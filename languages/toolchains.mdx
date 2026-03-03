@@ -1,0 +1,258 @@
+---
+title: Toolchain Management
+description: Use Zed's toolchain selector to manage language-specific toolchains, virtual environments, and interpreter paths for your projects
+---
+
+# Toolchain Management
+
+Zed projects include a toolchain selector that lets you choose the tools used for a language in the current project. Toolchains define the interpreter, compiler, or runtime environment that language servers and tasks use when working with your code.
+
+## What are Toolchains?
+
+A toolchain is a set of tools for working with a specific language. Examples include:
+
+- **Python virtual environments** - Isolated Python installations with project-specific dependencies
+- **Node.js versions** - Different Node.js runtime versions managed by tools like nvm
+- **Go installations** - Different Go compiler versions
+- **Global installations** - System-wide language installations
+
+For example, in Python projects, virtual environments define dependencies and interpreter paths. Language servers need that environment to analyze your code correctly. With the toolchain selector, you can pick the right virtual environment from a dropdown instead of configuring language server paths manually.
+
+<Note>
+You can select different toolchains for different subprojects within your Zed project. A definition of a subproject is language-specific.
+</Note>
+
+## Why Toolchains Matter
+
+The active toolchain affects several aspects of your development workflow:
+
+<AccordionGroup>
+  <Accordion title="Language Server Integration">
+    Language servers are configured with the active toolchain's interpreter or compiler path. Without the correct toolchain, language servers may fail to resolve dependencies, and features like "Go to Definition" or "Code Completions" may not work.
+  </Accordion>
+  
+  <Accordion title="Terminal Integration">
+    Some toolchains provide "activation scripts" for shells. Zed runs these scripts automatically when you create a new terminal, making the toolchain available in your shell environment.
+  </Accordion>
+  
+  <Accordion title="Task Execution">
+    Tasks run as if you opened a new terminal tab and executed the command yourself. Task execution is affected by the active toolchain and its activation script.
+  </Accordion>
+  
+  <Accordion title="Debugging">
+    Debug adapters and debuggers use the active toolchain's runtime or interpreter when launching debug sessions.
+  </Accordion>
+</AccordionGroup>
+
+## Selecting Toolchains
+
+The active toolchain (if there is one) is shown in the status bar on the right. Click it to open the toolchain selector, or run the command palette action `toolchain: select`.
+
+<Steps>
+  <Step title="Open the Toolchain Selector">
+    Click the toolchain indicator in the status bar or use the Command Palette action `toolchain: select`.
+  </Step>
+  
+  <Step title="Choose a Toolchain">
+    Zed automatically infers a set of toolchains based on your project. Select from:
+    - Detected virtual environments
+    - System installations
+    - Manually added toolchains
+  </Step>
+  
+  <Step title="Apply Selection">
+    The selected toolchain applies to the current subproject. In monorepos, you can choose different toolchains for each subproject.
+  </Step>
+</Steps>
+
+<Note>
+Zed will automatically select a default toolchain on a best-effort basis when you open a project for the first time.
+</Note>
+
+### Collaborative Editing
+
+In collaborative scenarios:
+- Only the **project owner** can see and modify the active toolchain
+- When [sharing your project](https://docs.zed.dev/collaboration), the toolchain selector is not available to guests
+- In [remote projects](https://docs.zed.dev/remote-development), you control the toolchain on the SSH host
+
+## Adding Toolchains Manually
+
+If automatic detection doesn't find your toolchain, you can add it manually.
+
+<Steps>
+  <Step title="Open Toolchain Selector">
+    Click the toolchain indicator in the status bar.
+  </Step>
+  
+  <Step title="Click 'Add Toolchain'">
+    Look for the "Add toolchain" button at the bottom of the selector.
+  </Step>
+  
+  <Step title="Provide Toolchain Details">
+    Enter:
+    - **Path** - Full path to the toolchain (e.g., `/usr/local/bin/python3.11` or `~/.pyenv/versions/3.11.0`)
+    - **Name** - A descriptive name for the toolchain (e.g., "Python 3.11 pyenv")
+  </Step>
+</Steps>
+
+## Language-Specific Toolchain Support
+
+### Python Toolchains
+
+Zed has built-in support for discovering and configuring Python toolchains:
+
+- **Virtual environments** - `.venv`, `venv`, `env` directories
+- **Conda environments** - Anaconda and Miniconda installations
+- **Poetry** - Poetry-managed virtual environments
+- **Pipenv** - Pipenv virtual environments
+- **uv** - Virtual environments created with `uv`
+- **Global Python** - System-wide Python installations
+
+<Info>
+When a Python toolchain is active, Zed automatically configures built-in language servers (basedpyright, Ruff, etc.) with the virtual environment path and interpreter.
+</Info>
+
+**Python Toolchain Usage:**
+
+1. Built-in language servers receive the toolchain's Python interpreter path
+2. Python tasks (like pytest) run using the toolchain's interpreter
+3. Virtual environment activation scripts run automatically in new terminals
+4. If a language server is installed in the active virtual environment, that binary is used instead of Zed's automatically-installed version
+
+For more details, see the [Python documentation](/languages/python#virtual-environments).
+
+### Node.js / JavaScript Toolchains
+
+Node.js version managers are commonly used to switch between Node versions:
+
+- **nvm** - Node Version Manager
+- **fnm** - Fast Node Manager
+- **asdf** - Universal version manager
+- **Volta** - JavaScript toolchain manager
+
+Zed respects your shell's Node.js configuration when launching language servers and running tasks.
+
+### Go Toolchains
+
+Go toolchains represent different Go compiler installations. Zed uses the `GOROOT` environment variable and your `PATH` to locate Go installations.
+
+### Rust Toolchains
+
+Rust development typically uses rustup to manage toolchains:
+
+- **Stable** - The stable release channel
+- **Beta** - The beta release channel
+- **Nightly** - The nightly release channel
+- **Custom toolchains** - Project-specific toolchains defined in `rust-toolchain.toml`
+
+rust-analyzer automatically respects `rust-toolchain.toml` files in your project.
+
+## Toolchain Discovery
+
+Zed uses language-specific heuristics to discover available toolchains:
+
+<Tabs>
+  <Tab title="Python">
+    - Searches for `venv`, `.venv`, `env` directories
+    - Checks common locations for Conda, Poetry, Pipenv environments
+    - Detects system Python installations in standard locations
+    - Discovers pyenv-managed Python versions
+  </Tab>
+  
+  <Tab title="Node.js">
+    - Reads `.nvmrc` files
+    - Detects nvm, fnm, and asdf installations
+    - Finds Volta-managed Node versions
+    - Locates system Node.js installations
+  </Tab>
+  
+  <Tab title="Go">
+    - Uses `GOROOT` environment variable
+    - Searches `PATH` for Go installations
+    - Detects multiple Go versions in common installation paths
+  </Tab>
+  
+  <Tab title="Rust">
+    - Reads `rust-toolchain.toml` and `rust-toolchain` files
+    - Queries rustup for installed toolchains
+    - Uses the default rustup toolchain if no override is specified
+  </Tab>
+</Tabs>
+
+## Troubleshooting Toolchains
+
+<AccordionGroup>
+  <Accordion title="Language server can't find dependencies">
+    **Problem**: Language server shows "unresolved import" or similar errors.
+    
+    **Solution**:
+    1. Verify the correct toolchain is selected in the status bar
+    2. Check that dependencies are installed in that toolchain
+    3. Restart the language server from the Command Palette (`editor: restart language server`)
+  </Accordion>
+  
+  <Accordion title="Toolchain not detected automatically">
+    **Problem**: Your virtual environment or toolchain doesn't appear in the selector.
+    
+    **Solution**:
+    1. Ensure the toolchain is in a standard location
+    2. Manually add the toolchain using "Add toolchain"
+    3. Verify the toolchain is properly installed (e.g., `which python` in the terminal)
+  </Accordion>
+  
+  <Accordion title="Tasks use wrong Python/Node version">
+    **Problem**: Tasks don't use the selected toolchain.
+    
+    **Solution**:
+    1. Confirm the toolchain is selected in the status bar
+    2. Create a new terminal to ensure activation scripts run
+    3. Check that the toolchain provides an activation script
+  </Accordion>
+  
+  <Accordion title="Terminal doesn't activate environment">
+    **Problem**: New terminals don't activate the virtual environment.
+    
+    **Solution**:
+    1. Verify the toolchain is selected
+    2. Check terminal settings: `detect_venv` should be enabled for Python
+    3. Try closing and reopening the terminal
+  </Accordion>
+</AccordionGroup>
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Use Project-Local Environments" icon="folder">
+    Create virtual environments or use project-specific toolchains instead of relying on global installations. This ensures consistent behavior across team members.
+  </Card>
+  
+  <Card title="Document Toolchain Requirements" icon="file-text">
+    Include setup instructions in your project README. Specify required language versions and how to create the appropriate toolchain.
+  </Card>
+  
+  <Card title="Check Toolchain Before Reporting Issues" icon="bug">
+    If language features aren't working, verify the correct toolchain is selected before troubleshooting other areas.
+  </Card>
+  
+  <Card title="Use Standard Locations" icon="map-pin">
+    Place virtual environments in standard locations (`.venv`, `venv`) for automatic detection.
+  </Card>
+</CardGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Python Virtual Environments" icon="python" href="/languages/python#virtual-environments">
+    Detailed guide for Python virtual environment setup
+  </Card>
+  <Card title="Language Configuration" icon="gear" href="/languages/configuring">
+    Configure language servers and formatters
+  </Card>
+  <Card title="Tasks" icon="play" href="https://docs.zed.dev/tasks">
+    Learn about running tasks with toolchains
+  </Card>
+  <Card title="Remote Development" icon="server" href="https://docs.zed.dev/remote-development">
+    Use toolchains in remote development environments
+  </Card>
+</CardGroup>

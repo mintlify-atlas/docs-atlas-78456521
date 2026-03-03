@@ -1,0 +1,699 @@
+---
+title: AI Configuration
+description: Configure AI providers, models, and settings in Zed
+---
+
+Zed's AI features are highly configurable. This guide covers how to set up AI providers, configure models, and customize AI behavior.
+
+## Settings Location
+
+AI settings are configured in your Zed settings file:
+
+```bash
+# Open settings
+Cmd/Ctrl + ,
+
+# Settings file location
+~/.config/zed/settings.json
+```
+
+## AI Providers
+
+Zed supports multiple AI providers:
+
+### Anthropic (Claude)
+
+Configure Claude models:
+
+```json
+{
+  "language_models": {
+    "anthropic": {
+      "api_url": "https://api.anthropic.com",
+      "api_key": "sk-ant-...",
+      "low_speed_timeout_in_seconds": 60
+    }
+  },
+  "agent": {
+    "default_model": {
+      "provider": "anthropic",
+      "model": "claude-3-5-sonnet-20241022",
+      "enable_thinking": true,
+      "effort": "medium"
+    }
+  }
+}
+```
+
+### OpenAI (GPT)
+
+Configure OpenAI models:
+
+```json
+{
+  "language_models": {
+    "openai": {
+      "api_url": "https://api.openai.com/v1",
+      "api_key": "sk-...",
+      "low_speed_timeout_in_seconds": 60
+    }
+  },
+  "agent": {
+    "default_model": {
+      "provider": "openai",
+      "model": "gpt-4-turbo-preview"
+    }
+  }
+}
+```
+
+### Google AI (Gemini)
+
+Configure Gemini models:
+
+```json
+{
+  "language_models": {
+    "google": {
+      "api_url": "https://generativelanguage.googleapis.com",
+      "api_key": "..."
+    }
+  },
+  "agent": {
+    "default_model": {
+      "provider": "google",
+      "model": "gemini-1.5-pro-latest"
+    }
+  }
+}
+```
+
+### xAI (Grok)
+
+Configure Grok models:
+
+```json
+{
+  "language_models": {
+    "x_ai": {
+      "api_url": "https://api.x.ai/v1",
+      "api_key": "..."
+    }
+  },
+  "agent": {
+    "default_model": {
+      "provider": "x_ai",
+      "model": "grok-beta"
+    }
+  }
+}
+```
+
+### Ollama (Local Models)
+
+Run models locally:
+
+```json
+{
+  "language_models": {
+    "ollama": {
+      "api_url": "http://localhost:11434"
+    }
+  },
+  "agent": {
+    "default_model": {
+      "provider": "ollama",
+      "model": "codellama"
+    }
+  }
+}
+```
+
+<Note>
+Ollama must be running locally. Install from [ollama.ai](https://ollama.ai)
+</Note>
+
+### Custom OpenAI-Compatible
+
+Use any OpenAI-compatible API:
+
+```json
+{
+  "language_models": {
+    "openai": {
+      "api_url": "https://your-api.com/v1",
+      "api_key": "..."
+    }
+  }
+}
+```
+
+## Model Configuration
+
+### Default Model
+
+The model used in the Agent Panel:
+
+```json
+{
+  "agent": {
+    "default_model": {
+      "provider": "anthropic",
+      "model": "claude-3-5-sonnet-20241022"
+    }
+  }
+}
+```
+
+### Inline Assistant Model
+
+Model for inline code assistance:
+
+```json
+{
+  "agent": {
+    "inline_assistant_model": {
+      "provider": "anthropic",
+      "model": "claude-3-5-sonnet-20241022"
+    },
+    "inline_assistant_use_streaming_tools": true
+  }
+}
+```
+
+### Thread Summary Model
+
+Fast model for summarizing long threads:
+
+```json
+{
+  "agent": {
+    "thread_summary_model": {
+      "provider": "anthropic",
+      "model": "claude-3-haiku-20240307"
+    }
+  }
+}
+```
+
+### Commit Message Model
+
+Model for generating commit messages:
+
+```json
+{
+  "agent": {
+    "commit_message_model": {
+      "provider": "anthropic",
+      "model": "claude-3-haiku-20240307"
+    }
+  }
+}
+```
+
+## Model Parameters
+
+Customize model behavior:
+
+```json
+{
+  "agent": {
+    "model_parameters": [
+      {
+        "provider": "anthropic",
+        "model": "claude-3-5-sonnet-20241022",
+        "temperature": 0.7,
+        "max_tokens": 4096
+      },
+      {
+        "provider": "openai",
+        "temperature": 0.8
+      }
+    ]
+  }
+}
+```
+
+<ParamField path="temperature" type="number" default="1.0">
+  Randomness of responses (0-2). Lower = more focused, higher = more creative
+</ParamField>
+
+<ParamField path="max_tokens" type="number">
+  Maximum tokens in response. Leave unset to use model default
+</ParamField>
+
+## Thinking Configuration
+
+For Claude models with extended thinking:
+
+```json
+{
+  "agent": {
+    "default_model": {
+      "provider": "anthropic",
+      "model": "claude-3-5-sonnet-20241022",
+      "enable_thinking": true,
+      "effort": "high"
+    }
+  }
+}
+```
+
+<ParamField path="enable_thinking" type="boolean" default="false">
+  Show the model's reasoning process
+</ParamField>
+
+<ParamField path="effort" type="string" default="medium">
+  How much the model should think. Options: `low`, `medium`, `high`
+</ParamField>
+
+## Favorite Models
+
+Quick access to preferred models:
+
+```json
+{
+  "agent": {
+    "favorite_models": [
+      {
+        "provider": "anthropic",
+        "model": "claude-3-5-sonnet-20241022"
+      },
+      {
+        "provider": "anthropic",
+        "model": "claude-3-opus-20240229"
+      },
+      {
+        "provider": "openai",
+        "model": "gpt-4-turbo-preview"
+      }
+    ]
+  }
+}
+```
+
+Access via model selector or keyboard shortcut.
+
+## Tool Permissions
+
+Control what AI agents can do:
+
+```json
+{
+  "agent": {
+    "tool_permissions": {
+      "default": "confirm",
+      "tools": {
+        "read_file": {
+          "default": "allow"
+        },
+        "edit_file": {
+          "default": "confirm",
+          "always_allow": [
+            {
+              "pattern": "src/.*\\.rs$",
+              "case_sensitive": false
+            }
+          ],
+          "always_deny": [
+            {
+              "pattern": ".*\\.env$",
+              "case_sensitive": false
+            }
+          ]
+        },
+        "terminal": {
+          "default": "confirm",
+          "always_deny": [
+            {
+              "pattern": "rm -rf",
+              "case_sensitive": true
+            }
+          ]
+        }
+      }
+    }
+  }
+}
+```
+
+### Permission Modes
+
+<ParamField path="allow" type="mode">
+  Always allow this operation without asking
+</ParamField>
+
+<ParamField path="confirm" type="mode">
+  Ask for permission each time
+</ParamField>
+
+<ParamField path="deny" type="mode">
+  Never allow this operation
+</ParamField>
+
+### Pattern Matching
+
+Use regex patterns to control permissions:
+
+```json
+{
+  "always_allow": [
+    {
+      "pattern": "src/.*",
+      "case_sensitive": false
+    }
+  ],
+  "always_deny": [
+    {
+      "pattern": ".*\\.(env|secret)$",
+      "case_sensitive": false
+    }
+  ]
+}
+```
+
+[Learn more about tool permissions →](/ai/tools#permissions)
+
+## UI Configuration
+
+### Panel Position
+
+```json
+{
+  "agent": {
+    "dock": "right",
+    "default_width": 600,
+    "default_height": 800
+  }
+}
+```
+
+### Button Visibility
+
+```json
+{
+  "agent": {
+    "button": true,
+    "enabled": true
+  }
+}
+```
+
+### Message Editor
+
+```json
+{
+  "agent": {
+    "message_editor_min_lines": 3,
+    "use_modifier_to_send": false
+  }
+}
+```
+
+### Visual Feedback
+
+```json
+{
+  "agent": {
+    "show_turn_stats": true,
+    "play_sound_when_agent_done": false,
+    "notify_when_agent_waiting": "always"
+  }
+}
+```
+
+## Edit Predictions
+
+Configure AI code completion:
+
+```json
+{
+  "edit_predictions": {
+    "enabled": true,
+    "provider": {
+      "name": "anthropic",
+      "model": "claude-3-5-sonnet-20241022"
+    },
+    "debounce_ms": 500,
+    "enabled_in_text_threads": false
+  }
+}
+```
+
+[Learn more about Edit Prediction →](/ai/edit-prediction)
+
+## Cache Configuration
+
+Prompt caching (when supported):
+
+```json
+{
+  "language_models": {
+    "anthropic": {
+      "cache_configuration": {
+        "max_cache_anchors": 3,
+        "min_total_token": 1024,
+        "should_speculate": true,
+        "min_context_length_for_caching": 2048
+      }
+    }
+  }
+}
+```
+
+## Advanced Settings
+
+### Timeout Configuration
+
+```json
+{
+  "language_models": {
+    "anthropic": {
+      "low_speed_timeout_in_seconds": 60,
+      "timeout_in_seconds": 120
+    }
+  }
+}
+```
+
+### Feedback and Telemetry
+
+```json
+{
+  "agent": {
+    "enable_feedback": true
+  }
+}
+```
+
+### Expand Cards
+
+```json
+{
+  "agent": {
+    "expand_edit_card": true,
+    "expand_terminal_card": false
+  }
+}
+```
+
+## Per-Language Configuration
+
+Override settings for specific languages:
+
+```json
+{
+  "languages": {
+    "Rust": {
+      "agent": {
+        "default_model": {
+          "provider": "anthropic",
+          "model": "claude-3-5-sonnet-20241022"
+        }
+      },
+      "edit_predictions": {
+        "enabled": true
+      }
+    },
+    "JavaScript": {
+      "edit_predictions": {
+        "enabled": false
+      }
+    }
+  }
+}
+```
+
+## Environment Variables
+
+API keys can also be set via environment variables:
+
+```bash
+# Anthropic
+export ANTHROPIC_API_KEY="sk-ant-..."
+
+# OpenAI
+export OPENAI_API_KEY="sk-..."
+
+# Google AI
+export GOOGLE_AI_API_KEY="..."
+
+# xAI
+export XAI_API_KEY="..."
+```
+
+Zed will use these if not specified in settings.
+
+## Validation
+
+Zed validates your configuration:
+
+- Invalid models show warnings
+- Missing API keys prompt for setup
+- Malformed patterns are reported
+
+Check the log panel for validation errors:
+
+```
+View → Debug → Open Log
+```
+
+## Example Configurations
+
+### Minimal Setup
+
+```json
+{
+  "language_models": {
+    "anthropic": {
+      "api_key": "sk-ant-..."
+    }
+  },
+  "agent": {
+    "enabled": true
+  }
+}
+```
+
+### Power User Setup
+
+```json
+{
+  "language_models": {
+    "anthropic": {
+      "api_key": "sk-ant-..."
+    },
+    "openai": {
+      "api_key": "sk-..."
+    }
+  },
+  "agent": {
+    "enabled": true,
+    "default_model": {
+      "provider": "anthropic",
+      "model": "claude-3-5-sonnet-20241022",
+      "enable_thinking": true,
+      "effort": "high"
+    },
+    "inline_assistant_model": {
+      "provider": "anthropic",
+      "model": "claude-3-5-sonnet-20241022"
+    },
+    "thread_summary_model": {
+      "provider": "anthropic",
+      "model": "claude-3-haiku-20240307"
+    },
+    "favorite_models": [
+      { "provider": "anthropic", "model": "claude-3-5-sonnet-20241022" },
+      { "provider": "anthropic", "model": "claude-3-opus-20240229" },
+      { "provider": "openai", "model": "gpt-4-turbo-preview" }
+    ],
+    "tool_permissions": {
+      "default": "confirm",
+      "tools": {
+        "read_file": { "default": "allow" },
+        "terminal": {
+          "default": "confirm",
+          "always_deny": [
+            { "pattern": "rm -rf", "case_sensitive": true }
+          ]
+        }
+      }
+    },
+    "show_turn_stats": true
+  },
+  "edit_predictions": {
+    "enabled": true,
+    "provider": {
+      "name": "anthropic",
+      "model": "claude-3-5-sonnet-20241022"
+    }
+  }
+}
+```
+
+### Local-Only Setup
+
+```json
+{
+  "language_models": {
+    "ollama": {
+      "api_url": "http://localhost:11434"
+    }
+  },
+  "agent": {
+    "enabled": true,
+    "default_model": {
+      "provider": "ollama",
+      "model": "codellama"
+    }
+  }
+}
+```
+
+<Warning>
+Store API keys securely. Don't commit settings.json with keys to version control.
+</Warning>
+
+## Troubleshooting
+
+### Configuration Not Loading
+
+- Check JSON syntax
+- Restart Zed
+- Check file permissions
+- Review logs for errors
+
+### API Key Issues
+
+- Verify key is correct
+- Check key hasn't expired
+- Ensure proper environment variable format
+- Test API key with curl
+
+### Model Not Available
+
+- Check provider supports the model
+- Verify model name spelling
+- Ensure API key has access
+- Check provider's model list
+
+## Related Documentation
+
+<CardGroup cols={2}>
+  <Card title="Agent Panel" icon="comments" href="/ai/agent-panel">
+    Using the AI agent interface
+  </Card>
+  
+  <Card title="Tool Permissions" icon="shield" href="/ai/tools#permissions">
+    Controlling agent capabilities
+  </Card>
+  
+  <Card title="Edit Prediction" icon="wand-magic-sparkles" href="/ai/edit-prediction">
+    AI code completion settings
+  </Card>
+  
+  <Card title="MCP Configuration" icon="plug" href="/ai/mcp">
+    Model Context Protocol setup
+  </Card>
+</CardGroup>

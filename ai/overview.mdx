@@ -1,0 +1,190 @@
+---
+title: AI Overview
+description: AI capabilities and features in Zed
+---
+
+Zed includes powerful AI features that help you write code faster and more efficiently. From inline code completion to interactive agent assistance, Zed's AI capabilities are designed to integrate seamlessly into your workflow.
+
+## Core AI Features
+
+Zed's AI system is built around several key components:
+
+### Agent Panel
+
+The **Agent Panel** provides an interactive chat interface where you can:
+
+- Ask questions about your codebase
+- Request code changes and refactoring
+- Get explanations of complex code
+- Generate new code based on natural language descriptions
+
+[Learn more about the Agent Panel →](/ai/agent-panel)
+
+### Inline Assistant
+
+The **Inline Assistant** brings AI directly into your editor:
+
+- Generate code at your cursor position
+- Transform selected code with natural language instructions
+- Receive context-aware code suggestions
+- Refactor code inline without leaving your workflow
+
+[Learn more about the Inline Assistant →](/ai/inline-assistant)
+
+### Edit Prediction
+
+**Edit Prediction** provides AI-powered code completion:
+
+- Real-time code completions based on context
+- Multi-line suggestions
+- Smart completion that understands your project structure
+
+[Learn more about Edit Prediction →](/ai/edit-prediction)
+
+### Text Threads
+
+**Text Threads** enable persistent AI conversations:
+
+- Save and resume conversations
+- Share conversations with team members
+- Build context across multiple turns
+- Reference code, files, and terminal output
+
+[Learn more about Text Threads →](/ai/text-threads)
+
+## Language Model Support
+
+Zed supports multiple AI providers and models:
+
+- **Anthropic** (Claude models)
+- **OpenAI** (GPT-4, GPT-3.5)
+- **Google AI** (Gemini models)
+- **xAI** (Grok models)
+- **Ollama** (local models)
+- **Custom providers** via configuration
+
+### Model Selection
+
+You can configure different models for different tasks:
+
+```json
+{
+  "agent": {
+    "default_model": {
+      "provider": "anthropic",
+      "model": "claude-3-5-sonnet-20241022"
+    },
+    "inline_assistant_model": {
+      "provider": "anthropic",
+      "model": "claude-3-5-sonnet-20241022"
+    },
+    "thread_summary_model": {
+      "provider": "anthropic",
+      "model": "claude-3-haiku-20240307"
+    }
+  }
+}
+```
+
+[Learn more about AI Configuration →](/ai/configuration)
+
+## Agent Tools
+
+Zed's AI agents have access to powerful tools that let them interact with your project:
+
+- **File operations**: Read, write, edit, move, and delete files
+- **Search**: Find files and grep through code
+- **Terminal**: Execute shell commands
+- **Diagnostics**: Access compiler errors and warnings
+- **Web search**: Search the internet for information
+- **Context servers**: Connect to external data sources via MCP
+
+[Learn more about Agent Tools →](/ai/tools)
+
+## Context Awareness
+
+Zed's AI features are deeply integrated with your development environment:
+
+- **Project context**: AI understands your workspace structure
+- **LSP integration**: Access to language server information
+- **Git awareness**: Understand repository history and changes
+- **Rules files**: Custom instructions via `.zed/rules` files
+
+## Privacy and Security
+
+Zed takes privacy seriously:
+
+- **Local-first**: Your code stays on your machine unless you explicitly share it
+- **Provider choice**: Select which AI provider handles your data
+- **Tool permissions**: Control what actions AI agents can perform
+- **No telemetry**: AI features work without sending usage data to Zed
+
+<Note>
+All AI features require explicit user consent before accessing external APIs.
+</Note>
+
+## Getting Started
+
+1. **Enable AI features**: Configure your preferred AI provider in settings
+2. **Set API keys**: Add credentials for your chosen provider
+3. **Choose models**: Select appropriate models for different tasks
+4. **Configure permissions**: Set tool permission policies
+5. **Start using AI**: Open the Agent Panel or use inline assistance
+
+<Card title="Configuration Guide" icon="gear" href="/ai/configuration">
+  Learn how to configure AI providers, models, and permissions
+</Card>
+
+## Key Concepts
+
+### Sessions and Threads
+
+- **Session**: An active conversation with an AI agent
+- **Thread**: A saved conversation that can be resumed
+- **Turn**: A single user message and agent response pair
+
+### Token Usage
+
+Zed tracks token usage for cost transparency:
+
+- Input tokens (prompt)
+- Output tokens (response)
+- Cached tokens (when using prompt caching)
+
+### Model Context Window
+
+Each model has a maximum context window. Zed manages this automatically by:
+
+- Summarizing old messages
+- Pruning less relevant context
+- Optimizing tool output
+
+## Architecture
+
+Zed's AI system is built on several key crates:
+
+- `agent`: Core agent logic and thread management
+- `agent_ui`: User interface components
+- `language_model`: Provider abstraction and registry
+- `context_server`: Model Context Protocol support
+- `acp_thread`: Agent Client Protocol thread handling
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Agent Panel" icon="comments" href="/ai/agent-panel">
+    Learn how to use the interactive agent chat interface
+  </Card>
+  
+  <Card title="Inline Assistant" icon="wand-magic-sparkles" href="/ai/inline-assistant">
+    Use AI assistance directly in your editor
+  </Card>
+  
+  <Card title="Configuration" icon="gear" href="/ai/configuration">
+    Configure AI providers and models
+  </Card>
+  
+  <Card title="Agent Tools" icon="wrench" href="/ai/tools">
+    Understand what tools agents can use
+  </Card>
+</CardGroup>

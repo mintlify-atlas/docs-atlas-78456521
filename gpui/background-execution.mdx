@@ -1,0 +1,452 @@
+---
+title: Background Execution
+description: Execute CPU-intensive work on background threads in GPUI
+---
+
+GPUI provides robust support for background execution, allowing you to perform heavy computations without blocking the UI thread.
+
+## Background vs Foreground
+
+GPUI maintains a strict separation between foreground and background execution:
+
+- **Foreground (Main Thread)**: All UI rendering, entity updates, and window management
+- **Background (Thread Pool)**: CPU-intensive work, I/O operations, and long-running computations
+
+```rust
+use gpui::*;
+
+// Foreground task (main thread)
+cx.spawn(|this, mut cx| async move {
+    // Runs on main thread
+    this.update(&mut cx, |this, cx| {
+        // UI updates here
+    })
+});
+
+// Background task (thread pool)
+cx.background_spawn(async move {
+    // Runs on background thread
+    heavy_computation()
+});
+```
+
+## BackgroundExecutor
+
+The `BackgroundExecutor` is responsible for scheduling and running background tasks:
+
+```rust
+let executor = cx.background_executor();
+
+// Spawn a background task
+let task = executor.spawn(async move {
+    // This runs on a background thread
+    perform_calculation()
+});
+
+// Await the result
+let result = task.await;
+```
+
+## Common Patterns
+
+### Offload Heavy Computation
+
+Move CPU-intensive work to background threads:
+
+```rust
+use gpui::*;
+
+struct ComputationView {
+    result: Option<i64>,
+    computing: bool,
+}
+
+impl ComputationView {
+    fn start_computation(&mut self, cx: &mut Context<Self>) {
+        self.computing = true;
+        cx.notify();
+        
+        cx.spawn(|this, mut cx| async move {
+            // Perform heavy work on background thread
+            let result = cx.background_spawn(async move {
+                // This runs in the thread pool
+                expensive_calculation()
+            }).await;
+            
+            // Update UI on main thread
+            this.update(&mut cx, |this, cx| {
+                this.result = Some(result);
+                this.computing = false;
+                cx.notify();
+            })
+        })
+        .detach();
+    }
+}
+
+fn expensive_calculation() -> i64 {
+    // Simulate heavy CPU work
+    (0..1_000_000).sum()
+}
+```
+
+### File I/O
+
+Perform file operations in the background:
+
+```rust
+use std::fs;
+use gpui::*;
+
+struct FileLoader {
+    content: Option<String>,
+}
+
+impl FileLoader {
+    fn load_file(&mut self, path: String, cx: &mut Context<Self>) {
+        cx.spawn(|this, mut cx| async move {
+            // Read file on background thread
+            let content = cx.background_spawn(async move {
+                fs::read_to_string(path).unwrap()
+            }).await;
+            
+            // Update UI
+            this.update(&mut cx, |this, cx| {
+                this.content = Some(content);
+                cx.notify();
+            })
+        })
+        .detach();
+    }
+}
+```
+
+### Network Requests
+
+```rust
+use gpui::*;
+
+struct ApiClient {
+    data: Option<String>,
+}
+
+impl ApiClient {
+    fn fetch_data(&mut self, url: String, cx: &mut Context<Self>) {
+        cx.spawn(|this, mut cx| async move {
+            // Network request on background thread
+            let response = cx.background_spawn(async move {
+                // Using reqwest or similar
+                fetch_from_api(&url).await
+            }).await;
+            
+            this.update(&mut cx, |this, cx| {
+                this.data = Some(response);
+                cx.notify();
+            })
+        })
+        .detach();
+    }
+}
+
+async fn fetch_from_api(url: &str) -> String {
+    // Actual network request
+    format!("Data from {}", url)
+}
+```
+
+## Scoped Background Execution
+
+Run multiple background tasks and wait for all to complete:
+
+```rust
+use gpui::*;
+
+let executor = cx.background_executor();
+
+executor.scoped(|scope| {
+    scope.spawn(async {
+        // Task 1
+    });
+    
+    scope.spawn(async {
+        // Task 2
+    });
+    
+    scope.spawn(async {
+        // Task 3
+    });
+}).await;
+
+// All tasks completed here
+```
+
+### With Priority
+
+Control task priority:
+
+```rust
+use gpui::*;
+
+let executor = cx.background_executor();
+
+executor.scoped_priority(Priority::High, |scope| {
+    scope.spawn(async {
+        // High priority work
+    });
+}).await;
+```
+
+## Task Priorities
+
+GPUI supports different priority levels for background tasks:
+
+```rust
+use gpui::*;
+
+// Normal priority (default)
+cx.background_executor().spawn(async {
+    // Work
+});
+
+// High priority
+cx.background_executor().spawn_with_priority(Priority::High, async {
+    // Urgent work
+});
+
+// Low priority
+cx.background_executor().spawn_with_priority(Priority::Low, async {
+    // Non-urgent work
+});
+
+// Realtime (for audio processing)
+cx.background_executor().spawn_with_priority(Priority::RealtimeAudio, async {
+    // Audio processing work
+});
+```
+
+## Await on Background
+
+Run async work on a background thread with scoped borrowing:
+
+```rust
+let executor = cx.background_executor();
+
+let data = vec![1, 2, 3, 4, 5];
+
+let result = executor.await_on_background(async {
+    // This runs on background thread but can borrow from scope
+    data.iter().sum::<i32>()
+}).await;
+```
+
+## Practical Examples
+
+### Image Processing
+
+```rust
+use gpui::*;
+
+struct ImageProcessor {
+    original: Vec<u8>,
+    processed: Option<Vec<u8>>,
+    processing: bool,
+}
+
+impl ImageProcessor {
+    fn process_image(&mut self, cx: &mut Context<Self>) {
+        self.processing = true;
+        cx.notify();
+        
+        let image_data = self.original.clone();
+        
+        cx.spawn(|this, mut cx| async move {
+            // Heavy image processing on background thread
+            let processed = cx.background_spawn(async move {
+                apply_filters(&image_data)
+            }).await;
+            
+            this.update(&mut cx, |this, cx| {
+                this.processed = Some(processed);
+                this.processing = false;
+                cx.notify();
+            })
+        })
+        .detach();
+    }
+}
+
+fn apply_filters(data: &[u8]) -> Vec<u8> {
+    // Expensive image processing
+    data.iter().map(|&b| b.saturating_add(10)).collect()
+}
+```
+
+### Batch Processing
+
+```rust
+use gpui::*;
+
+struct BatchProcessor {
+    items: Vec<String>,
+    results: Vec<String>,
+    progress: f32,
+}
+
+impl BatchProcessor {
+    fn process_batch(&mut self, cx: &mut Context<Self>) {
+        let items = self.items.clone();
+        let total = items.len() as f32;
+        
+        cx.spawn(|this, mut cx| async move {
+            let executor = cx.background_executor();
+            
+            executor.scoped(|scope| {
+                for (i, item) in items.into_iter().enumerate() {
+                    let this = this.clone();
+                    let mut cx = cx.clone();
+                    
+                    scope.spawn(async move {
+                        // Process item on background thread
+                        let result = process_item(&item).await;
+                        
+                        // Update progress on main thread
+                        this.update(&mut cx, |this, cx| {
+                            this.results.push(result);
+                            this.progress = (i + 1) as f32 / total;
+                            cx.notify();
+                        }).ok();
+                    });
+                }
+            }).await;
+        })
+        .detach();
+    }
+}
+
+async fn process_item(item: &str) -> String {
+    // Process individual item
+    format!("Processed: {}", item)
+}
+```
+
+### Debounced Search
+
+```rust
+use gpui::*;
+use std::time::Duration;
+
+struct Search {
+    query: String,
+    results: Vec<String>,
+    search_task: Option<Task<()>>,
+}
+
+impl Search {
+    fn search(&mut self, query: String, cx: &mut Context<Self>) {
+        self.query = query.clone();
+        
+        // Cancel previous search
+        self.search_task = None;
+        
+        let task = cx.spawn(|this, mut cx| async move {
+            // Debounce
+            cx.background_executor()
+                .timer(Duration::from_millis(300))
+                .await;
+            
+            // Search on background thread
+            let results = cx.background_spawn(async move {
+                perform_search(&query).await
+            }).await;
+            
+            this.update(&mut cx, |this, cx| {
+                this.results = results;
+                cx.notify();
+            })
+        });
+        
+        self.search_task = Some(task);
+    }
+}
+
+async fn perform_search(query: &str) -> Vec<String> {
+    // Simulate search
+    vec![format!("Result for: {}", query)]
+}
+```
+
+## Thread Safety
+
+<Warning>
+Only `Send` types can be moved to background threads. Ensure your data structures implement `Send` when using background execution.
+</Warning>
+
+```rust
+// This works - String is Send
+cx.background_spawn(async move {
+    let data = String::from("data");
+    process(data)
+});
+
+// This doesn't compile - Rc is not Send
+use std::rc::Rc;
+let data = Rc::new(String::from("data"));
+cx.background_spawn(async move {
+    process(data)  // Error: Rc is not Send
+});
+
+// Use Arc instead for shared ownership across threads
+use std::sync::Arc;
+let data = Arc::new(String::from("data"));
+cx.background_spawn(async move {
+    process(data)  // OK: Arc is Send
+});
+```
+
+## Best Practices
+
+<Tip>
+Move heavy computations to background threads to keep the UI responsive.
+</Tip>
+
+<Note>
+Background tasks automatically use a thread pool sized according to available CPU cores.
+</Note>
+
+<Warning>
+Always handle the case where entity updates might fail if the entity has been dropped.
+</Warning>
+
+### Efficient Data Transfer
+
+Minimize data cloning when moving between threads:
+
+```rust
+// Instead of cloning large data structures
+let large_vec = vec![0; 1_000_000];
+let cloned = large_vec.clone();  // Expensive!
+cx.background_spawn(async move {
+    process(cloned)
+});
+
+// Move ownership when possible
+let large_vec = vec![0; 1_000_000];
+cx.background_spawn(async move {
+    process(large_vec)  // Moved, no clone!
+});
+```
+
+## Testing Background Tasks
+
+In tests, control background execution:
+
+```rust
+#[gpui::test]
+fn test_background_work(cx: &mut TestAppContext) {
+    // Run tasks to completion
+    cx.background_executor.run_until_parked();
+    
+    // Advance time for timers
+    cx.background_executor.advance_clock(Duration::from_secs(1));
+}
+```

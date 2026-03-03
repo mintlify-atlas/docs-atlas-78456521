@@ -1,0 +1,323 @@
+---
+title: Migration Guides
+description: Guides for migrating to Zed from other editors including VS Code, JetBrains IDEs, and Vim/Neovim.
+---
+
+# Migration Guides
+
+Migrating to Zed from another editor? These guides help you transition smoothly by mapping familiar concepts, shortcuts, and workflows to Zed.
+
+## Available Migration Guides
+
+<ParamField path="VS Code" type="guide">
+  Comprehensive guide for Visual Studio Code users covering keybindings, extensions, and settings.
+  
+  [View VS Code Migration Guide](../migrate/vs-code)
+</ParamField>
+
+<ParamField path="JetBrains IDEs" type="guide">
+  Migration guide for IntelliJ IDEA, WebStorm, PyCharm, and other JetBrains IDEs.
+  
+  [View JetBrains Migration Guide](../migrate/intellij)
+</ParamField>
+
+<ParamField path="PyCharm" type="guide">
+  Specific guide for PyCharm users with Python development workflow tips.
+  
+  [View PyCharm Migration Guide](../migrate/pycharm)
+</ParamField>
+
+<ParamField path="WebStorm" type="guide">
+  Guide for WebStorm users focusing on JavaScript/TypeScript development.
+  
+  [View WebStorm Migration Guide](../migrate/webstorm)
+</ParamField>
+
+<ParamField path="RustRover" type="guide">
+  Migration guide for RustRover users with Rust-specific workflows.
+  
+  [View RustRover Migration Guide](../migrate/rustrover)
+</ParamField>
+
+## Quick Start: Common Migrations
+
+### Setting a Base Keymap
+
+Zed supports predefined keymaps matching popular editors:
+
+```json
+{
+  "base_keymap": "VSCode"  // or "JetBrains", "SublimeText", "Atom", "Emacs"
+}
+```
+
+Change via settings or run `zed: toggle base keymap selector` from the command palette.
+
+### Vim Mode
+
+If you're used to Vim/Neovim:
+
+```json
+{
+  "vim_mode": true
+}
+```
+
+See the [Vim documentation](../vim) for full Vim mode capabilities.
+
+## General Migration Concepts
+
+### Workspaces vs. Projects
+
+**Other editors:**
+- VS Code: "Workspace" = folder or multi-root workspace
+- JetBrains: "Project" = collection of modules
+
+**Zed:**
+- "Workspace" = a Zed window with open folders/files
+- Can open multiple folders in one workspace
+- Each workspace maintains its own state (open files, layout)
+
+### Settings and Configuration
+
+**Other editors:**
+- VS Code: `settings.json` + UI settings
+- JetBrains: Preferences dialog + XML files
+- Vim: `.vimrc` or `init.vim`
+
+**Zed:**
+- User settings: `~/.config/zed/settings.json` (all platforms)
+- Project settings: `.zed/settings.json` in project root
+- Settings Editor: `Cmd+,` / `Ctrl+,` for UI-based configuration
+
+See [Configuring Zed](../customize/configuring-zed) for details.
+
+### Extensions and Plugins
+
+**Other editors:**
+- VS Code: Marketplace with 50,000+ extensions
+- JetBrains: Plugin repository
+- Vim: vim-plug, Vundle, or native packages
+
+**Zed:**
+- Built-in extension system
+- Extensions for languages, themes, and tools
+- Install via `zed: extensions` in command palette
+
+See [Extensions](../extensions) for available extensions.
+
+### Command Palette
+
+All editors have a command palette:
+
+- **VS Code:** `Cmd+Shift+P` / `Ctrl+Shift+P`
+- **JetBrains:** `Cmd+Shift+A` / `Ctrl+Shift+A`
+- **Zed:** `Cmd+Shift+P` / `Ctrl+Shift+P` (VS Code style by default)
+
+### File Navigation
+
+**Quick Open / Go to File:**
+
+- VS Code: `Cmd+P` / `Ctrl+P`
+- JetBrains: `Cmd+Shift+O` / `Ctrl+Shift+N`
+- Zed: `Cmd+P` / `Ctrl+P` (VS Code style by default)
+
+**Symbol Search:**
+
+- VS Code: `Cmd+Shift+O` / `Ctrl+Shift+O`
+- JetBrains: `Cmd+O` / `Ctrl+N`
+- Zed: `Cmd+Shift+O` / `Ctrl+Shift+O`
+
+**Project-wide Symbol:**
+
+- VS Code: `Cmd+T` / `Ctrl+T`
+- JetBrains: `Cmd+Shift+O` / `Ctrl+Shift+Alt+N`
+- Zed: `Cmd+T` / `Ctrl+T`
+
+### Language Servers
+
+All modern editors use Language Server Protocol (LSP):
+
+- Zed automatically installs and configures language servers
+- Manual configuration in `settings.json` if needed
+- Per-language settings under `"languages": { "LanguageName": {...} }`
+
+See [Configuring Languages](../languages) for language-specific setup.
+
+### Git Integration
+
+**Other editors:**
+- VS Code: Built-in Git + Source Control panel
+- JetBrains: Built-in VCS integration
+
+**Zed:**
+- Built-in Git integration
+- Git blame inline annotations
+- Diff views
+- Commit and push from editor
+
+See [Git](../git) for Git features.
+
+## Common Tasks
+
+### Opening a Project
+
+```sh
+# Command line
+zed /path/to/project
+
+# Or from within Zed
+# File → Open... or Cmd+O / Ctrl+O
+```
+
+### Searching
+
+**Find in File:**
+- `Cmd+F` / `Ctrl+F`
+
+**Find in Project:**
+- `Cmd+Shift+F` / `Ctrl+Shift+F`
+
+**Find and Replace:**
+- `Cmd+H` / `Ctrl+H` (in file)
+- `Cmd+Shift+H` / `Ctrl+Shift+H` (in project)
+
+### Editing
+
+**Multiple Cursors:**
+- `Cmd+D` / `Ctrl+D` - Add selection to next match
+- `Cmd+Click` / `Ctrl+Click` - Add cursor at position
+- `Cmd+Shift+L` / `Ctrl+Shift+L` - Add cursors to all matches
+
+**Line Operations:**
+- `Cmd+Shift+K` / `Ctrl+Shift+K` - Delete line
+- `Alt+Up/Down` - Move line up/down
+- `Cmd+/` / `Ctrl+/` - Toggle comment
+
+**Code Actions:**
+- `Cmd+.` / `Ctrl+.` - Show code actions
+
+### Terminal
+
+**Open Terminal:**
+- `Ctrl+` ` (backtick)
+
+**New Terminal:**
+- Run `terminal: deploy` from command palette
+
+See [Terminal](../terminal) for terminal features.
+
+## Settings Equivalents
+
+### Font and Appearance
+
+**VS Code:**
+```json
+{
+  "editor.fontFamily": "Fira Code",
+  "editor.fontSize": 14,
+  "workbench.colorTheme": "One Dark Pro"
+}
+```
+
+**Zed:**
+```json
+{
+  "buffer_font_family": "Fira Code",
+  "buffer_font_size": 14,
+  "theme": "One Dark"
+}
+```
+
+### Editor Behavior
+
+**VS Code:**
+```json
+{
+  "editor.tabSize": 2,
+  "editor.formatOnSave": true,
+  "files.autoSave": "onFocusChange"
+}
+```
+
+**Zed:**
+```json
+{
+  "tab_size": 2,
+  "format_on_save": "on",
+  "autosave": "on_focus_change"
+}
+```
+
+### Minimap
+
+**VS Code:**
+```json
+{
+  "editor.minimap.enabled": false
+}
+```
+
+**Zed:**
+```json
+{
+  "scrollbar": {
+    "show": "never"  // Zed doesn't have a traditional minimap
+  }
+}
+```
+
+## Feature Comparison
+
+| Feature | VS Code | JetBrains | Zed |
+|---------|---------|-----------|-----|
+| Language Servers | ✓ | ✓ | ✓ |
+| Debugger | ✓ | ✓ | ✓ |
+| Git Integration | ✓ | ✓ | ✓ |
+| Extensions | ✓ | ✓ | ✓ |
+| Remote Development | ✓ | ✓ | ✓ (SSH) |
+| AI Assistant | GitHub Copilot | AI Assistant | Built-in Agent |
+| Collaboration | Live Share | Code With Me | Built-in |
+| Performance | Good | Good | Excellent |
+| Native UI | Electron | Swing | Native |
+
+## Known Limitations
+
+When migrating to Zed, be aware of these current limitations:
+
+### Extension Ecosystem
+
+Zed's extension ecosystem is newer and smaller than VS Code or JetBrains. Many popular extensions are available, but some niche extensions may not exist yet.
+
+**Solution:** Check [zed.dev/extensions](https://zed.dev/extensions) or create your own extension.
+
+### Remote Development
+
+Zed supports SSH remoting but doesn't support:
+- Containers (Dev Containers)
+- WSL from Windows (use SSH to WSL instead)
+
+**Solution:** Use SSH for remote development. WSL integration is planned.
+
+### Language Support
+
+Most popular languages are well-supported, but some less common languages may have limited tooling.
+
+**Solution:** Check language support in [Languages](../languages) documentation.
+
+## Getting Help
+
+If you're stuck during migration:
+
+1. **Documentation:** Search this documentation site
+2. **Command Palette:** Press `Cmd+Shift+P` / `Ctrl+Shift+P` and search for features
+3. **Discord:** Join the [Zed Discord](https://discord.gg/zed-community)
+4. **GitHub:** Search [issues](https://github.com/zed-industries/zed/issues) or ask questions
+
+## Contributing to Guides
+
+Found something missing in the migration guides? Contributions are welcome:
+
+1. Visit [github.com/zed-industries/zed](https://github.com/zed-industries/zed)
+2. Open an issue or pull request with your suggestions
+3. Help other users migrating from your favorite editor

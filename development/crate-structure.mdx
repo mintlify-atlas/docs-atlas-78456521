@@ -1,0 +1,288 @@
+---
+title: Crate Structure
+description: Understanding Zed's crate organization and architecture
+---
+
+Zed is organized as a Cargo workspace with over 200 crates, each serving a
+specific purpose in the application architecture. This modular structure enables
+code reuse, clear dependency boundaries, and parallel compilation.
+
+## Workspace Organization
+
+The workspace is defined in the root `Cargo.toml` and includes three main
+categories:
+
+### Core Application Crates
+
+Crates in `crates/` that make up the main Zed application:
+
+- **zed**: The main application binary and entry point
+- **editor**: Text editing functionality and the `Editor` entity
+- **workspace**: Root UI container managing panes, panels, and docks
+- **project**: Project-level operations, LSP integration, and file management
+- **worktree**: File tree representation (local or remote)
+- **language**: Language definitions, syntax trees, and parsing
+- **lsp**: Language Server Protocol client implementation
+
+### Extensions
+
+Crates in `extensions/` that provide additional language support:
+
+- `extensions/glsl`: GLSL language support
+- `extensions/html`: HTML language support
+- `extensions/proto`: Protocol Buffer support
+- `extensions/slash-commands-example`: Example slash command extension
+- `extensions/test-extension`: Testing extension framework
+
+### Tooling
+
+Crates in `tooling/` for development and build processes:
+
+- `tooling/xtask`: Build automation and development tasks
+- `tooling/perf`: Performance benchmarking and profiling
+
+## Key Crate Categories
+
+### UI Framework
+
+<CardGroup cols={2}>
+  <Card title="gpui" icon="window">
+    GPU-accelerated UI framework with state management and rendering
+  </Card>
+  <Card title="ui" icon="palette">
+    High-level UI components and design system
+  </Card>
+  <Card title="theme" icon="brush">
+    Theme system and color management
+  </Card>
+  <Card title="assets" icon="image">
+    Static assets and resource management
+  </Card>
+</CardGroup>
+
+GPUI and related crates:
+
+- `gpui`: Core UI framework
+- `gpui_macros`: Procedural macros for GPUI
+- `gpui_platform`: Platform abstraction layer
+- `gpui_macos`, `gpui_linux`, `gpui_windows`, `gpui_web`: Platform-specific
+  implementations
+- `gpui_wgpu`: WebGPU rendering backend
+- `gpui_tokio`: Tokio integration for async runtime
+- `gpui_util`: Utility functions for GPUI
+
+### Editor and Text
+
+<CardGroup cols={2}>
+  <Card title="editor" icon="pen">
+    Core text editing functionality
+  </Card>
+  <Card title="text" icon="align-left">
+    Low-level text representation and manipulation
+  </Card>
+  <Card title="rope" icon="rope">
+    Rope data structure for efficient text storage
+  </Card>
+  <Card title="multi_buffer" icon="files">
+    Multi-buffer editing (e.g., search results)
+  </Card>
+</CardGroup>
+
+### Project Management
+
+<CardGroup cols={2}>
+  <Card title="project" icon="folder">
+    Project-level operations and coordination
+  </Card>
+  <Card title="worktree" icon="tree">
+    File tree representation and watching
+  </Card>
+  <Card title="fs" icon="hard-drive">
+    File system abstraction
+  </Card>
+  <Card title="git" icon="git-branch">
+    Git integration and operations
+  </Card>
+</CardGroup>
+
+### Language Support
+
+<CardGroup cols={2}>
+  <Card title="language" icon="code">
+    Language definitions and parsing
+  </Card>
+  <Card title="lsp" icon="server">
+    Language Server Protocol client
+  </Card>
+  <Card title="languages" icon="globe">
+    Built-in language definitions
+  </Card>
+  <Card title="diagnostics" icon="triangle-exclamation">
+    Diagnostic display and management
+  </Card>
+</CardGroup>
+
+### Collaboration
+
+<CardGroup cols={2}>
+  <Card title="collab" icon="users">
+    Collaboration server implementation
+  </Card>
+  <Card title="rpc" icon="network-wired">
+    RPC protocol and client/server communication
+  </Card>
+  <Card title="proto" icon="file-code">
+    Protocol buffer definitions
+  </Card>
+  <Card title="client" icon="laptop">
+    Client-side collaboration logic
+  </Card>
+</CardGroup>
+
+### AI and Agent Features
+
+<CardGroup cols={2}>
+  <Card title="agent" icon="robot">
+    AI agent core functionality
+  </Card>
+  <Card title="agent_ui" icon="window-restore">
+    Agent UI components
+  </Card>
+  <Card title="acp_thread" icon="messages">
+    Agent conversation thread management
+  </Card>
+  <Card title="language_model" icon="brain">
+    Language model abstraction
+  </Card>
+</CardGroup>
+
+Related crates:
+
+- `language_models`: Collection of LLM provider implementations
+- `anthropic`, `open_ai`, `google_ai`, `ollama`, `deepseek`, etc.: Individual
+  LLM providers
+- `assistant_slash_command`: Slash command framework
+- `assistant_slash_commands`: Built-in slash commands
+- `edit_prediction`: Code edit prediction
+
+### UI Components
+
+<CardGroup cols={3}>
+  <Card title="workspace" icon="layout">
+    Main window container
+  </Card>
+  <Card title="panel" icon="sidebar">
+    Panel abstraction
+  </Card>
+  <Card title="picker" icon="search">
+    Fuzzy picker component
+  </Card>
+  <Card title="menu" icon="bars">
+    Menu system
+  </Card>
+  <Card title="command_palette" icon="terminal">
+    Command palette UI
+  </Card>
+  <Card title="file_finder" icon="magnifying-glass">
+    File finder UI
+  </Card>
+</CardGroup>
+
+### Utilities and Infrastructure
+
+<CardGroup cols={2}>
+  <Card title="util" icon="wrench">
+    General utility functions
+  </Card>
+  <Card title="collections" icon="layer-group">
+    Custom collection types
+  </Card>
+  <Card title="settings" icon="gear">
+    Settings system
+  </Card>
+  <Card title="db" icon="database">
+    Local database (SQLite)
+  </Card>
+</CardGroup>
+
+## Dependency Patterns
+
+### Foundation Layer
+
+Low-level crates with minimal dependencies:
+
+- `collections`: Custom collection types (HashMap, Vec alternatives)
+- `rope`: Rope data structure for text
+- `sum_tree`: B-tree variant for ordered sequences
+- `util`: General utilities
+- `clock`: Lamport clock for distributed systems
+
+### Core Layer
+
+Crates that build on foundation:
+
+- `text`: Text representation using `rope`
+- `gpui`: UI framework using foundation crates
+- `rpc`: Communication protocol
+- `proto`: Protocol definitions
+
+### Feature Layer
+
+Crates implementing specific features:
+
+- `editor`: Depends on `text`, `language`, `project`, `gpui`
+- `project`: Depends on `worktree`, `language`, `lsp`, `fs`
+- `workspace`: Depends on `editor`, `project`, `gpui`
+
+### Application Layer
+
+Top-level crates:
+
+- `zed`: Main application, depends on most feature crates
+- `collab`: Server application, shares protocol crates with client
+
+## Naming Conventions
+
+Zed follows specific naming patterns:
+
+- **Library path**: Most crates use `src/<crate_name>.rs` instead of `src/lib.rs`
+  - Example: `editor` crate uses `src/editor.rs`
+  - Specified in `Cargo.toml` as `[lib] path = "src/editor.rs"`
+- **Store suffix**: Crates with `Store` suffix abstract over local/remote
+  operations
+  - Example: `NameStore` in the glossary convention
+- **UI suffix**: Crates ending in `_ui` provide UI components
+  - Examples: `agent_ui`, `collab_ui`, `debugger_ui`, `settings_ui`
+- **Test support**: Feature flag pattern `test-support` for testing utilities
+
+## Build Configuration
+
+The workspace `Cargo.toml` defines:
+
+### Workspace Metadata
+
+```toml
+[workspace.package]
+publish = false
+edition = "2024"
+```
+
+### Optimization Profiles
+
+- **Dev profile**: Split debuginfo, incremental compilation, 16 codegen units
+- **Release profile**: Thin LTO, 1 codegen unit (except zed binary: 16)
+- **Release-fast profile**: Full debug info, no LTO, 16 codegen units
+
+### Proc-macro Optimization
+
+Proc-macro crates are optimized even in debug builds:
+
+- `gpui_macros`, `derive_refineable`, `settings_macros`, `sqlez_macros`,
+  `ui_macros`, `util_macros`
+- Built with `opt-level = 3` and `codegen-units = 1`
+
+## See Also
+
+- [Key Subsystems](./key-subsystems.mdx): Detailed subsystem architecture
+- [GPUI Integration](./gpui-integration.mdx): How Zed uses GPUI
+- [Development Glossary](./glossary.mdx): Term definitions

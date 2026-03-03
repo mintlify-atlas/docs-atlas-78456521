@@ -1,0 +1,402 @@
+---
+title: Go Development
+description: Configure Go language support in Zed with gopls language server, including inlay hints, debugging with Delve, and LSP configuration
+---
+
+# Go Development
+
+Go support is available natively in Zed with comprehensive integration for gopls and Delve debugging.
+
+<Info>
+**Key Technologies:**
+- **Tree-sitter**: [tree-sitter/tree-sitter-go](https://github.com/tree-sitter/tree-sitter-go)
+- **Language Server**: [gopls](https://github.com/golang/tools/tree/master/gopls)
+- **Debug Adapter**: [Delve](https://github.com/go-delve/delve)
+</Info>
+
+## Setup
+
+<Warning>
+Install gopls via Go's package manager, not via Homebrew or your Linux distribution's package manager.
+</Warning>
+
+<Steps>
+  <Step title="Uninstall Package Manager Versions">
+    Remove any existing gopls installations:
+    
+    ```bash
+    # macOS Homebrew
+    brew remove gopls
+    
+    # Ubuntu
+    sudo apt-get remove gopls
+    sudo snap remove gopls
+    
+    # Arch
+    sudo pacman -R gopls
+    ```
+  </Step>
+  
+  <Step title="Install gopls via Go">
+    Install or update to the latest gopls version:
+    
+    ```bash
+    go install golang.org/x/tools/gopls@latest
+    ```
+  </Step>
+  
+  <Step title="Verify Installation">
+    Ensure gopls is in your PATH:
+    
+    ```bash
+    which gopls
+    gopls version
+    ```
+    
+    If `gopls` is not found, add to your shell profile:
+    
+    ```bash
+    export PATH="$PATH:$HOME/go/bin"
+    ```
+  </Step>
+</Steps>
+
+## Getting Started
+
+Zed automatically detects Go files and starts gopls when you open `.go` files.
+
+<Steps>
+  <Step title="Open a Go Project">
+    Open any folder containing Go code with `go.mod`.
+  </Step>
+  
+  <Step title="Automatic Configuration">
+    Zed automatically:
+    - Detects `.go` files using tree-sitter
+    - Starts gopls language server
+    - Enables code completion, diagnostics, and navigation
+  </Step>
+  
+  <Step title="Verify Functionality">
+    Test features like:
+    - Code completion (start typing)
+    - Go to definition (`F12`)
+    - Find references (`Shift+F12`)
+  </Step>
+</Steps>
+
+## gopls Configuration
+
+### Inlay Hints
+
+Zed sets the following default inlay hints for gopls:
+
+<CodeGroup>
+```json Default Hints
+{
+  "hints": {
+    "assignVariableTypes": true,
+    "compositeLiteralFields": true,
+    "compositeLiteralTypes": true,
+    "constantValues": true,
+    "functionTypeParameters": true,
+    "parameterNames": true,
+    "rangeVariableTypes": true
+  }
+}
+```
+</CodeGroup>
+
+To override these settings:
+
+<CodeGroup>
+```json settings.json
+{
+  "lsp": {
+    "gopls": {
+      "initialization_options": {
+        "hints": {
+          "assignVariableTypes": false,
+          "parameterNames": false
+        }
+      }
+    }
+  }
+}
+```
+</CodeGroup>
+
+See [gopls inlay hints documentation](https://github.com/golang/tools/blob/master/gopls/doc/inlayHints.md) for complete options.
+
+### Advanced gopls Settings
+
+Configure gopls behavior through `initialization_options`:
+
+<CodeGroup>
+```json settings.json
+{
+  "lsp": {
+    "gopls": {
+      "initialization_options": {
+        "analyses": {
+          "unusedparams": true,
+          "shadow": true
+        },
+        "staticcheck": true,
+        "gofumpt": true
+      }
+    }
+  }
+}
+```
+</CodeGroup>
+
+This configuration:
+- Enables unused parameter analysis
+- Detects shadowed variables
+- Integrates staticcheck for additional lints
+- Uses gofumpt for stricter formatting
+
+See [gopls settings documentation](https://github.com/golang/tools/blob/master/gopls/doc/settings.md) for all available options.
+
+## Debugging with Delve
+
+Zed supports zero-configuration debugging of Go tests and entry points using Delve.
+
+### Zero-Configuration Debugging
+
+Run `debugger: start` (default: `F4`) to see automatically detected debug targets:
+
+- Go packages with `func main`
+- Go test functions
+
+### Custom Debug Configurations
+
+Create `.zed/debug.json` for advanced debugging setups:
+
+<Tabs>
+  <Tab title="Debug Current File">
+    ```json .zed/debug.json
+    [
+      {
+        "label": "Go (Delve)",
+        "adapter": "Delve",
+        "program": "$ZED_FILE",
+        "request": "launch",
+        "mode": "debug"
+      }
+    ]
+    ```
+  </Tab>
+  
+  <Tab title="Debug Specific Package">
+    ```json .zed/debug.json
+    [
+      {
+        "label": "Run server",
+        "adapter": "Delve",
+        "request": "launch",
+        "mode": "debug",
+        "program": "./cmd/server"
+      }
+    ]
+    ```
+    
+    For Delve, `program` can be a package name.
+  </Tab>
+  
+  <Tab title="Debug Tests">
+    ```json .zed/debug.json
+    [
+      {
+        "label": "Run integration tests",
+        "adapter": "Delve",
+        "request": "launch",
+        "mode": "test",
+        "program": ".",
+        "buildFlags": ["-tags", "integration"]
+      }
+    ]
+    ```
+    
+    Use `mode: "test"` to debug tests. The `program` is still the package name.
+  </Tab>
+  
+  <Tab title="Debug Specific Test">
+    ```json .zed/debug.json
+    [
+      {
+        "label": "Debug current test",
+        "adapter": "Delve",
+        "request": "launch",
+        "mode": "test",
+        "program": ".",
+        "args": ["-test.run", "$ZED_SYMBOL"]
+      }
+    ]
+    ```
+    
+    `$ZED_SYMBOL` expands to the test function name under your cursor.
+  </Tab>
+</Tabs>
+
+### Build and Debug Separately
+
+If you need a custom build command, use Delve's `exec` mode:
+
+<CodeGroup>
+```json .zed/debug.json
+[
+  {
+    "label": "Debug Prebuilt Unit Tests",
+    "adapter": "Delve",
+    "request": "launch",
+    "mode": "exec",
+    "program": "${ZED_WORKTREE_ROOT}/__debug_unit",
+    "args": ["-test.v", "-test.run=${ZED_SYMBOL}"],
+    "build": {
+      "command": "go",
+      "args": [
+        "test",
+        "-c",
+        "-tags",
+        "unit",
+        "-gcflags=all=-N -l",
+        "-o",
+        "__debug_unit",
+        "./pkg/..."
+      ]
+    }
+  }
+]
+```
+</CodeGroup>
+
+In `exec` mode, `program` points to a pre-built executable.
+
+### Attach to Running Delve Instance
+
+Connect to an existing Delve instance running elsewhere:
+
+<CodeGroup>
+```json .zed/debug.json
+[
+  {
+    "adapter": "Delve",
+    "label": "Connect to running Delve",
+    "program": "/Users/zed/Projects/hello/hello",
+    "cwd": "/Users/zed/Projects/hello",
+    "request": "launch",
+    "mode": "exec",
+    "stopOnEntry": false,
+    "tcp_connection": {
+      "host": "127.0.0.1",
+      "port": 53412
+    }
+  }
+]
+```
+</CodeGroup>
+
+<Warning>
+When connecting to an existing Delve instance, Zed won't spawn a new one, so there will be no terminal in Zed. You must interact with the Delve instance directly.
+</Warning>
+
+See [Delve configuration documentation](https://github.com/go-delve/delve/blob/master/Documentation/api/dap/README.md#launch-and-attach-configurations) for all options.
+
+## Related File Types
+
+### Go Modules (go.mod)
+
+- **Tree-sitter**: [camdencheek/tree-sitter-go-mod](https://github.com/camdencheek/tree-sitter-go-mod)
+- **Language Server**: N/A
+
+Zed provides syntax highlighting for `go.mod` files.
+
+### Go Sum (go.sum)
+
+- **Tree-sitter**: [amaanq/tree-sitter-go-sum](https://github.com/amaanq/tree-sitter-go-sum)
+- **Language Server**: N/A
+
+Zed provides syntax highlighting for `go.sum` files.
+
+### Go Workspaces (go.work)
+
+- **Tree-sitter**: [d1y/tree-sitter-go-work](https://github.com/d1y/tree-sitter-go-work)
+- **Language Server**: N/A
+
+Zed provides syntax highlighting for `go.work` files.
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="gopls fails to start">
+    **Solution**:
+    1. Verify gopls installation: `which gopls && gopls version`
+    2. Ensure `$HOME/go/bin` is in your PATH
+    3. Check Zed logs: Command Palette → `zed: open log`
+    4. Reinstall gopls: `go install golang.org/x/tools/gopls@latest`
+    5. Restart language server: Command Palette → `editor: restart language server`
+  </Accordion>
+  
+  <Accordion title="Import errors or module not found">
+    **Solution**:
+    1. Verify `go.mod` exists in project root
+    2. Run `go mod tidy` to ensure dependencies are correct
+    3. Check `GOPATH` and `GOROOT` environment variables
+    4. Restart gopls after modifying `go.mod`
+  </Accordion>
+  
+  <Accordion title="Debugging not working">
+    **Solution**:
+    1. Verify Delve installation: `which dlv && dlv version`
+    2. Install Delve if missing: `go install github.com/go-delve/delve/cmd/dlv@latest`
+    3. Ensure debug build is not optimized (use `-gcflags="all=-N -l"`)
+    4. Check debug configuration `program` path is correct
+  </Accordion>
+  
+  <Accordion title="Slow performance or high CPU">
+    **Solution**:
+    1. Update gopls to latest version
+    2. Reduce analysis scope in gopls settings
+    3. Disable unused analyses
+    4. Consider excluding large directories from workspace
+  </Accordion>
+</AccordionGroup>
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Use Go Modules" icon="box">
+    Always use Go modules (`go.mod`) for dependency management. gopls works best with modules.
+  </Card>
+  
+  <Card title="Keep gopls Updated" icon="arrow-up">
+    Run `go install golang.org/x/tools/gopls@latest` regularly to get the latest features and bug fixes.
+  </Card>
+  
+  <Card title="Configure Inlay Hints" icon="eye">
+    Adjust inlay hints to your preference. Too many hints can be distracting.
+  </Card>
+  
+  <Card title="Use Build Tags" icon="tag">
+    Leverage build tags in debug configurations to test different code paths.
+  </Card>
+</CardGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="gopls Documentation" icon="book" href="https://github.com/golang/tools/blob/master/gopls/README.md">
+    Comprehensive gopls feature guide
+  </Card>
+  <Card title="Delve Documentation" icon="bug" href="https://github.com/go-delve/delve/tree/master/Documentation">
+    Complete Delve debugging documentation
+  </Card>
+  <Card title="Language Configuration" icon="gear" href="/languages/configuring">
+    General language configuration options
+  </Card>
+  <Card title="Tasks" icon="play" href="https://docs.zed.dev/tasks">
+    Configure tasks for Go projects
+  </Card>
+</CardGroup>

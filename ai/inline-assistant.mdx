@@ -1,0 +1,413 @@
+---
+title: Inline Assistant
+description: AI-powered code assistance directly in your editor
+---
+
+The Inline Assistant brings AI capabilities directly into your code editor, allowing you to generate, modify, and refactor code without leaving your current context.
+
+## Activating the Inline Assistant
+
+There are several ways to invoke the inline assistant:
+
+### Keyboard Shortcuts
+
+- **Generate/Transform**: `cmd-shift-enter` (macOS) or `ctrl-shift-enter` (Linux/Windows)
+- With selected text, this opens a prompt to transform the selection
+- Without selection, this generates new code at the cursor
+
+### Context Menu
+
+Right-click in the editor and select:
+- "Generate Code"
+- "Transform Selection"
+- "Explain Selection"
+
+### Code Actions
+
+The inline assistant appears in the code actions menu (💡):
+
+```rust
+pub fn process_data(data: Vec<i32>) -> i32 {
+    // Click the lightbulb and select "Generate implementation"
+}
+```
+
+## Usage Modes
+
+### Generate Mode
+
+Generate new code at your cursor position:
+
+1. Place cursor where you want code generated
+2. Press `cmd-shift-enter`
+3. Describe what you want
+4. Review and accept the generated code
+
+**Example**:
+
+```rust
+// Cursor here
+| 
+// Type: "function to calculate fibonacci numbers"
+```
+
+Generates:
+
+```rust
+fn fibonacci(n: u32) -> u32 {
+    match n {
+        0 => 0,
+        1 => 1,
+        _ => fibonacci(n - 1) + fibonacci(n - 2),
+    }
+}
+```
+
+### Transform Mode
+
+Modify existing code:
+
+1. Select the code you want to transform
+2. Press `cmd-shift-enter`
+3. Describe the transformation
+4. Review the changes
+
+**Example**:
+
+```rust
+// Select this code
+fn add(a: i32, b: i32) -> i32 {
+    a + b
+}
+
+// Prompt: "add error handling for overflow"
+```
+
+Transforms to:
+
+```rust
+fn add(a: i32, b: i32) -> Result<i32, String> {
+    a.checked_add(b)
+        .ok_or_else(|| "Integer overflow".to_string())
+}
+```
+
+### Explain Mode
+
+Get explanations for complex code:
+
+1. Select code you want explained
+2. Use the code action menu
+3. Select "Explain Selection"
+4. Read the explanation in a tooltip
+
+## Inline Prompt Editor
+
+When you activate the inline assistant, a prompt editor appears:
+
+<Frame>
+  <img src="/images/inline-prompt.png" alt="Inline prompt editor" />
+</Frame>
+
+### Prompt Editor Features
+
+- **Multi-line input**: Shift+Enter for new lines
+- **Submit**: Cmd+Enter (or click the send button)
+- **Cancel**: Escape key
+- **History**: Up/down arrows to navigate previous prompts
+
+### Context Mentions
+
+Include additional context in your prompt:
+
+```
+@utils.rs Refactor this to use the helper functions
+```
+
+```
+@DatabaseConnection Make this compatible with the connection trait
+```
+
+## Code Generation
+
+The inline assistant generates code based on:
+
+- **Surrounding context**: Nearby code, imports, types
+- **Project structure**: Related files and modules
+- **Language conventions**: Idiomatic patterns for the language
+- **Your prompt**: Specific instructions and requirements
+
+### Streaming Generation
+
+Code appears incrementally as it's generated:
+
+```rust
+fn process_
+// Still generating...
+
+fn process_users(users: Vec<User>) -> 
+// Still generating...
+
+fn process_users(users: Vec<User>) -> Result<Vec<ProcessedUser>, Error> {
+    users
+        .into_iter()
+        .map(|user| {
+            // Generation continues...
+```
+
+You can:
+- **Accept**: Click checkmark or press Tab
+- **Reject**: Click X or press Escape
+- **Stop**: Press Escape while generating
+
+## Code Transformations
+
+Common transformation patterns:
+
+### Refactoring
+
+```
+Prompt: "Extract this logic into a separate function"
+Prompt: "Convert to async/await"
+Prompt: "Add logging"
+```
+
+### Error Handling
+
+```
+Prompt: "Add proper error handling"
+Prompt: "Convert to Result type"
+Prompt: "Add validation"
+```
+
+### Testing
+
+```
+Prompt: "Generate unit tests for this function"
+Prompt: "Add test cases for edge cases"
+```
+
+### Documentation
+
+```
+Prompt: "Add doc comments"
+Prompt: "Add examples to the documentation"
+```
+
+## Terminal Inline Assistant
+
+The inline assistant also works in the terminal:
+
+1. In a terminal panel, select output or an error message
+2. Press `cmd-shift-enter`
+3. Ask for help understanding or fixing the error
+
+**Example**:
+
+```bash
+error: expected `;`, found `}`
+  --> src/main.rs:10:5
+   |
+10 |     }
+   |     ^
+
+# Select this error and prompt:
+# "What does this error mean and how do I fix it?"
+```
+
+## Buffer Codegen
+
+For larger code generation tasks, the inline assistant uses "buffer codegen":
+
+- Generates code in a side-by-side view
+- Shows diff between original and generated code
+- Allows editing before accepting
+- Supports multiple alternatives
+
+### Viewing Alternatives
+
+When multiple solutions are possible:
+
+1. Generate initial code
+2. Click "Show Alternatives"
+3. Browse different approaches
+4. Select the best one
+
+## Configuration
+
+### Inline Assistant Model
+
+Configure which model powers inline assistance:
+
+```json
+{
+  "agent": {
+    "inline_assistant_model": {
+      "provider": "anthropic",
+      "model": "claude-3-5-sonnet-20241022"
+    },
+    "inline_assistant_use_streaming_tools": true
+  }
+}
+```
+
+### Alternative Models
+
+Define alternative models for variety:
+
+```json
+{
+  "agent": {
+    "inline_alternatives": [
+      {
+        "provider": "openai",
+        "model": "gpt-4-turbo-preview"
+      },
+      {
+        "provider": "anthropic",
+        "model": "claude-3-opus-20240229"
+      }
+    ]
+  }
+}
+```
+
+Cycle through alternatives with `cmd-shift-alt-enter`.
+
+### Streaming Tools
+
+Enable streaming for tool-based generation:
+
+```json
+{
+  "agent": {
+    "inline_assistant_use_streaming_tools": true
+  }
+}
+```
+
+This allows the model to use tools like file reading while generating code inline.
+
+## Best Practices
+
+### Be Specific
+
+Clear prompts yield better results:
+
+❌ **Vague**: "make this better"
+
+✅ **Specific**: "add input validation for email format and handle empty strings"
+
+### Provide Context
+
+Mention related code or requirements:
+
+```
+@types.ts Make sure this matches the TypeScript interfaces
+```
+
+### Iterate
+
+Start simple, then refine:
+
+1. Generate basic implementation
+2. Accept or modify
+3. Transform to add error handling
+4. Transform again to add documentation
+
+### Review Carefully
+
+Always review generated code:
+
+- Check for correctness
+- Verify type safety
+- Ensure it follows project conventions
+- Test edge cases
+
+## Advanced Features
+
+### Edit Predictions
+
+Zed can show predictive edits as you type:
+
+- Based on surrounding code
+- Shown as ghost text
+- Press Tab to accept
+
+[Learn more about Edit Prediction →](/ai/edit-prediction)
+
+### Code Action Provider
+
+The inline assistant integrates with LSP code actions:
+
+```rust
+// Unimplemented trait method - click lightbulb
+trait MyTrait {
+    fn my_method(&self) -> String;
+}
+
+struct MyStruct;
+
+impl MyTrait for MyStruct {
+    // AI can implement this
+}
+```
+
+### Selection Context
+
+The assistant understands your selection:
+
+- Full function? Generate tests or docs
+- Single line? Explain or refactor
+- Error message? Suggest fix
+
+## Keyboard Shortcuts
+
+| Action | Shortcut (macOS) | Shortcut (Linux/Windows) |
+|--------|------------------|-------------------------|
+| Inline assist | `cmd-shift-enter` | `ctrl-shift-enter` |
+| Accept | `tab` | `tab` |
+| Reject | `escape` | `escape` |
+| Next alternative | `cmd-shift-alt-enter` | `ctrl-shift-alt-enter` |
+| Stop generation | `escape` | `escape` |
+
+## Troubleshooting
+
+### No Suggestions Appearing
+
+- Check that AI features are enabled in settings
+- Verify your API key is valid
+- Ensure the model supports the task
+
+### Poor Quality Suggestions
+
+- Be more specific in your prompt
+- Add context mentions
+- Try a different model
+- Ensure surrounding code is complete
+
+### Inline Assistant Not Working in Terminal
+
+- Ensure agent settings are enabled
+- Check terminal panel permissions
+- Verify model supports text generation
+
+<Note>
+The Inline Assistant requires an active AI provider configuration. See [Configuration](/ai/configuration) for setup details.
+</Note>
+
+## Implementation Details
+
+The Inline Assistant is implemented in:
+
+- **Core**: `agent_ui/src/inline_assistant.rs`
+- **Prompt Editor**: `agent_ui/src/inline_prompt_editor.rs`
+- **Buffer Codegen**: `agent_ui/src/buffer_codegen.rs`
+- **Terminal Integration**: `agent_ui/src/terminal_inline_assistant.rs`
+
+Key concepts:
+
+- `InlineAssist`: Represents a single inline assistance session
+- `InlineAssistGroup`: Groups related assists together
+- `CodegenAlternative`: Different solutions for the same problem
+- `PromptEditor`: The inline prompt input interface

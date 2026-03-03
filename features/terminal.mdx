@@ -1,0 +1,567 @@
+---
+title: Integrated Terminal - Zed
+description: Zed's built-in terminal with multiple instances, custom shells, vi mode, and deep editor integration for seamless development workflows.
+---
+
+# Integrated Terminal
+
+Zed includes a full-featured terminal emulator with multiple terminal instances, custom shell support, and tight integration with the editor and task system.
+
+## Opening Terminals
+
+### Terminal Panel
+
+The Terminal Panel is docked at the bottom of Zed by default.
+
+**Toggle terminal panel:** `` Ctrl+` `` (macOS and Linux/Windows)
+
+### New Terminal Instances
+
+Create additional terminals while the panel is focused:
+
+- **macOS:** `Cmd+N`
+- **Linux/Windows:** `Ctrl+N`
+
+Each terminal appears as a tab in the panel.
+
+### Center Pane Terminal
+
+Open a terminal in the center pane alongside your editor tabs:
+
+**Command Palette:** `workspace: new center terminal`
+
+Center terminals work like any other tab and can be split, moved, and arranged.
+
+## Terminal Layouts
+
+### Panel Position
+
+Change where the terminal panel docks:
+
+```json
+{
+  "terminal": {
+    "dock": "bottom"
+  }
+}
+```
+
+Options: `"bottom"` (default), `"left"`, `"right"`
+
+### Splitting Terminals
+
+Split terminals horizontally to view multiple shells side-by-side:
+
+- **macOS:** `Cmd+D`
+- **Linux/Windows:** `Ctrl+Shift+5`
+
+### Panel Size
+
+Set default dimensions for the terminal panel:
+
+```json
+{
+  "terminal": {
+    "default_width": 640,
+    "default_height": 320
+  }
+}
+```
+
+Drag the panel border to resize interactively.
+
+## Shell Configuration
+
+### Default Shell
+
+Zed uses your system's default shell (from `/etc/passwd` on Unix). Override it:
+
+```json
+{
+  "terminal": {
+    "shell": {
+      "program": "/bin/zsh"
+    }
+  }
+}
+```
+
+### Shell Arguments
+
+Pass arguments to your shell:
+
+```json
+{
+  "terminal": {
+    "shell": {
+      "with_arguments": {
+        "program": "/bin/bash",
+        "args": ["--login"]
+      }
+    }
+  }
+}
+```
+
+Common use cases:
+- `--login` - Load login shell configuration
+- `--norc` - Skip reading `.bashrc`
+- `-l` - Login shell (zsh)
+
+## Working Directory
+
+Control where new terminals start:
+
+```json
+{
+  "terminal": {
+    "working_directory": "current_project_directory"
+  }
+}
+```
+
+<ParamField path="working_directory" type="string" default="current_project_directory">
+  <Expandable title="Options">
+    <ResponseField name="current_file_directory">
+      Use the directory of the currently active file. Falls back to the project directory, then the first project.
+    </ResponseField>
+    <ResponseField name="current_project_directory">
+      Use the project directory containing the current file (default).
+    </ResponseField>
+    <ResponseField name="first_project_directory">
+      Always use the first project in your workspace.
+    </ResponseField>
+    <ResponseField name="always_home">
+      Always start in your home directory.
+    </ResponseField>
+    <ResponseField name="always">
+      Always start in a specific directory:
+      ```json
+      "working_directory": { "always": { "directory": "~/projects" } }
+      ```
+    </ResponseField>
+  </Expandable>
+</ParamField>
+
+## Environment Variables
+
+Add environment variables to all terminal sessions:
+
+```json
+{
+  "terminal": {
+    "env": {
+      "EDITOR": "zed --wait",
+      "MY_VAR": "value",
+      "PATH": "/custom/path:$PATH"
+    }
+  }
+}
+```
+
+<Tip>
+Use `:` to prepend paths: `"PATH": "/new/path:$PATH"`
+</Tip>
+
+### Zed-Specific Variables
+
+Zed automatically sets these environment variables in terminal sessions:
+
+- `ZED_TERM=true` - Indicates terminal is running in Zed
+- `TERM_PROGRAM=zed` - Program name
+- `TERM_PROGRAM_VERSION` - Zed version number
+- `TERM=xterm-256color` - Terminal type
+- `COLORTERM=truecolor` - Color support
+
+### Python Virtual Environment
+
+Automatically activate Python virtual environments:
+
+```json
+{
+  "terminal": {
+    "detect_venv": {
+      "on": {
+        "directories": [".venv", "venv", "env"],
+        "activate_script": "default"
+      }
+    }
+  }
+}
+```
+
+**Activate script options:**
+- `"default"` - `activate` (bash/zsh)
+- `"csh"` - `activate.csh`
+- `"fish"` - `activate.fish`
+- `"nushell"` - `activate.nu`
+
+**Disable detection:**
+```json
+{
+  "terminal": {
+    "detect_venv": "off"
+  }
+}
+```
+
+## Appearance
+
+### Font Configuration
+
+Terminals can use different fonts from the editor:
+
+```json
+{
+  "terminal": {
+    "font_family": "JetBrains Mono",
+    "font_size": 14,
+    "font_features": {
+      "calt": false
+    }
+  }
+}
+```
+
+### Line Height
+
+```json
+{
+  "terminal": {
+    "line_height": "comfortable"
+  }
+}
+```
+
+Options:
+- `"comfortable"` - 1.618 ratio, good for reading (default)
+- `"standard"` - 1.3 ratio, better for TUIs with box-drawing
+- `{"custom": 1.5}` - Custom ratio
+
+### Cursor Style
+
+```json
+{
+  "terminal": {
+    "cursor_shape": "bar",
+    "blinking": "terminal_controlled"
+  }
+}
+```
+
+**Cursor shapes:** `"block"`, `"bar"`, `"underline"`, `"hollow"`
+
+**Blinking modes:**
+- `"off"` - Never blink
+- `"terminal_controlled"` - Respect terminal escape sequences (default)
+- `"on"` - Always blink
+
+### Color Contrast
+
+Zed adjusts terminal colors for readability. Control the minimum contrast:
+
+```json
+{
+  "terminal": {
+    "minimum_contrast": 45
+  }
+}
+```
+
+Set to `0` to use exact theme colors without adjustment.
+
+## Scrolling
+
+### Keyboard Navigation
+
+| Action | macOS | Linux/Windows |
+| --- | --- | --- |
+| Scroll page up | `Shift+PageUp` or `Cmd+Up` | `Shift+PageUp` |
+| Scroll page down | `Shift+PageDown` or `Cmd+Down` | `Shift+PageDown` |
+| Scroll line up | `Shift+Up` | `Shift+Up` |
+| Scroll line down | `Shift+Down` | `Shift+Down` |
+| Scroll to top | `Shift+Home` or `Cmd+Home` | `Shift+Home` |
+| Scroll to bottom | `Shift+End` or `Cmd+End` | `Shift+End` |
+
+### Scroll Speed
+
+```json
+{
+  "terminal": {
+    "scroll_multiplier": 3.0
+  }
+}
+```
+
+Higher values scroll faster.
+
+### Alternate Scroll Mode
+
+Send scroll events as arrow keys for apps like `vim` or `less`:
+
+```json
+{
+  "terminal": {
+    "alternate_scroll": "on"
+  }
+}
+```
+
+Options: `"on"`, `"off"`, `"always"`
+
+## Copy and Paste
+
+| Action | macOS | Linux/Windows |
+| --- | --- | --- |
+| Copy | `Cmd+C` | `Ctrl+Shift+C` |
+| Paste | `Cmd+V` | `Ctrl+Shift+V` |
+
+### Copy on Select
+
+Automatically copy selected text:
+
+```json
+{
+  "terminal": {
+    "copy_on_select": true
+  }
+}
+```
+
+### Clear Selection After Copy
+
+```json
+{
+  "terminal": {
+    "keep_selection_on_copy": false
+  }
+}
+```
+
+When `true` (default), selection remains after copying.
+
+## Search in Terminal
+
+Search terminal content using the same search interface as the editor.
+
+**Open search:** `Cmd+F` (macOS) or `Ctrl+Shift+F` (Linux/Windows)
+
+Supports:
+- Text search
+- Regular expressions
+- Case sensitivity
+- Whole word matching
+
+Navigate results with `Enter` (next) and `Shift+Enter` (previous).
+
+## Vi Mode
+
+Enable vi-style navigation in the terminal:
+
+**Toggle vi mode:** `Ctrl+Shift+Space`
+
+In vi mode:
+- Use `h`, `j`, `k`, `l` to navigate
+- `v` for visual selection
+- `y` to yank (copy)
+- Standard vi motion commands
+
+Press `Escape` or `i` to return to normal terminal mode.
+
+## Clear Terminal
+
+Clear the terminal screen and scrollback buffer:
+
+- **macOS:** `Cmd+K`
+- **Linux/Windows:** `Ctrl+Shift+L`
+
+## Path Detection and Hyperlinks
+
+Zed automatically detects file paths and URLs in terminal output, making them clickable.
+
+### Click to Open
+
+**Open paths:** `Cmd+Click` (macOS) or `Ctrl+Click` (Linux/Windows)
+
+### Recognized Formats
+
+<AccordionGroup>
+  <Accordion title="File paths with line numbers">
+    - `src/main.rs:42` - Opens at line 42
+    - `src/main.rs:42:10` - Opens at line 42, column 10
+    - `./script.py:15` - Relative paths
+  </Accordion>
+  
+  <Accordion title="Language-specific formats">
+    - Python: `File "script.py", line 10`
+    - Rust: `error: src/lib.rs:24:5`
+    - JavaScript: `at Object.<anonymous> (index.js:15:3)`
+  </Accordion>
+  
+  <Accordion title="URLs">
+    - `http://example.com`
+    - `https://github.com/user/repo`
+    - `git@github.com:user/repo.git`
+  </Accordion>
+</AccordionGroup>
+
+## Terminal Title
+
+Terminals display titles in the breadcrumb toolbar.
+
+### Enable Breadcrumbs
+
+```json
+{
+  "terminal": {
+    "toolbar": {
+      "breadcrumbs": true
+    }
+  }
+}
+```
+
+### Set Title from Shell
+
+Use escape sequences to set custom titles:
+
+```bash
+# Bash/Zsh
+echo -ne "\e]2;My Terminal Title\007"
+```
+
+Add to your shell's `precmd` or `PROMPT_COMMAND` to update dynamically.
+
+## macOS-Specific Features
+
+### Option as Meta
+
+For Emacs users or apps that use Meta key combinations:
+
+```json
+{
+  "terminal": {
+    "option_as_meta": true
+  }
+}
+```
+
+Reinterprets the Option key as Meta, enabling sequences like `Alt+X`.
+
+### Character Palette
+
+Open the macOS special character picker:
+
+**Keybinding:** `Cmd+Ctrl+Space`
+
+## Integration with Zed Features
+
+### Tasks
+
+The terminal integrates with [Zed's task system](https://zed.dev/docs/tasks). When you run a task, it executes in the terminal.
+
+**Rerun last task:**
+- **macOS:** `Cmd+Alt+R`
+- **Linux/Windows:** `Ctrl+Shift+R` or `Alt+T`
+
+### AI Assistance
+
+Use the [Inline Assistant](https://zed.dev/docs/ai/inline-assistant) in the terminal:
+
+**Open assistant:** `Ctrl+Enter` (macOS and Linux/Windows)
+
+Ask for help with:
+- Explaining error messages
+- Suggesting commands
+- Troubleshooting issues
+
+AI agents in the [Agent Panel](https://zed.dev/docs/ai/agent-panel) can also run terminal commands as part of their workflow.
+
+### Remote Development
+
+Terminals in [remote projects](https://zed.dev/docs/remote-development) run on the remote server with full access to the remote environment.
+
+## Advanced Keybindings
+
+### Send Raw Text
+
+Send specific text strings to the terminal:
+
+```json
+[
+  {
+    "context": "Terminal",
+    "bindings": {
+      "alt-left": ["terminal::SendText", "\u001bb"]
+    }
+  }
+]
+```
+
+### Send Keystrokes
+
+Send key combinations to the terminal:
+
+```json
+[
+  {
+    "context": "Terminal",
+    "bindings": {
+      "ctrl-c": ["terminal::SendKeystroke", "ctrl-c"]
+    }
+  }
+]
+```
+
+## Panel Configuration
+
+### Hide Terminal Button
+
+Remove the terminal button from the status bar:
+
+```json
+{
+  "terminal": {
+    "button": false
+  }
+}
+```
+
+### Default Panel State
+
+Control whether the terminal panel is open by default:
+
+```json
+{
+  "terminal": {
+    "default_open": false
+  }
+}
+```
+
+## All Terminal Actions
+
+| Action | Description |
+| --- | --- |
+| `terminal::Clear` | Clear screen and scrollback |
+| `terminal::Copy` | Copy selected text |
+| `terminal::Paste` | Paste from clipboard |
+| `terminal::ScrollLineUp` | Scroll up one line |
+| `terminal::ScrollLineDown` | Scroll down one line |
+| `terminal::ScrollPageUp` | Scroll up one page |
+| `terminal::ScrollPageDown` | Scroll down one page |
+| `terminal::ScrollHalfPageUp` | Scroll up half page |
+| `terminal::ScrollHalfPageDown` | Scroll down half page |
+| `terminal::ScrollToTop` | Scroll to top of buffer |
+| `terminal::ScrollToBottom` | Scroll to bottom of buffer |
+| `terminal::ToggleViMode` | Enable/disable vi mode |
+| `terminal::SelectAll` | Select all terminal content |
+| `terminal::ShowCharacterPalette` | Open special character picker (macOS) |
+
+## See Also
+
+- [Tasks](https://zed.dev/docs/tasks) - Run commands and scripts
+- [Remote Development](https://zed.dev/docs/remote-development) - Remote terminals
+- [REPL](https://zed.dev/docs/repl) - Interactive code execution
+- [CLI Reference](https://zed.dev/docs/reference/cli) - Command-line interface
+- [All Settings](https://zed.dev/docs/reference/all-settings#terminal) - Complete terminal settings

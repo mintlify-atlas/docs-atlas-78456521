@@ -1,0 +1,551 @@
+---
+title: Python Development
+description: Complete guide to Python development in Zed with basedpyright, Ruff, virtual environments, debugging, and toolchain management
+---
+
+# Python Development
+
+Python support is available natively in Zed with comprehensive language server options, virtual environment management, and debugging capabilities.
+
+<Info>
+**Key Technologies:**
+- **Tree-sitter**: [tree-sitter-python](https://github.com/zed-industries/tree-sitter-python)
+- **Language Servers**: [basedpyright](https://github.com/DetachHead/basedpyright), [Ruff](https://github.com/astral-sh/ruff), [ty](https://github.com/astral-sh/ty), [Pyright](https://github.com/microsoft/pyright), [PyLSP](https://github.com/python-lsp/python-lsp-server)
+- **Debug Adapter**: [debugpy](https://github.com/microsoft/debugpy)
+</Info>
+
+## Installation
+
+### Install Python
+
+Zed does not bundle a Python runtime, so you'll need to install one yourself.
+
+<Tabs>
+  <Tab title="uv (Recommended)">
+    ```bash
+    curl -LsSf https://astral.sh/uv/install.sh | sh
+    ```
+    
+    Learn more at [Astral's installation guide](https://docs.astral.sh/uv/getting-started/installation/).
+  </Tab>
+  
+  <Tab title="Homebrew">
+    ```bash
+    brew install python
+    ```
+  </Tab>
+  
+  <Tab title="Python.org">
+    Download from [python.org/downloads](https://python.org/downloads)
+  </Tab>
+</Tabs>
+
+### Verify Installation
+
+```bash
+python3 --version
+```
+
+You should see output like `Python 3.x.x`.
+
+## Getting Started
+
+<Steps>
+  <Step title="Open a Python Project">
+    Open a folder containing Python files (`.py`) in Zed.
+  </Step>
+  
+  <Step title="Automatic Setup">
+    Zed automatically:
+    - Detects Python files using tree-sitter
+    - Downloads basedpyright and Ruff language servers
+    - Configures virtual environment if detected
+  </Step>
+  
+  <Step title="Use Integrated Terminal (Optional)">
+    Zed's integrated terminal automatically activates detected virtual environments. Configure this with the `detect_venv` setting.
+  </Step>
+</Steps>
+
+## Language Server Configuration
+
+Zed provides several Python language servers. By default:
+- **basedpyright** - Primary language server for type checking and code intelligence
+- **Ruff** - Formatting and linting
+
+### Available Language Servers
+
+<Tabs>
+  <Tab title="basedpyright (Default)">
+    [basedpyright](https://docs.basedpyright.com/latest/) provides core language server functionality with enhanced features over Pyright:
+    - Type checking and inference
+    - Code navigation (go to definition, find references)
+    - Inlay hints
+    - Additional checking rules
+    
+    Zed configures basedpyright to use `standard` type-checking mode by default (less strict than basedpyright's default `recommended` mode).
+  </Tab>
+  
+  <Tab title="Ruff (Default)">
+    [Ruff](https://github.com/astral-sh/ruff) is an extremely fast Python linter and formatter written in Rust:
+    - Code formatting
+    - Import organization
+    - Linting with auto-fixes
+    - Runs via `ruff server` LSP
+  </Tab>
+  
+  <Tab title="ty">
+    [ty](https://docs.astral.sh/ty/) is Astral's next-generation language server, built for speed:
+    - Fast type checking
+    - Minimal memory footprint
+    - Built on the same infrastructure as Ruff
+    
+    Enable with:
+    ```json
+    {
+      "languages": {
+        "Python": {
+          "language_servers": ["ty", "!basedpyright", "..."]
+        }
+      }
+    }
+    ```
+  </Tab>
+  
+  <Tab title="Pyright">
+    [Pyright](https://github.com/microsoft/pyright) is Microsoft's Python language server and the basis for basedpyright.
+    
+    Enable with:
+    ```json
+    {
+      "languages": {
+        "Python": {
+          "language_servers": ["pyright", "!basedpyright", "..."]
+        }
+      }
+    }
+    ```
+  </Tab>
+  
+  <Tab title="PyLSP">
+    [PyLSP](https://github.com/python-lsp/python-lsp-server/) is a plugin-based language server integrating with tools like pycodestyle, autopep8, and yapf.
+    
+    Enable with:
+    ```json
+    {
+      "languages": {
+        "Python": {
+          "language_servers": ["pylsp", "!basedpyright", "..."]
+        }
+      }
+    }
+    ```
+  </Tab>
+</Tabs>
+
+### Switching Language Servers
+
+<CodeGroup>
+```json settings.json
+{
+  "languages": {
+    "Python": {
+      "language_servers": [
+        "ty",
+        "!basedpyright",
+        "..."
+      ]
+    }
+  }
+}
+```
+</CodeGroup>
+
+See [Working with Language Servers](/languages/configuring#working-with-language-servers) for more information.
+
+## basedpyright Configuration
+
+basedpyright reads configuration from two sources:
+
+1. **Language server settings** - Configured in Zed's `settings.json`
+2. **Configuration files** - `pyrightconfig.json` or `pyproject.toml`
+
+### Language Server Settings
+
+<CodeGroup>
+```json settings.json
+{
+  "lsp": {
+    "basedpyright": {
+      "settings": {
+        "basedpyright.analysis": {
+          "diagnosticMode": "workspace",
+          "inlayHints": {
+            "callArgumentNames": false
+          }
+        }
+      }
+    }
+  }
+}
+```
+</CodeGroup>
+
+This configuration:
+- Diagnoses all workspace files (not just open files)
+- Disables inlay hints on function arguments
+
+### Configuration Files
+
+basedpyright reads project-specific configuration from `pyrightconfig.json` or the `[tool.basedpyright]` section of `pyproject.toml`.
+
+<Tabs>
+  <Tab title="pyrightconfig.json">
+    ```json pyrightconfig.json
+    {
+      "typeCheckingMode": "strict",
+      "ignore": ["**/__pycache__"]
+    }
+    ```
+  </Tab>
+  
+  <Tab title="pyproject.toml">
+    ```toml pyproject.toml
+    [tool.basedpyright]
+    typeCheckingMode = "strict"
+    ignore = ["**/__pycache__"]
+    ```
+  </Tab>
+</Tabs>
+
+See:
+- [basedpyright language server settings](https://docs.basedpyright.com/latest/configuration/language-server-settings/)
+- [basedpyright configuration files](https://docs.basedpyright.com/latest/configuration/config-files/)
+
+## Virtual Environments
+
+[Virtual environments](https://docs.python.org/3/library/venv.html) isolate Python versions and dependencies for specific projects. Zed has built-in support for discovering, configuring, and activating virtual environments through [toolchains](/languages/toolchains).
+
+### Creating a Virtual Environment
+
+<Tabs>
+  <Tab title="venv">
+    ```bash
+    python3 -m venv .venv
+    ```
+  </Tab>
+  
+  <Tab title="uv">
+    ```bash
+    uv sync
+    ```
+    
+    Creates a virtual environment on first run.
+  </Tab>
+</Tabs>
+
+### How Zed Uses Python Toolchains
+
+Zed uses the selected Python toolchain for:
+
+<AccordionGroup>
+  <Accordion title="Language Server Configuration">
+    Built-in language servers are automatically configured with the toolchain's Python interpreter path and virtual environment. This ensures they can resolve dependencies correctly.
+  </Accordion>
+  
+  <Accordion title="Task Execution">
+    Python tasks (like pytest tests) run using the toolchain's Python interpreter.
+  </Accordion>
+  
+  <Accordion title="Terminal Activation">
+    Virtual environment activation scripts run automatically when you launch a new shell in Zed's integrated terminal.
+  </Accordion>
+  
+  <Accordion title="Local Language Server Binaries">
+    If a language server is installed in the active virtual environment, Zed uses that binary instead of its private automatically-installed version. This also applies to debugpy.
+  </Accordion>
+</AccordionGroup>
+
+### Selecting a Toolchain
+
+For most projects, Zed automatically selects the right Python toolchain. In complex projects with multiple virtual environments, use the [toolchain selector](/languages/toolchains#selecting-toolchains) to pick from the list or [specify a path manually](/languages/toolchains#adding-toolchains-manually).
+
+<Info>
+The active toolchain is displayed in the status bar. Click it to open the toolchain selector, or run `toolchain: select` from the Command Palette.
+</Info>
+
+## Code Formatting & Linting
+
+Zed uses [Ruff](https://github.com/astral-sh/ruff) for formatting and linting Python code by default.
+
+### Configuring Formatting
+
+Formatting follows a two-phase pipeline:
+
+1. **Code actions on format** - Runs first (e.g., import organization)
+2. **Formatter** - Runs second (e.g., Ruff or Black)
+
+<CodeGroup>
+```json settings.json
+{
+  "languages": {
+    "Python": {
+      "code_actions_on_format": {
+        "source.organizeImports.ruff": true
+      },
+      "formatter": {
+        "language_server": {
+          "name": "ruff"
+        }
+      }
+    }
+  }
+}
+```
+</CodeGroup>
+
+### Using Black Instead of Ruff
+
+To use [Black](https://github.com/psf/black) for formatting while keeping Ruff for import sorting:
+
+<CodeGroup>
+```json settings.json
+{
+  "languages": {
+    "Python": {
+      "code_actions_on_format": {
+        "source.organizeImports.ruff": true
+      },
+      "formatter": {
+        "external": {
+          "command": "black",
+          "arguments": ["--stdin-filename", "{buffer_path}", "-"]
+        }
+      }
+    }
+  }
+}
+```
+</CodeGroup>
+
+### Disabling Formatting
+
+To completely disable formatting on save:
+
+<CodeGroup>
+```json settings.json
+{
+  "languages": {
+    "Python": {
+      "format_on_save": "off"
+    }
+  }
+}
+```
+</CodeGroup>
+
+To prevent Ruff from modifying code, explicitly disable it:
+
+<CodeGroup>
+```json settings.json
+{
+  "languages": {
+    "Python": {
+      "code_actions_on_format": {
+        "source.organizeImports.ruff": false
+      }
+    }
+  }
+}
+```
+</CodeGroup>
+
+### Configuring Ruff
+
+Ruff reads options from Zed's language server settings or `ruff.toml` configuration files.
+
+<Tabs>
+  <Tab title="Language Server Settings">
+    ```json settings.json
+    {
+      "lsp": {
+        "ruff": {
+          "initialization_options": {
+            "settings": {
+              "exclude": ["*"]
+            }
+          }
+        }
+      }
+    }
+    ```
+    
+    This disables all Ruff lints while still using it as a formatter.
+  </Tab>
+  
+  <Tab title="ruff.toml">
+    ```toml ruff.toml
+    [lint]
+    # Avoid enforcing line-length violations
+    ignore = ["E501"]
+    
+    [format]
+    # Use single quotes
+    quote-style = "single"
+    ```
+  </Tab>
+</Tabs>
+
+See:
+- [Ruff configuration files](https://docs.astral.sh/ruff/configuration/)
+- [Ruff language server settings](https://docs.astral.sh/ruff/editors/settings/)
+- [Ruff settings reference](https://docs.astral.sh/ruff/settings/)
+
+### Embedded Language Highlighting
+
+Zed supports syntax highlighting for code embedded in Python strings with language comments:
+
+```python
+# sql
+query = "SELECT * FROM users"
+
+#sql
+query = """
+    SELECT *
+    FROM users
+"""
+
+result = func( #sql
+    "SELECT * FROM users"
+)
+```
+
+## Debugging
+
+Zed supports Python debugging through the `debugpy` adapter.
+
+### Zero-Configuration Debugging
+
+Press `F4` (or run `debugger: start`) to see automatically detected debug targets:
+
+- Python scripts
+- Python modules
+- pytest tests
+
+No adapter configuration is required.
+
+### Custom Debug Configurations
+
+Create `.zed/debug.json` for reusable debug setups:
+
+<Tabs>
+  <Tab title="Debug Active File">
+    ```json .zed/debug.json
+    [
+      {
+        "label": "Python Active File",
+        "adapter": "Debugpy",
+        "program": "$ZED_FILE",
+        "request": "launch"
+      }
+    ]
+    ```
+  </Tab>
+  
+  <Tab title="Debug Flask App">
+    ```json .zed/debug.json
+    [
+      {
+        "label": "Python: Flask",
+        "adapter": "Debugpy",
+        "request": "launch",
+        "module": "app",
+        "cwd": "$ZED_WORKTREE_ROOT",
+        "env": {
+          "FLASK_APP": "app",
+          "FLASK_DEBUG": "1"
+        },
+        "args": [
+          "run",
+          "--reload",
+          "--debugger"
+        ],
+        "autoReload": {
+          "enable": true
+        },
+        "jinja": true,
+        "justMyCode": true
+      }
+    ]
+    ```
+  </Tab>
+  
+  <Tab title="Debug with Arguments">
+    ```json .zed/debug.json
+    [
+      {
+        "label": "Python with args",
+        "adapter": "Debugpy",
+        "program": "$ZED_FILE",
+        "request": "launch",
+        "args": ["--verbose", "--config", "config.json"]
+      }
+    ]
+    ```
+  </Tab>
+</Tabs>
+
+See [debugpy configuration documentation](https://github.com/microsoft/debugpy/wiki/Debug-configuration-settings#launchattach-settings) for all options.
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Language server startup issues">
+    **Solution**:
+    1. Check Zed log: Command Palette → `zed: open log`
+    2. Use language server logs: Command Palette → `dev: open language server logs`
+    3. Verify `settings.json` and `pyrightconfig.json` syntax
+    4. Restart language server: Command Palette → `editor: restart language server`
+  </Accordion>
+  
+  <Accordion title="Import resolution errors">
+    **Solution**:
+    1. Verify correct virtual environment is selected in status bar
+    2. Check language server logs for "Server Info" → "Configuration" section
+    3. Ensure dependencies are installed in the active environment
+    4. Restart language server after changing toolchains
+  </Accordion>
+  
+  <Accordion title="Terminal doesn't activate environment">
+    **Solution**:
+    1. Verify toolchain is selected in status bar
+    2. Check `detect_venv` setting is enabled
+    3. Close and reopen the terminal
+    4. Manually activate: `source .venv/bin/activate`
+  </Accordion>
+  
+  <Accordion title="Formatting not working">
+    **Solution**:
+    1. Verify Ruff is enabled in language servers list
+    2. Check `format_on_save` setting is not `"off"`
+    3. Ensure Ruff binary is accessible (check language server logs)
+    4. Try formatting manually: Command Palette → `editor: format`
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Toolchains" icon="wrench" href="/languages/toolchains">
+    Deep dive into Python toolchain management
+  </Card>
+  <Card title="Language Configuration" icon="gear" href="/languages/configuring">
+    General language configuration options
+  </Card>
+  <Card title="basedpyright Docs" icon="book" href="https://docs.basedpyright.com/latest/">
+    Complete basedpyright documentation
+  </Card>
+  <Card title="Ruff Documentation" icon="zap" href="https://docs.astral.sh/ruff/">
+    Comprehensive Ruff configuration guide
+  </Card>
+</CardGroup>

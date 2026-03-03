@@ -1,0 +1,313 @@
+---
+title: Theme Extensions
+description: Create custom color schemes for Zed's editor and UI
+---
+
+## Overview
+
+Theme extensions customize Zed's appearance by defining color schemes for the editor, UI elements, syntax highlighting, and terminal. Themes are defined in JSON files that adhere to Zed's theme schema.
+
+## Creating a Theme Extension
+
+### Directory Structure
+
+```
+my-theme-extension/
+  extension.toml
+  themes/
+    my-theme.json
+    my-other-theme.json
+```
+
+### Extension Manifest
+
+```toml
+id = "my-theme-theme"
+name = "My Theme"
+version = "0.0.1"
+schema_version = 1
+authors = ["Your Name <you@example.com>"]
+description = "Beautiful color scheme for Zed"
+repository = "https://github.com/your-name/my-theme-zed"
+
+themes = ["themes/my-theme.json"]
+```
+
+<Warning>
+Theme extension IDs must be suffixed with `-theme` (e.g., `dracula-theme`, `nord-theme`) for publication.
+</Warning>
+
+## Theme JSON Structure
+
+Themes use the [Zed Theme JSON Schema v0.2.0](https://zed.dev/schema/themes/v0.2.0.json).
+
+### Theme Family
+
+A theme file defines a theme family containing one or more themes:
+
+```json
+{
+  "$schema": "https://zed.dev/schema/themes/v0.2.0.json",
+  "name": "My Theme",
+  "author": "Your Name",
+  "themes": [
+    {
+      "name": "My Theme Dark",
+      "appearance": "dark",
+      "style": {
+        // Theme colors
+      }
+    },
+    {
+      "name": "My Theme Light",
+      "appearance": "light",
+      "style": {
+        // Theme colors
+      }
+    }
+  ]
+}
+```
+
+**Theme Family Fields:**
+
+- `name` - Family name
+- `author` - Theme author
+- `themes` - Array of theme objects
+
+**Theme Object Fields:**
+
+- `name` - Individual theme name
+- `appearance` - Either `"dark"` or `"light"`
+- `style` - Color definitions
+
+## Theme Style Properties
+
+### Core Colors
+
+```json
+{
+  "style": {
+    "background": "#1e1e2e",
+    "foreground": "#cdd6f4",
+    "accent": "#89b4fa",
+    "border": "#313244",
+    "border.variant": "#45475a",
+    "border.focused": "#89b4fa",
+    "border.selected": "#94e2d5",
+    "border.transparent": "#00000000",
+    "border.disabled": "#6c7086"
+  }
+}
+```
+
+**Essential Properties:**
+
+- `background` - Main background color
+- `foreground` - Primary text color
+- `accent` - Accent color for highlights and emphasis
+- `border` - Default border color
+
+### UI Element Colors
+
+```json
+{
+  "style": {
+    "element.background": "#313244",
+    "element.hover": "#45475a",
+    "element.active": "#585b70",
+    "element.selected": "#45475a",
+    "element.disabled": "#6c7086",
+    
+    "text": "#cdd6f4",
+    "text.muted": "#a6adc8",
+    "text.placeholder": "#6c7086",
+    "text.disabled": "#585b70",
+    "text.accent": "#89b4fa"
+  }
+}
+```
+
+### Editor Colors
+
+```json
+{
+  "style": {
+    "editor.background": "#1e1e2e",
+    "editor.gutter.background": "#1e1e2e",
+    "editor.subheader.background": "#313244",
+    "editor.active_line.background": "#313244",
+    "editor.highlighted_line.background": "#45475a",
+    "editor.line_number": "#6c7086",
+    "editor.active_line_number": "#cdd6f4",
+    "editor.invisible": "#45475a",
+    "editor.wrap_guide": "#313244",
+    "editor.active_wrap_guide": "#45475a",
+    "editor.document_highlight.read_background": "#45475a",
+    "editor.document_highlight.write_background": "#585b70"
+  }
+}
+```
+
+### Syntax Highlighting
+
+```json
+{
+  "style": {
+    "syntax": {
+      "attribute": "#f9e2af",
+      "boolean": "#f38ba8",
+      "comment": "#6c7086",
+      "comment.doc": "#7f849c",
+      "constant": "#fab387",
+      "constructor": "#89b4fa",
+      "function": "#89b4fa",
+      "keyword": "#cba6f7",
+      "number": "#fab387",
+      "operator": "#94e2d5",
+      "property": "#89dceb",
+      "punctuation": "#bac2de",
+      "punctuation.bracket": "#bac2de",
+      "punctuation.delimiter": "#bac2de",
+      "string": "#a6e3a1",
+      "string.escape": "#f5c2e7",
+      "string.regex": "#f5c2e7",
+      "tag": "#89b4fa",
+      "type": "#f9e2af",
+      "variable": "#cdd6f4",
+      "variable.special": "#f38ba8"
+    }
+  }
+}
+```
+
+### Terminal Colors
+
+Define ANSI colors for the integrated terminal:
+
+```json
+{
+  "style": {
+    "terminal.ansi.black": "#45475a",
+    "terminal.ansi.red": "#f38ba8",
+    "terminal.ansi.green": "#a6e3a1",
+    "terminal.ansi.yellow": "#f9e2af",
+    "terminal.ansi.blue": "#89b4fa",
+    "terminal.ansi.magenta": "#f5c2e7",
+    "terminal.ansi.cyan": "#94e2d5",
+    "terminal.ansi.white": "#bac2de",
+    "terminal.ansi.bright_black": "#585b70",
+    "terminal.ansi.bright_red": "#f38ba8",
+    "terminal.ansi.bright_green": "#a6e3a1",
+    "terminal.ansi.bright_yellow": "#f9e2af",
+    "terminal.ansi.bright_blue": "#89b4fa",
+    "terminal.ansi.bright_magenta": "#f5c2e7",
+    "terminal.ansi.bright_cyan": "#94e2d5",
+    "terminal.ansi.bright_white": "#cdd6f4"
+  }
+}
+```
+
+## Theme Builder
+
+Use [Zed's Theme Builder](https://zed.dev/theme-builder) to design themes visually:
+
+1. Start with an existing theme
+2. Adjust colors using the interactive editor
+3. Preview changes in real-time
+4. Export the JSON for your extension
+
+The Theme Builder provides fine-grained control over all theme surfaces and shows live previews of editor UI, syntax highlighting, and terminal colors.
+
+## Complete Theme Example
+
+<Accordion title="Full Theme JSON">
+```json
+{
+  "$schema": "https://zed.dev/schema/themes/v0.2.0.json",
+  "name": "Catppuccin Mocha",
+  "author": "Catppuccin",
+  "themes": [
+    {
+      "name": "Catppuccin Mocha",
+      "appearance": "dark",
+      "style": {
+        "background": "#1e1e2e",
+        "foreground": "#cdd6f4",
+        "accent": "#89b4fa",
+        "border": "#313244",
+        "border.variant": "#45475a",
+        "border.focused": "#89b4fa",
+        "border.selected": "#94e2d5",
+        "element.background": "#313244",
+        "element.hover": "#45475a",
+        "element.active": "#585b70",
+        "text": "#cdd6f4",
+        "text.muted": "#a6adc8",
+        "text.accent": "#89b4fa",
+        "editor.background": "#1e1e2e",
+        "editor.gutter.background": "#1e1e2e",
+        "editor.active_line.background": "#313244",
+        "editor.line_number": "#6c7086",
+        "editor.active_line_number": "#cdd6f4",
+        "syntax": {
+          "keyword": "#cba6f7",
+          "function": "#89b4fa",
+          "type": "#f9e2af",
+          "string": "#a6e3a1",
+          "number": "#fab387",
+          "comment": "#6c7086",
+          "variable": "#cdd6f4"
+        },
+        "terminal.ansi.black": "#45475a",
+        "terminal.ansi.red": "#f38ba8",
+        "terminal.ansi.green": "#a6e3a1",
+        "terminal.ansi.yellow": "#f9e2af",
+        "terminal.ansi.blue": "#89b4fa",
+        "terminal.ansi.magenta": "#f5c2e7",
+        "terminal.ansi.cyan": "#94e2d5",
+        "terminal.ansi.white": "#bac2de"
+      }
+    }
+  ]
+}
+```
+</Accordion>
+
+## Publishing Theme Extensions
+
+Follow the standard [extension publishing process](/extensions/developing#publishing-extensions):
+
+1. Add your theme repository as a submodule to [zed-industries/extensions](https://github.com/zed-industries/extensions)
+2. Update `extensions.toml` with your theme metadata
+3. Ensure your extension ID ends with `-theme`
+4. Open a pull request
+
+## Theme Development Tips
+
+<AccordionGroup>
+  <Accordion title="Test with Multiple Languages">
+    Test your theme with various programming languages to ensure syntax highlighting works well across different code patterns.
+  </Accordion>
+  
+  <Accordion title="Consider Accessibility">
+    Ensure sufficient contrast between foreground and background colors. Use tools like [WebAIM Contrast Checker](https://webaim.org/resources/contrastchecker/) to verify readability.
+  </Accordion>
+  
+  <Accordion title="Provide Light and Dark Variants">
+    Many users switch between light and dark modes. Offering both variants in your theme family improves user experience.
+  </Accordion>
+  
+  <Accordion title="Use Semantic Color Names">
+    Choose descriptive color variable names in your design system before mapping them to theme properties.
+  </Accordion>
+</AccordionGroup>
+
+## Examples
+
+Popular theme extensions:
+
+- [Catppuccin](https://github.com/zed-extensions/catppuccin) - Pastel color scheme with multiple flavors
+- [Tokyo Night](https://github.com/zed-extensions/tokyo-night) - Dark theme inspired by Tokyo's night skyline
+- [Dracula](https://github.com/zed-extensions/dracula) - Dark theme with vibrant colors
+- [Nord](https://github.com/zed-extensions/nord) - Arctic-inspired color palette

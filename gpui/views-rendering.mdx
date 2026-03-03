@@ -1,0 +1,323 @@
+---
+title: 'Views and Rendering'
+description: 'Understanding the Render trait, views, and the rendering pipeline in GPUI'
+keywords: ['render', 'view', 'rendering', 'ui', 'render trait']
+---
+
+## Overview
+
+A _view_ in GPUI is an `Entity<T>` where `T` implements the `Render` trait. Views are the primary way to build user interfaces, rendering state into an element tree that is laid out using flexbox.
+
+## The Render Trait
+
+The `Render` trait is used to convert state into an element tree.
+
+```rust Render trait definition
+pub trait Render: 'static + Sized {
+    fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement;
+}
+```
+
+### Basic Example
+
+<CodeGroup>
+
+```rust Simple view
+use gpui::{div, prelude::*, Context, Render, SharedString, Window};
+
+struct TextWithBorder(SharedString);
+
+impl Render for TextWithBorder {
+    fn render(&mut self, _window: &mut Window, _cx: &mut Context<Self>) -> impl IntoElement {
+        div().border_1().child(self.0.clone())
+    }
+}
+```
+
+```rust Hello World example
+use gpui::{
+    div, prelude::*, px, rgb, Context, Render, SharedString, Window,
+};
+
+struct HelloWorld {
+    text: SharedString,
+}
+
+impl Render for HelloWorld {
+    fn render(&mut self, _window: &mut Window, _cx: &mut Context<Self>) -> impl IntoElement {
+        div()
+            .flex()
+            .flex_col()
+            .gap_3()
+            .bg(rgb(0x505050))
+            .size(px(500.0))
+            .justify_center()
+            .items_center()
+            .shadow_lg()
+            .border_1()
+            .border_color(rgb(0x0000ff))
+            .text_xl()
+            .text_color(rgb(0xffffff))
+            .child(format!("Hello, {}!", &self.text))
+    }
+}
+```
+
+</CodeGroup>
+
+<Info>
+`SharedString` is used to avoid copying strings. It's either an `&'static str` or `Arc<str>`.
+</Info>
+
+## RenderOnce Trait
+
+For UI components constructed just to be turned into elements, use `RenderOnce` instead of `Render`.
+
+```rust RenderOnce trait
+pub trait RenderOnce: 'static {
+    fn render(self, window: &mut Window, cx: &mut App) -> impl IntoElement;
+}
+```
+
+<Tabs>
+  <Tab title="Differences">
+    **Render vs RenderOnce:**
+    
+    - `Render::render()` takes `&mut self` and `&mut Context<Self>`
+    - `RenderOnce::render()` takes ownership of `self` and receives `&mut App`
+    - Types implementing `RenderOnce` can use `#[derive(IntoElement)]` to use them directly as children
+  </Tab>
+  <Tab title="Example">
+    ```rust
+    use gpui::{IntoElement, RenderOnce, div};
+    
+    #[derive(IntoElement)]
+    struct Badge {
+        label: String,
+    }
+    
+    impl RenderOnce for Badge {
+        fn render(self, _window: &mut Window, _cx: &mut App) -> impl IntoElement {
+            div()
+                .px_2()
+                .py_1()
+                .rounded_md()
+                .bg(gpui::blue())
+                .text_color(gpui::white())
+                .child(self.label)
+        }
+    }
+    ```
+  </Tab>
+</Tabs>
+
+## Styling Elements
+
+GPUI uses Tailwind CSS-style methods for styling elements.
+
+```rust Styling example
+div()
+    .flex()           // display: flex
+    .flex_col()       // flex-direction: column
+    .gap_4()          // gap: 1rem
+    .p_4()            // padding: 1rem
+    .bg(rgb(0xf3f4f6)) // background-color
+    .rounded_md()     // border-radius
+    .border_1()       // border-width: 1px
+    .border_color(rgb(0x0000ff))
+    .text_xl()        // font-size: 1.25rem
+    .font_weight(FontWeight::BOLD)
+    .child("Content")
+```
+
+## Conditional Rendering
+
+Use `.when()` and `.when_some()` for conditional attributes or children.
+
+<CodeGroup>
+
+```rust .when()
+div()
+    .when(is_active, |this| {
+        this.bg(gpui::blue())
+    })
+    .when(!is_active, |this| {
+        this.bg(gpui::gray())
+    })
+    .child("Toggle me")
+```
+
+```rust .when_some()
+div()
+    .when_some(optional_color, |this, color| {
+        this.bg(color)
+    })
+    .child("Conditional styling")
+```
+
+</CodeGroup>
+
+## Creating Windows with Views
+
+Views are rendered in windows created with `cx.open_window()`.
+
+```rust Opening a window
+use gpui::{App, Bounds, WindowBounds, WindowOptions, px, size};
+
+application().run(|cx: &mut App| {
+    let bounds = Bounds::centered(None, size(px(500.), px(500.0)), cx);
+    cx.open_window(
+        WindowOptions {
+            window_bounds: Some(WindowBounds::Windowed(bounds)),
+            ..Default::default()
+        },
+        |_, cx| {
+            cx.new(|_| HelloWorld {
+                text: "World".into(),
+            })
+        },
+    )
+    .unwrap();
+    
+    cx.activate(true);
+});
+```
+
+## AnyView
+
+A dynamically-typed handle to a view, which can be downcast to an `Entity<V>` for a specific type.
+
+```rust Working with AnyView
+use gpui::AnyView;
+
+let any_view: AnyView = view.into();
+
+// Downcast to specific type
+let typed_view: Result<Entity<MyView>, AnyView> = any_view.downcast();
+
+// Get entity information
+let entity_id = any_view.entity_id();
+let type_id = any_view.entity_type();
+```
+
+## View Caching
+
+Views can be cached to improve performance when state hasn't changed.
+
+```rust Cached views
+use gpui::{AnyView, StyleRefinement};
+
+let cached_view = any_view.cached(StyleRefinement::default());
+```
+
+<Info>
+When using cached views, the previous layout and paint will be recycled if `cx.notify()` hasn't been called since rendering. Caching is ignored when `Window::refresh()` is called.
+</Info>
+
+## Notify and Re-rendering
+
+When a view's state changes in a way that may affect rendering, call `cx.notify()`.
+
+```rust Notifying changes
+struct Counter {
+    count: usize,
+}
+
+impl Render for Counter {
+    fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        div()
+            .on_click(cx.listener(|this, _, _, cx| {
+                this.count += 1;
+                cx.notify(); // Triggers re-render
+            }))
+            .child(format!("Count: {}", self.count))
+    }
+}
+```
+
+<Steps>
+  <Step title="State changes">
+    View's internal state is modified
+  </Step>
+  <Step title="Call cx.notify()">
+    Notify GPUI that the view needs to be re-rendered
+  </Step>
+  <Step title="Re-render triggered">
+    GPUI calls the `render()` method again on the next frame
+  </Step>
+  <Step title="Observer callbacks">
+    Any observers registered with `cx.observe()` are called
+  </Step>
+</Steps>
+
+## Input Events
+
+Input event handlers can be registered on elements.
+
+<CodeGroup>
+
+```rust Mouse events
+div()
+    .on_click(|event, window, cx: &mut App| {
+        println!("Clicked!");
+    })
+    .on_hover(|event, window, cx| {
+        println!("Hovered!");
+    })
+    .child("Click me")
+```
+
+```rust Using cx.listener
+// cx.listener provides access to the current entity
+div()
+    .on_click(cx.listener(|this: &mut MyView, event, window, cx: &mut Context<MyView>| {
+        this.handle_click();
+        cx.notify();
+    }))
+    .child("Click me")
+```
+
+</CodeGroup>
+
+## Focus Management
+
+```rust Focus example
+use gpui::{FocusHandle, actions, div, prelude::*};
+
+actions!(example, [Tab, TabPrev]);
+
+struct Example {
+    focus_handle: FocusHandle,
+}
+
+impl Example {
+    fn new(window: &mut Window, cx: &mut Context<Self>) -> Self {
+        let focus_handle = cx.focus_handle();
+        window.focus(&focus_handle, cx);
+        
+        Self { focus_handle }
+    }
+}
+
+impl Render for Example {
+    fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        div()
+            .track_focus(&self.focus_handle)
+            .on_action(cx.listener(|this, _: &Tab, window, cx| {
+                window.focus_next(cx);
+            }))
+            .child("Focus management")
+    }
+}
+```
+
+## Related Topics
+
+<CardGroup cols={2}>
+  <Card title="Element System" icon="box" href="/gpui/elements">
+    Deep dive into the element tree and layout
+  </Card>
+  <Card title="Actions" icon="bolt" href="/gpui/actions">
+    Keyboard-driven UI with actions
+  </Card>
+</CardGroup>

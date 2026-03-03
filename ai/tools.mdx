@@ -1,0 +1,703 @@
+---
+title: Agent Tools
+description: Tools available to AI agents in Zed
+---
+
+Zed's AI agents can interact with your development environment through a comprehensive set of tools. These tools enable agents to read files, edit code, run commands, and more.
+
+## Built-in Tools
+
+Zed provides these tools out of the box:
+
+### File Operations
+
+#### read_file
+
+Read file contents:
+
+```typescript
+{
+  tool: "read_file",
+  input: {
+    path: "src/main.rs",
+    start_line: 10,  // optional
+    end_line: 50     // optional
+  }
+}
+```
+
+**Features**:
+- Reads text and image files
+- Optional line range for large files
+- Returns file outline for very large files
+- Supports image analysis (PNG, JPEG, WebP, GIF, BMP, TIFF)
+
+**Permissions**: Usually set to `allow` by default
+
+#### edit_file
+
+Modify file contents using search/replace:
+
+```typescript
+{
+  tool: "edit_file",
+  input: {
+    path: "src/main.rs",
+    old_str: "fn old_name()",
+    new_str: "fn new_name()",
+    description: "Rename function"
+  }
+}
+```
+
+**Features**:
+- Precise search/replace editing
+- Multiple edits in sequence
+- Validation before applying
+- Undo support
+
+**Permissions**: Usually requires `confirm`
+
+#### save_file
+
+Write entire file contents:
+
+```typescript
+{
+  tool: "save_file",
+  input: {
+    path: "src/new_file.rs",
+    content: "fn main() {\n    println!(\"Hello!\");\n}",
+    description: "Create new file"
+  }
+}
+```
+
+**Permissions**: Usually requires `confirm`
+
+#### create_directory
+
+Create a new directory:
+
+```typescript
+{
+  tool: "create_directory",
+  input: {
+    path: "src/new_module"
+  }
+}
+```
+
+#### copy_path
+
+Copy files or directories:
+
+```typescript
+{
+  tool: "copy_path",
+  input: {
+    source: "src/template.rs",
+    destination: "src/new_file.rs"
+  }
+}
+```
+
+#### move_path
+
+Move or rename files:
+
+```typescript
+{
+  tool: "move_path",
+  input: {
+    source: "src/old_name.rs",
+    destination: "src/new_name.rs"
+  }
+}
+```
+
+#### delete_path
+
+Delete files or directories:
+
+```typescript
+{
+  tool: "delete_path",
+  input: {
+    path: "src/unused.rs"
+  }
+}
+```
+
+**Permissions**: Usually requires `confirm` or `deny`
+
+### Search Tools
+
+#### find_path
+
+Find files by pattern:
+
+```typescript
+{
+  tool: "find_path",
+  input: {
+    pattern: "*.rs",
+    path: "src/"  // optional, defaults to project root
+  }
+}
+```
+
+**Features**:
+- Glob pattern matching
+- Recursive search
+- Respects .gitignore
+
+#### grep
+
+Search file contents:
+
+```typescript
+{
+  tool: "grep",
+  input: {
+    pattern: "fn main",
+    file_pattern: "*.rs",  // optional
+    path: "src/"            // optional
+  }
+}
+```
+
+**Features**:
+- Regex pattern matching
+- File filtering
+- Line number results
+- Context lines
+
+### Terminal
+
+#### terminal
+
+Execute shell commands:
+
+```typescript
+{
+  tool: "terminal",
+  input: {
+    command: "cargo build --release",
+    cd: "project_root",
+    timeout_ms: 60000  // optional
+  }
+}
+```
+
+**Features**:
+- Runs in user's shell
+- Combined stdout/stderr
+- Timeout support
+- Working directory selection
+
+**Limitations**:
+- Not for long-running processes (servers, watchers)
+- Each invocation is a new shell
+- No state between invocations
+
+**Permissions**: Highly sensitive, usually requires `confirm`
+
+<Warning>
+The terminal tool can execute arbitrary commands. Always review commands before approving.
+</Warning>
+
+### Code Intelligence
+
+#### diagnostics
+
+Get compiler errors and warnings:
+
+```typescript
+{
+  tool: "diagnostics",
+  input: {
+    path: "src/main.rs"  // optional, returns all diagnostics if omitted
+  }
+}
+```
+
+**Returns**:
+- Error messages
+- Warning messages
+- Line numbers and columns
+- Suggestions and fixes
+
+#### open
+
+Open files in editor:
+
+```typescript
+{
+  tool: "open",
+  input: {
+    path: "src/main.rs",
+    line: 42  // optional, jump to line
+  }
+}
+```
+
+**Features**:
+- Opens in Zed editor
+- Optional line navigation
+- Brings file to focus
+
+### Utilities
+
+#### now
+
+Get current date/time:
+
+```typescript
+{
+  tool: "now",
+  input: {}
+}
+```
+
+**Returns**: Current UTC timestamp
+
+#### web_search
+
+Search the web (if configured):
+
+```typescript
+{
+  tool: "web_search",
+  input: {
+    query: "rust async programming"
+  }
+}
+```
+
+**Requires**: Web search provider configured
+
+#### fetch
+
+Fetch URL contents:
+
+```typescript
+{
+  tool: "fetch",
+  input: {
+    url: "https://docs.rs/tokio/latest/tokio/"
+  }
+}
+```
+
+**Features**:
+- HTTP/HTTPS support
+- Returns page content
+- Follows redirects
+
+### Advanced
+
+#### spawn_agent
+
+Create a subagent for parallel work:
+
+```typescript
+{
+  tool: "spawn_agent",
+  input: {
+    instructions: "Research the best async runtime for this use case"
+  }
+}
+```
+
+**Features**:
+- Parallel execution
+- Independent context
+- Reports back to parent
+
+#### list_directory
+
+List directory contents:
+
+```typescript
+{
+  tool: "list_directory",
+  input: {
+    path: "src/"
+  }
+}
+```
+
+#### restore_file_from_disk
+
+Revert file to disk state:
+
+```typescript
+{
+  tool: "restore_file_from_disk",
+  input: {
+    path: "src/main.rs"
+  }
+}
+```
+
+## Tool Permissions
+
+Control what agents can do with granular permissions:
+
+### Permission Modes
+
+<ParamField path="allow" type="mode">
+  Automatically approve all uses of this tool
+</ParamField>
+
+<ParamField path="confirm" type="mode">
+  Ask user before each use (default for most tools)
+</ParamField>
+
+<ParamField path="deny" type="mode">
+  Never allow this tool to be used
+</ParamField>
+
+### Global Default
+
+Set default permission for all tools:
+
+```json
+{
+  "agent": {
+    "tool_permissions": {
+      "default": "confirm"
+    }
+  }
+}
+```
+
+### Per-Tool Configuration
+
+Configure specific tools:
+
+```json
+{
+  "agent": {
+    "tool_permissions": {
+      "default": "confirm",
+      "tools": {
+        "read_file": {
+          "default": "allow"
+        },
+        "terminal": {
+          "default": "confirm"
+        },
+        "delete_path": {
+          "default": "deny"
+        }
+      }
+    }
+  }
+}
+```
+
+### Pattern-Based Rules
+
+Use regex patterns for fine-grained control:
+
+```json
+{
+  "agent": {
+    "tool_permissions": {
+      "tools": {
+        "edit_file": {
+          "default": "confirm",
+          "always_allow": [
+            {
+              "pattern": "src/.*\\.rs$",
+              "case_sensitive": false
+            },
+            {
+              "pattern": "tests/.*",
+              "case_sensitive": false
+            }
+          ],
+          "always_deny": [
+            {
+              "pattern": ".*\\.env$",
+              "case_sensitive": false
+            },
+            {
+              "pattern": ".*/secrets/.*",
+              "case_sensitive": true
+            }
+          ]
+        },
+        "terminal": {
+          "default": "confirm",
+          "always_deny": [
+            {
+              "pattern": "rm -rf",
+              "case_sensitive": true
+            },
+            {
+              "pattern": "sudo",
+              "case_sensitive": true
+            }
+          ]
+        }
+      }
+    }
+  }
+}
+```
+
+### Rule Evaluation
+
+Rules are evaluated in this order:
+
+1. **Always Deny**: If pattern matches, deny immediately
+2. **Always Allow**: If pattern matches, allow immediately
+3. **Always Confirm**: If pattern matches, ask user
+4. **Tool Default**: Use tool-specific default
+5. **Global Default**: Use global default
+
+### Hardcoded Security Rules
+
+Some operations are **always blocked** for safety:
+
+```typescript
+// These patterns are ALWAYS denied in terminal
+const HARDCODED_DENIALS = [
+  /rm\s+-rf\s+\//,  // rm -rf /
+  /:\(\)\{\s*:\|:&\s*\};:/,  // fork bomb
+  // ... other dangerous patterns
+];
+```
+
+These cannot be overridden in settings.
+
+## MCP Tools
+
+Tools from MCP servers appear alongside built-in tools:
+
+```json
+{
+  "context_servers": {
+    "github": {
+      "command": { /* ... */ }
+    }
+  },
+  "agent": {
+    "tool_permissions": {
+      "tools": {
+        "github_search_issues": {
+          "default": "allow"
+        }
+      }
+    }
+  }
+}
+```
+
+[Learn more about MCP →](/ai/mcp)
+
+## Tool Output
+
+Tool results are displayed in the conversation:
+
+```
+🔧 read_file
+Path: src/main.rs (lines 1-50)
+────────────────
+<file content>
+────────────────
+
+🔧 terminal
+Command: cargo build
+Working directory: /path/to/project
+────────────────
+<command output>
+────────────────
+Exit code: 0
+```
+
+### Output Limits
+
+Large outputs are truncated:
+
+- **File content**: Outlines for very large files
+- **Terminal output**: Limited to 16KB
+- **Search results**: Limited to 1000 results
+
+Agents can use line ranges or filters to get specific data.
+
+## Tool Implementation
+
+Tools are implemented in `crates/agent/src/tools/`:
+
+- `read_file_tool.rs` - File reading
+- `edit_file_tool.rs` - File editing
+- `terminal_tool.rs` - Command execution
+- `grep_tool.rs` - Content search
+- `find_path_tool.rs` - File search
+- ... and more
+
+Each tool implements the `AgentTool` trait:
+
+```rust
+pub trait AgentTool: Send + Sync {
+    type Input: DeserializeOwned + JsonSchema;
+    type Output: Serialize;
+    
+    const NAME: &'static str;
+    
+    fn kind() -> acp::ToolKind;
+    
+    fn initial_title(
+        &self,
+        input: Result<Self::Input, serde_json::Value>,
+        cx: &mut App,
+    ) -> SharedString;
+    
+    fn run(
+        self: Arc<Self>,
+        input: ToolInput<Self::Input>,
+        event_stream: ToolCallEventStream,
+        cx: &mut App,
+    ) -> Task<Result<Self::Output, Self::Output>>;
+}
+```
+
+## Best Practices
+
+### Configure Permissions Thoughtfully
+
+✅ **Good**:
+```json
+{
+  "read_file": { "default": "allow" },
+  "terminal": { "default": "confirm" },
+  "delete_path": { "default": "deny" }
+}
+```
+
+❌ **Too permissive**:
+```json
+{
+  "default": "allow"
+}
+```
+
+### Use Pattern Matching
+
+Protect sensitive files:
+
+```json
+{
+  "edit_file": {
+    "always_deny": [
+      { "pattern": ".*\\.(env|secret|key)$" }
+    ]
+  }
+}
+```
+
+### Review Terminal Commands
+
+Always review before approving:
+
+- Check for destructive operations
+- Verify paths are correct
+- Ensure no sensitive data in command
+- Understand what the command does
+
+### Monitor Tool Usage
+
+Keep an eye on:
+
+- Frequent permission requests (may indicate inefficient prompting)
+- Unexpected tool usage
+- Failed tool calls (may need better instructions)
+
+## Troubleshooting
+
+### Tool Permission Denied
+
+**Issue**: Agent tried to use a tool but was denied
+
+**Solutions**:
+1. Check tool permissions in settings
+2. Review pattern rules
+3. Grant appropriate access
+4. Check hardcoded security rules
+
+### Tool Call Failed
+
+**Issue**: Tool executed but returned an error
+
+**Solutions**:
+1. Check file paths exist
+2. Verify working directory
+3. Review file permissions
+4. Check command syntax
+
+### Tool Not Available
+
+**Issue**: Agent can't find a tool
+
+**Solutions**:
+1. Check tool is enabled
+2. Restart Zed
+3. Verify MCP server is running (for MCP tools)
+4. Check logs for errors
+
+<Note>
+Tool availability depends on your Zed version and configuration. Some tools may require specific features to be enabled.
+</Note>
+
+## Security Considerations
+
+### File System Access
+
+- Tools can only access files within project bounds
+- Symlinks are checked and may require confirmation
+- Hidden files (.env, .secret) should be protected
+
+### Command Execution
+
+- Terminal commands run with your user permissions
+- No privilege escalation (sudo is blocked)
+- Commands can access network and file system
+- Timeout protection for long-running commands
+
+### Pattern Security
+
+Be careful with patterns:
+
+❌ **Too broad**:
+```json
+{ "pattern": ".*" }  // Matches everything!
+```
+
+✅ **Specific**:
+```json
+{ "pattern": "src/.*\\.rs$" }  // Only Rust files in src/
+```
+
+## Related Documentation
+
+<CardGroup cols={2}>
+  <Card title="Agent Panel" icon="comments" href="/ai/agent-panel">
+    Using agents in Zed
+  </Card>
+  
+  <Card title="MCP" icon="plug" href="/ai/mcp">
+    Extending tools with MCP
+  </Card>
+  
+  <Card title="Configuration" icon="gear" href="/ai/configuration">
+    Configuring tool permissions
+  </Card>
+  
+  <Card title="Rules" icon="file-lines" href="/ai/rules">
+    Guiding agent behavior
+  </Card>
+</CardGroup>

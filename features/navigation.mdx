@@ -1,0 +1,320 @@
+---
+title: File and Code Navigation - Zed
+description: Navigate your codebase with file finder, project search, go to definition, symbol search, and the command palette.
+---
+
+# Navigation
+
+Zed provides powerful navigation tools to help you move through your codebase quickly. This page covers all the ways to find and jump to files, symbols, and definitions.
+
+## Command Palette
+
+The Command Palette is your gateway to almost everything in Zed.
+
+**Open:** `Cmd+Shift+P` (macOS) or `Ctrl+Shift+P` (Linux/Windows)
+
+Type a few characters to filter commands, then press Enter to execute. The palette shows:
+
+- All available actions and commands
+- Recently used commands at the top
+- Keybindings for each command
+
+<Tip>
+The Command Palette uses fuzzy matching, so you don't need to type the full command name. For example, type "git pull" or just "gpull" to find the Git Pull command.
+</Tip>
+
+## File Finder
+
+Quickly open any file in your project.
+
+**Open:** `Cmd+P` (macOS) or `Ctrl+P` (Linux/Windows)
+
+### Features
+
+- **Fuzzy matching:** Type parts of the filename or path to narrow results
+- **Recent files:** Files you've opened recently appear at the top
+- **Path search:** Include slashes to search by directory: `src/editor/actions`
+- **Line numbers:** Add `:42` to jump to line 42: `main.rs:42`
+- **Column numbers:** Add `:42:10` to jump to line 42, column 10
+
+### Example Searches
+
+| Search | Matches |
+| --- | --- |
+| `main` | `main.rs`, `main.js`, `src/main.ts` |
+| `src/ed` | `src/editor.rs`, `src/editor/mod.rs` |
+| `main:42` | Opens `main.rs` at line 42 |
+| `config.json:10:5` | Opens `config.json` at line 10, column 5 |
+
+## Project Search
+
+Search across all files in your project.
+
+**Open:** `Cmd+Shift+F` (macOS) or `Ctrl+Shift+F` (Linux/Windows)
+
+### Search Modes
+
+<Tabs>
+  <Tab title="Text Search">
+    Search for plain text across all files. The search is case-insensitive by default.
+    
+    **Toggle case sensitivity:** Click the "Aa" button or use `Cmd+Alt+C` (macOS)
+  </Tab>
+  
+  <Tab title="Regex Search">
+    Use regular expressions for advanced pattern matching.
+    
+    **Toggle regex:** Click the ".*" button or use `Cmd+Alt+R` (macOS)
+    
+    Example regex patterns:
+    - `function\s+\w+` - Find function declarations
+    - `TODO|FIXME` - Find TODO or FIXME comments
+    - `\d{3}-\d{4}` - Find phone number patterns
+  </Tab>
+  
+  <Tab title="Whole Word">
+    Match whole words only (no partial matches).
+    
+    **Toggle whole word:** Click the "Ab" button or use `Cmd+Alt+W` (macOS)
+  </Tab>
+</Tabs>
+
+### Search Results
+
+Results appear in a [multibuffer](https://zed.dev/docs/multibuffers), which means you can:
+
+- Edit matches directly in the search results
+- See context around each match
+- Navigate between matches with `F3` / `Shift+F3`
+- Replace text across all results
+
+### File Filters
+
+Include or exclude files from search:
+
+- Use the "Include" field to search only specific files: `*.rs`, `src/**/*.ts`
+- Use the "Exclude" field to skip files: `**/node_modules/**`, `*.test.js`
+
+## Go to Definition
+
+Jump to where a symbol is defined.
+
+**Keybinding:** `F12` or `Cmd+Click` (macOS) / `Ctrl+Click` (Linux/Windows)
+
+Works for:
+- Functions and methods
+- Variables and constants
+- Types and interfaces
+- Classes and structs
+- Modules and imports
+
+### Multiple Definitions
+
+If a symbol has multiple definitions (common with interfaces or overloads), Zed opens them in a multibuffer so you can see all locations at once.
+
+### Go to Definition Split
+
+Open the definition in a split pane:
+
+**Keybinding:** `Cmd+Shift+F12` (macOS) or `Ctrl+Shift+F12` (Linux/Windows)
+
+### Go to Implementation
+
+Jump to the implementation of an interface or trait:
+
+**Keybinding:** Command Palette → "Go to Implementation"
+
+### Go to Type Definition
+
+Jump to the type definition of a symbol:
+
+**Keybinding:** Command Palette → "Go to Type Definition"
+
+## Find All References
+
+Find all places where a symbol is used.
+
+**Keybinding:** `Shift+F12` or right-click → "Find All References"
+
+Results open in a multibuffer, showing every location where the symbol is referenced with surrounding context.
+
+## Symbol Search
+
+Quickly navigate to functions, classes, and other symbols in your code.
+
+### File Outline
+
+See symbols in the current file.
+
+**Open:** `Cmd+Shift+O` (macOS) or `Ctrl+Shift+O` (Linux/Windows)
+
+The outline shows:
+- Functions and methods
+- Classes and structs
+- Interfaces and traits
+- Enums and types
+- Constants and variables
+
+Type to filter, then press Enter to jump to a symbol.
+
+### Project-Wide Symbol Search
+
+Search for symbols across your entire project.
+
+**Open:** `Cmd+T` (macOS) or `Ctrl+T` (Linux/Windows)
+
+This searches all files for matching symbol names, making it easy to find specific functions or classes regardless of which file they're in.
+
+## Outline Panel
+
+The Outline Panel shows a persistent tree view of symbols in the current file.
+
+**Toggle:** Command Palette → "Toggle Outline Panel"
+
+The panel is especially useful when:
+- Working with [multibuffers](https://zed.dev/docs/multibuffers) to see excerpts from multiple files
+- Navigating large files with many functions or classes
+- Reviewing search results or diagnostics
+
+## Tab Switcher
+
+Quickly switch between open tabs.
+
+**Open:** `Ctrl+Tab` (hold Ctrl and press Tab repeatedly to cycle)
+
+Tabs are sorted by recent use, so the most recently accessed files appear first.
+
+**Close tabs:** Press `Cmd+W` (macOS) or `Ctrl+W` (Linux/Windows)
+
+## Breadcrumb Navigation
+
+Breadcrumbs show your current location in the file and project hierarchy.
+
+**Toggle breadcrumbs:**
+
+```json
+{
+  "toolbar": {
+    "breadcrumbs": true
+  }
+}
+```
+
+Click any part of the breadcrumb path to:
+- Open a parent directory
+- Navigate to a parent symbol
+- See sibling files or symbols
+
+## Go to Line
+
+Jump to a specific line number in the current file.
+
+**Keybinding:** `Ctrl+G` (macOS and Linux/Windows)
+
+Type the line number and press Enter. You can also use the file finder format: `Cmd+P` then type `:42` to go to line 42.
+
+## Navigate History
+
+Move backward and forward through your navigation history.
+
+- **Go back:** `Cmd+Alt+Left` (macOS) or `Ctrl+Alt+Left` (Linux/Windows)
+- **Go forward:** `Cmd+Alt+Right` (macOS) or `Ctrl+Alt+Right` (Linux/Windows)
+
+Zed tracks your cursor positions as you jump between files and symbols, making it easy to retrace your steps.
+
+## Scroll Navigation
+
+### Center Cursor
+
+Center the current line in the viewport:
+
+**Keybinding:** `Cmd+L` (macOS) or `Ctrl+L` (Linux/Windows)
+
+### Page Up/Down
+
+- **Page up:** `Fn+Up` (macOS) or `PageUp` (Linux/Windows)
+- **Page down:** `Fn+Down` (macOS) or `PageDown` (Linux/Windows)
+
+### Jump to Top/Bottom
+
+- **Top of file:** `Cmd+Home` (macOS) or `Ctrl+Home` (Linux/Windows)
+- **Bottom of file:** `Cmd+End` (macOS) or `Ctrl+End` (Linux/Windows)
+
+## Diagnostic Navigation
+
+Jump between errors and warnings from your language server.
+
+- **Next diagnostic:** `F8`
+- **Previous diagnostic:** `Shift+F8`
+- **Next error only:** Command Palette → "Go to Next Error"
+
+See [Diagnostics](https://zed.dev/docs/diagnostics) for more details.
+
+## Git Diff Navigation
+
+Navigate between changed sections in your file.
+
+- **Next hunk:** Command Palette → "Go to Next Diff Hunk"
+- **Previous hunk:** Command Palette → "Go to Previous Diff Hunk"
+
+See [Git integration](https://zed.dev/docs/git) for more details.
+
+## Search and Replace in File
+
+Search and replace within the current file.
+
+- **Find:** `Cmd+F` (macOS) or `Ctrl+F` (Linux/Windows)
+- **Replace:** `Cmd+Alt+F` (macOS) or `Ctrl+H` (Linux/Windows)
+
+### Search Options
+
+- **Case sensitive:** `Cmd+Alt+C` (macOS)
+- **Whole word:** `Cmd+Alt+W` (macOS)
+- **Regex:** `Cmd+Alt+R` (macOS)
+
+### Navigate Matches
+
+- **Next match:** `Enter` or `Cmd+G` (macOS)
+- **Previous match:** `Shift+Enter` or `Cmd+Shift+G` (macOS)
+
+### Replace Operations
+
+- **Replace next:** Click "Replace" or press `Cmd+Enter` (macOS)
+- **Replace all:** Click "Replace All" or press `Cmd+Shift+Enter` (macOS)
+
+## Sticky Scroll
+
+Keep function and class headers visible at the top of the editor as you scroll.
+
+```json
+{
+  "sticky_scroll": {
+    "enabled": true
+  }
+}
+```
+
+This helps maintain context when reading long functions or classes.
+
+## Quick Reference
+
+| Task | Keybinding (macOS) | Keybinding (Linux/Windows) |
+| --- | --- | --- |
+| Command Palette | `Cmd+Shift+P` | `Ctrl+Shift+P` |
+| File Finder | `Cmd+P` | `Ctrl+P` |
+| Project Search | `Cmd+Shift+F` | `Ctrl+Shift+F` |
+| Go to Definition | `F12` | `F12` |
+| Find References | `Shift+F12` | `Shift+F12` |
+| File Outline | `Cmd+Shift+O` | `Ctrl+Shift+O` |
+| Symbol Search | `Cmd+T` | `Ctrl+T` |
+| Tab Switcher | `Ctrl+Tab` | `Ctrl+Tab` |
+| Go to Line | `Ctrl+G` | `Ctrl+G` |
+| Go Back | `Cmd+Alt+Left` | `Ctrl+Alt+Left` |
+| Go Forward | `Cmd+Alt+Right` | `Ctrl+Alt+Right` |
+
+## See Also
+
+- [Multibuffers](https://zed.dev/docs/multibuffers) - Edit search results and multiple files
+- [Diagnostics](https://zed.dev/docs/diagnostics) - Navigate errors and warnings
+- [Git Integration](https://zed.dev/docs/git) - Navigate changes and history
+- [Project Panel](https://zed.dev/docs/project-panel) - Browse files in a tree view

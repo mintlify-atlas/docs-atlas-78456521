@@ -1,0 +1,436 @@
+---
+title: Async Task System
+description: Understand GPUI's Task-based concurrency model for async operations
+---
+
+GPUI provides a powerful async task system built on Rust's async/await, allowing you to perform background work and update the UI safely.
+
+## The Task Type
+
+`Task<T>` is GPUI's fundamental async primitive. It's a future that represents work that may complete in the background.
+
+```rust
+use gpui::*;
+
+pub struct Task<T>;
+
+impl<T> Task<T> {
+    /// Creates a task that immediately resolves with a value
+    pub fn ready(val: T) -> Self;
+    
+    /// Detach the task to run it without waiting for the result
+    pub fn detach(self);
+    
+    /// Check if the task has completed
+    pub fn is_ready(&self) -> bool;
+}
+```
+
+## Spawning Tasks
+
+### Foreground Tasks
+
+Spawn tasks that run on the main thread:
+
+```rust
+use gpui::*;
+
+struct AsyncComponent {
+    result: Option<String>,
+}
+
+impl AsyncComponent {
+    fn fetch_data(&mut self, cx: &mut Context<Self>) {
+        cx.spawn(|this, mut cx| async move {
+            // Simulate async work
+            cx.background_executor().timer(Duration::from_secs(1)).await;
+            
+            // Update state on the main thread
+            this.update(&mut cx, |this, cx| {
+                this.result = Some("Data loaded".to_string());
+                cx.notify();
+            })
+        })
+        .detach();
+    }
+}
+```
+
+### Background Tasks
+
+Spawn tasks that run on background threads:
+
+```rust
+cx.background_spawn(async move {
+    // Heavy computation on background thread
+    let result = expensive_computation().await;
+    result
+})
+```
+
+## Task Lifecycle
+
+### Awaiting Tasks
+
+```rust
+// Spawn and await a task
+let task = cx.spawn(|this, mut cx| async move {
+    "result".to_string()
+});
+
+let result = task.await;
+```
+
+### Detaching Tasks
+
+Detaching allows tasks to run independently:
+
+```rust
+cx.spawn(|this, mut cx| async move {
+    // This task will run to completion even if nothing awaits it
+    do_background_work().await;
+})
+.detach();
+```
+
+<Warning>
+If a `Task` is dropped without being awaited or detached, it will be cancelled immediately.
+</Warning>
+
+### Task Cancellation
+
+```rust
+struct CancellableWork {
+    task: Option<Task<()>>,
+}
+
+impl CancellableWork {
+    fn start_work(&mut self, cx: &mut Context<Self>) {
+        let task = cx.spawn(|this, mut cx| async move {
+            // Long-running work
+            loop {
+                cx.background_executor().timer(Duration::from_secs(1)).await;
+                // Work continues...
+            }
+        });
+        
+        self.task = Some(task);
+    }
+    
+    fn cancel_work(&mut self) {
+        // Dropping the task cancels it
+        self.task = None;
+    }
+}
+```
+
+## Context Types for Async
+
+### AsyncApp
+
+`AsyncApp` is a context that can be held across await points:
+
+```rust
+cx.spawn(|this, mut cx| async move {
+    // cx is AsyncApp here
+    
+    // Update entities
+    this.update(&mut cx, |this, cx| {
+        // Modify state
+    })?;
+    
+    // Read entities
+    let value = this.read_with(&cx, |this, cx| {
+        this.some_field.clone()
+    })?;
+    
+    Ok(())
+})
+```
+
+### AsyncWindowContext
+
+`AsyncWindowContext` provides window-specific operations:
+
+```rust
+cx.spawn_in(window, |view, mut cx| async move {
+    // cx is AsyncWindowContext here
+    
+    // Update the window
+    cx.update(|window, cx| {
+        // Window operations
+    })?;
+    
+    Ok(())
+})
+```
+
+## Common Patterns
+
+### Loading Data
+
+```rust
+use gpui::*;
+
+struct DataLoader {
+    data: Option<String>,
+    loading: bool,
+    error: Option<String>,
+}
+
+impl DataLoader {
+    fn load_data(&mut self, cx: &mut Context<Self>) {
+        self.loading = true;
+        self.error = None;
+        cx.notify();
+        
+        cx.spawn(|this, mut cx| async move {
+            match fetch_data().await {
+                Ok(data) => {
+                    this.update(&mut cx, |this, cx| {
+                        this.data = Some(data);
+                        this.loading = false;
+                        cx.notify();
+                    })
+                }
+                Err(e) => {
+                    this.update(&mut cx, |this, cx| {
+                        this.error = Some(e.to_string());
+                        this.loading = false;
+                        cx.notify();
+                    })
+                }
+            }
+        })
+        .detach();
+    }
+}
+
+impl Render for DataLoader {
+    fn render(&mut self, _window: &mut Window, _cx: &mut Context<Self>) -> impl IntoElement {
+        div()
+            .when(self.loading, |div| {
+                div.child("Loading...")
+            })
+            .when_some(self.error.as_ref(), |div, error| {
+                div.child(format!("Error: {}", error))
+            })
+            .when_some(self.data.as_ref(), |div, data| {
+                div.child(data.clone())
+            })
+    }
+}
+```
+
+### Combining Tasks
+
+```rust
+use futures::join;
+
+cx.spawn(|this, mut cx| async move {
+    // Run multiple tasks concurrently
+    let (result1, result2) = join!(
+        fetch_data_1(),
+        fetch_data_2()
+    );
+    
+    this.update(&mut cx, |this, cx| {
+        this.data1 = result1;
+        this.data2 = result2;
+        cx.notify();
+    })
+})
+.detach();
+```
+
+### Sequential Operations
+
+```rust
+cx.spawn(|this, mut cx| async move {
+    // Step 1: Fetch user
+    let user = fetch_user().await?;
+    
+    // Step 2: Fetch user's posts
+    let posts = fetch_posts(&user.id).await?;
+    
+    // Step 3: Update UI
+    this.update(&mut cx, |this, cx| {
+        this.user = Some(user);
+        this.posts = posts;
+        cx.notify();
+    })
+})
+.detach();
+```
+
+## Error Handling
+
+### Using Result
+
+```rust
+cx.spawn(|this, mut cx| async move {
+    let result: Result<String> = fetch_data().await;
+    
+    this.update(&mut cx, |this, cx| {
+        match result {
+            Ok(data) => this.data = Some(data),
+            Err(e) => this.error = Some(e.to_string()),
+        }
+        cx.notify();
+    })
+})
+.detach();
+```
+
+### Using detach_and_log_err
+
+For tasks that return `Result`, automatically log errors:
+
+```rust
+cx.spawn(|this, mut cx| async move {
+    let data = fetch_data().await?;
+    
+    this.update(&mut cx, |this, cx| {
+        this.data = Some(data);
+        cx.notify();
+    })?;
+    
+    Ok(())
+})
+.detach_and_log_err(cx);
+```
+
+## Timers and Delays
+
+```rust
+// Create a timer
+let timer = cx.background_executor().timer(Duration::from_secs(2));
+
+cx.spawn(|this, mut cx| async move {
+    timer.await;
+    
+    this.update(&mut cx, |this, cx| {
+        println!("Timer expired");
+        cx.notify();
+    })
+})
+.detach();
+```
+
+## FallibleTask
+
+Handle task cancellation gracefully:
+
+```rust
+let task = cx.spawn(|this, mut cx| async move {
+    "result".to_string()
+});
+
+// Convert to fallible task
+let fallible = task.fallible();
+
+// Returns None if cancelled, Some(T) if completed
+if let Some(result) = fallible.await {
+    println!("Task completed: {}", result);
+} else {
+    println!("Task was cancelled");
+}
+```
+
+## Complete Example
+
+```rust
+use gpui::*;
+use std::time::Duration;
+
+struct SearchComponent {
+    query: String,
+    results: Vec<String>,
+    loading: bool,
+    search_task: Option<Task<()>>,
+}
+
+impl SearchComponent {
+    fn new() -> Self {
+        Self {
+            query: String::new(),
+            results: Vec::new(),
+            loading: false,
+            search_task: None,
+        }
+    }
+    
+    fn search(&mut self, query: String, cx: &mut Context<Self>) {
+        self.query = query.clone();
+        self.loading = true;
+        self.results.clear();
+        cx.notify();
+        
+        // Cancel previous search
+        self.search_task = None;
+        
+        // Start new search
+        let task = cx.spawn(|this, mut cx| async move {
+            // Debounce: wait before searching
+            cx.background_executor()
+                .timer(Duration::from_millis(300))
+                .await;
+            
+            // Perform search on background thread
+            let results = cx.background_spawn(async move {
+                perform_search(&query).await
+            });
+            
+            let results = results.await;
+            
+            // Update UI with results
+            this.update(&mut cx, |this, cx| {
+                this.results = results;
+                this.loading = false;
+                cx.notify();
+            })
+        });
+        
+        self.search_task = Some(task);
+    }
+}
+
+impl Render for SearchComponent {
+    fn render(&mut self, _window: &mut Window, _cx: &mut Context<Self>) -> impl IntoElement {
+        div()
+            .flex()
+            .flex_col()
+            .gap_4()
+            .child(
+                div()
+                    .when(self.loading, |div| {
+                        div.child("Searching...")
+                    })
+            )
+            .children(
+                self.results.iter().map(|result| {
+                    div().child(result.clone())
+                })
+            )
+    }
+}
+
+async fn perform_search(query: &str) -> Vec<String> {
+    // Simulate search
+    vec![format!("Result for: {}", query)]
+}
+```
+
+## Best Practices
+
+<Tip>
+Always call `cx.notify()` after updating state in async tasks to trigger re-renders.
+</Tip>
+
+<Note>
+Use `detach()` for fire-and-forget tasks, and store tasks in fields if you need to cancel them later.
+</Note>
+
+<Warning>
+Entity updates from async contexts return `Result` - always handle potential errors when the entity may have been dropped.
+</Warning>

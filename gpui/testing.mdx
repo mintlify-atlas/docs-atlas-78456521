@@ -1,0 +1,522 @@
+---
+title: 'Testing'
+description: 'Comprehensive testing support with TestAppContext and deterministic execution'
+icon: 'vial'
+---
+
+GPUI provides first-class support for testing UI applications with deterministic test execution, visual testing capabilities, and support for testing distributed systems. The testing framework ensures tests run reliably even with async operations and randomness.
+
+## Test Macro
+
+Use the `#[gpui::test]` macro to write GPUI tests. It automatically sets up the test environment and provides a `TestAppContext`.
+
+```rust
+use gpui::{TestAppContext, Entity};
+
+#[gpui::test]
+fn basic_test(cx: &mut TestAppContext) {
+    let counter = cx.new(|_| Counter { count: 0 });
+    
+    counter.update(cx, |counter, _| {
+        counter.count = 42;
+    });
+    
+    let value = counter.read_with(cx, |counter, _| counter.count);
+    assert_eq!(value, 42);
+}
+```
+
+## TestAppContext
+
+`TestAppContext` is the primary testing context that provides access to the app state, entities, and executors.
+
+### Creating Entities
+
+```rust
+use gpui::{TestAppContext, Context};
+
+struct MyModel {
+    value: i32,
+}
+
+#[gpui::test]
+fn test_entities(cx: &mut TestAppContext) {
+    // Create a new entity
+    let entity = cx.new(|_| MyModel { value: 0 });
+    
+    // Update the entity
+    entity.update(cx, |model, _| {
+        model.value = 100;
+    });
+    
+    // Read from the entity
+    entity.read_with(cx, |model, _| {
+        assert_eq!(model.value, 100);
+    });
+}
+```
+
+### Working with Multiple Entities
+
+```rust
+#[gpui::test]
+fn test_multiple_entities(cx: &mut TestAppContext) {
+    let entity_a = cx.new(|_| MyModel { value: 1 });
+    let entity_b = cx.new(|_| MyModel { value: 2 });
+    
+    // Entities are independent
+    entity_a.update(cx, |a, _| a.value += 10);
+    entity_b.update(cx, |b, _| b.value += 20);
+    
+    assert_eq!(entity_a.read_with(cx, |a, _| a.value), 11);
+    assert_eq!(entity_b.read_with(cx, |b, _| b.value), 22);
+}
+```
+
+## Events and Notifications
+
+Test event emissions and subscriptions with immediate side effect execution.
+
+```rust
+use gpui::{TestAppContext, Context, EventEmitter};
+
+struct MyEvent;
+impl EventEmitter<MyEvent> for Counter {}
+
+#[gpui::test]
+fn test_events(cx: &mut TestAppContext) {
+    let counter = cx.new(|cx| {
+        let subscription = cx.subscribe_self(|this: &mut Counter, _: &MyEvent, _| {
+            this.count = 999;
+        });
+        
+        Counter {
+            count: 0,
+            _subscription: subscription,
+        }
+    });
+    
+    // Emit event - subscriber runs immediately after update
+    counter.update(cx, |_, cx| {
+        cx.emit(MyEvent);
+    });
+    
+    let count = counter.read_with(cx, |c, _| c.count);
+    assert_eq!(count, 999, "Event handler should have run");
+}
+```
+
+## Visual Testing
+
+`VisualTestContext` provides window and rendering testing capabilities.
+
+### Creating Test Windows
+
+```rust
+use gpui::{TestAppContext, VisualTestContext, Render, div};
+
+struct MyView {
+    text: String,
+}
+
+impl Render for MyView {
+    fn render(&mut self, _window: &mut Window, _cx: &mut Context<Self>) -> impl IntoElement {
+        div().child(self.text.clone())
+    }
+}
+
+#[gpui::test]
+fn test_with_window(cx: &mut TestAppContext) {
+    let (view, cx) = cx.add_window_view(|_, _| MyView {
+        text: "Hello".to_string(),
+    });
+    
+    // cx is now a &mut VisualTestContext
+    assert_eq!(view.read_with(cx, |v, _| v.text.clone()), "Hello");
+}
+```
+
+### Testing Actions
+
+```rust
+use gpui::{actions, Action, Context, Window};
+
+actions!(counter, [Increment, Decrement]);
+
+#[gpui::test]
+fn test_actions(cx: &mut TestAppContext) {
+    let window = cx.add_window(|_, cx| Counter::new(cx));
+    let mut cx = VisualTestContext::from_window(window.into(), cx);
+    let counter = window.root(&mut cx).unwrap();
+    
+    // Dispatch action via focus handle
+    let focus = counter.read_with(&cx, |c, _| c.focus_handle.clone());
+    cx.update(|window, cx| {
+        focus.dispatch_action(&Increment, window, cx);
+    });
+    
+    let count = counter.read_with(&cx, |c, _| c.count);
+    assert_eq!(count, 1);
+}
+```
+
+### Simulating User Input
+
+```rust
+use gpui::{VisualTestContext, Modifiers, MouseButton, px};
+
+#[gpui::test]
+fn test_user_input(cx: &mut TestAppContext) {
+    let (view, cx) = cx.add_window_view(|_, _| MyView::new());
+    
+    // Simulate keystrokes
+    cx.simulate_keystrokes("cmd-shift-p b k s p enter");
+    
+    // Simulate text input
+    cx.simulate_input("hello world");
+    
+    // Simulate mouse click
+    cx.simulate_click(px(100.).into(), Modifiers::none());
+    
+    // Simulate mouse events
+    cx.simulate_mouse_down(
+        px(50.).into(),
+        MouseButton::Left,
+        Modifiers::none(),
+    );
+}
+```
+
+### Window State Testing
+
+```rust
+#[gpui::test]
+fn test_window_state(cx: &mut TestAppContext) {
+    let (_, cx) = cx.add_window_view(|_, _| MyView::new());
+    
+    // Check window title
+    let title = cx.window_title();
+    
+    // Simulate window close
+    let should_close = cx.simulate_close();
+    assert!(should_close);
+    
+    // Simulate window blur
+    cx.deactivate_window();
+    
+    // Simulate window resize
+    cx.simulate_resize(size(px(800.), px(600.)));
+}
+```
+
+## Async Testing
+
+GPUI supports async tests with deterministic execution.
+
+```rust
+use gpui::{TestAppContext, Task, Context};
+
+#[gpui::test]
+async fn test_async_operations(cx: &mut TestAppContext) {
+    let counter = cx.new(|_| Counter { count: 0 });
+    
+    // Spawn and await a task
+    counter.update(cx, |counter, cx| {
+        cx.spawn(async move |this, cx| {
+            this.update(cx, |counter, _| {
+                counter.count = 100;
+            }).ok();
+        })
+    }).await;
+    
+    let count = counter.read_with(cx, |c, _| c.count);
+    assert_eq!(count, 100);
+}
+```
+
+### Running Until Parked
+
+```rust
+#[gpui::test]
+async fn test_detached_tasks(cx: &mut TestAppContext) {
+    let counter = cx.new(|_| Counter { count: 0 });
+    
+    // Detach a task
+    counter.update(cx, |counter, cx| {
+        cx.spawn(async move |this, cx| {
+            this.update(cx, |c, _| c.count = 50).ok();
+        }).detach();
+    });
+    
+    // Task hasn't run yet
+    assert_eq!(counter.read_with(cx, |c, _| c.count), 0);
+    
+    // Run all pending tasks
+    cx.run_until_parked();
+    
+    // Now the task has completed
+    assert_eq!(counter.read_with(cx, |c, _| c.count), 50);
+}
+```
+
+### Waiting for Conditions
+
+```rust
+use std::time::Duration;
+
+#[gpui::test]
+async fn test_conditions(cx: &mut TestAppContext) {
+    let entity = cx.new(|_| MyModel { value: 0 });
+    
+    // Spawn background task
+    cx.background_spawn({
+        let entity = entity.clone();
+        async move {
+            entity.update(&cx, |m, _| m.value = 42).ok();
+        }
+    }).detach();
+    
+    // Wait for condition
+    cx.condition(&entity, |model, _| model.value == 42).await;
+    
+    assert_eq!(entity.read_with(cx, |m, _| m.value), 42);
+}
+```
+
+### External Systems and Parking
+
+```rust
+use futures::channel::oneshot;
+
+#[gpui::test]
+async fn test_external_system(cx: &mut TestAppContext) {
+    // Allow thread parking for external systems
+    cx.executor().allow_parking();
+    
+    let (tx, rx) = oneshot::channel();
+    std::thread::spawn(move || {
+        std::thread::sleep(Duration::from_millis(5));
+        tx.send(42).ok();
+    });
+    
+    // Can now await external futures
+    let result = rx.await.unwrap();
+    assert_eq!(result, 42);
+}
+```
+
+## Property-Based Testing
+
+Run tests multiple times with deterministic randomness.
+
+```rust
+use rand::prelude::*;
+
+#[gpui::test(iterations = 10)]
+fn test_random_operations(cx: &mut TestAppContext, mut rng: StdRng) {
+    let counter = cx.new(|_| Counter { count: 0 });
+    
+    let mut expected = 0;
+    for _ in 0..100 {
+        if rng.random_bool(0.5) {
+            expected += 1;
+            counter.update(cx, |c, _| c.count += 1);
+        } else {
+            expected -= 1;
+            counter.update(cx, |c, _| c.count -= 1);
+        }
+    }
+    
+    let actual = counter.read_with(cx, |c, _| c.count);
+    assert_eq!(actual, expected);
+}
+```
+
+### Specifying Seeds
+
+```bash
+# Run with specific seed
+SEED=12345 cargo test
+
+# Run multiple iterations
+ITERATIONS=100 cargo test
+```
+
+## Testing Distributed Systems
+
+Test multiple apps running concurrently with deterministic interleaving.
+
+```rust
+use gpui::TestAppContext;
+
+#[gpui::test]
+fn test_two_apps(cx_a: &mut TestAppContext, cx_b: &mut TestAppContext) {
+    let entity_a = cx_a.new(|_| Counter { count: 0 });
+    let entity_b = cx_b.new(|_| Counter { count: 0 });
+    
+    // Update both apps
+    entity_a.update(cx_a, |c, _| c.count = 10);
+    entity_b.update(cx_b, |c, _| c.count = 20);
+    
+    // Apps are independent
+    assert_eq!(entity_a.read_with(cx_a, |c, _| c.count), 10);
+    assert_eq!(entity_b.read_with(cx_b, |c, _| c.count), 20);
+}
+```
+
+### Deterministic Interleaving
+
+```rust
+#[gpui::test(iterations = 10)]
+fn test_concurrent_apps(
+    cx_a: &mut TestAppContext,
+    cx_b: &mut TestAppContext,
+    mut rng: StdRng,
+) {
+    let a = cx_a.new(|_| Counter { count: 0 });
+    let b = cx_b.new(|_| Counter { count: 0 });
+    
+    // Spawn tasks on both apps
+    for i in 0..10 {
+        if rng.random_bool(0.5) {
+            a.update(cx_a, |c, cx| {
+                cx.spawn(async move |this, cx| {
+                    this.update(cx, |c, _| c.count += i).ok();
+                }).detach();
+            });
+        } else {
+            b.update(cx_b, |c, cx| {
+                cx.spawn(async move |this, cx| {
+                    this.update(cx, |c, _| c.count += i).ok();
+                }).detach();
+            });
+        }
+    }
+    
+    // Deterministically run all tasks
+    cx_a.run_until_parked();
+    
+    // Both apps completed all work
+    let total = a.read_with(cx_a, |c, _| c.count) 
+              + b.read_with(cx_b, |c, _| c.count);
+    assert_eq!(total, 45); // 0+1+2+...+9 = 45
+}
+```
+
+## Platform Testing
+
+Test platform interactions using the test platform.
+
+### Clipboard Testing
+
+```rust
+use gpui::{TestAppContext, ClipboardItem};
+
+#[gpui::test]
+fn test_clipboard(cx: &mut TestAppContext) {
+    // Write to clipboard
+    cx.write_to_clipboard(ClipboardItem::new("test data"));
+    
+    // Read from clipboard
+    let item = cx.read_from_clipboard();
+    assert_eq!(item.unwrap().text(), Some("test data"));
+}
+```
+
+### Prompt Testing
+
+```rust
+#[gpui::test]
+fn test_prompts(cx: &mut TestAppContext) {
+    let (_, cx) = cx.add_window_view(|_, _| MyView::new());
+    
+    // Trigger a prompt in the app
+    // ...
+    
+    // Check for pending prompt
+    assert!(cx.has_pending_prompt());
+    
+    // Get prompt details
+    if let Some((msg, detail)) = cx.pending_prompt() {
+        println!("Prompt: {} - {}", msg, detail);
+    }
+    
+    // Simulate user clicking a button
+    cx.simulate_prompt_answer("OK");
+}
+```
+
+### File Picker Testing
+
+```rust
+use std::path::PathBuf;
+
+#[gpui::test]
+fn test_file_picker(cx: &mut TestAppContext) {
+    // Simulate file selection
+    cx.simulate_new_path_selection(|suggested_path| {
+        Some(suggested_path.join("test.txt"))
+    });
+    
+    // Check if prompt was triggered
+    assert!(cx.did_prompt_for_new_path());
+}
+```
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Use run_until_parked for detached tasks">
+    Always call `run_until_parked()` after detaching tasks to ensure they complete:
+    
+    ```rust
+    counter.update(cx, |c, cx| {
+        cx.spawn(async { /* work */ }).detach();
+    });
+    cx.run_until_parked(); // Ensure task completes
+    ```
+  </Accordion>
+  
+  <Accordion title="Avoid nested updates">
+    Don't update an entity while it's already being updated:
+    
+    ```rust
+    // Bad: nested update causes panic
+    entity.update(cx, |e, cx| {
+        entity.update(cx, |e2, _| { }); // Panic!
+    });
+    
+    // Good: sequential updates
+    entity.update(cx, |e, _| { });
+    entity.update(cx, |e, _| { });
+    ```
+  </Accordion>
+  
+  <Accordion title="Use iterations for flaky tests">
+    If a test occasionally fails, run it multiple times to catch issues:
+    
+    ```rust
+    #[gpui::test(iterations = 100)]
+    fn potentially_flaky_test(cx: &mut TestAppContext, rng: StdRng) {
+        // Test with randomness
+    }
+    ```
+  </Accordion>
+  
+  <Accordion title="Test entity cleanup">
+    Use weak handles to test entity lifecycle:
+    
+    ```rust
+    let weak = entity.downgrade();
+    drop(entity);
+    cx.run_until_parked();
+    assert!(weak.upgrade().is_none());
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## See Also
+
+- [Testing Example](src/../../examples/testing.rs:1) - Full example demonstrating testing patterns
+- [Test Module](src/test.rs:1) - Test utilities and helpers
+- [TestAppContext API](src/app/test_context.rs:18) - Full TestAppContext documentation

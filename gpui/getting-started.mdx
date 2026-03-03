@@ -1,0 +1,327 @@
+---
+title: Getting Started with GPUI
+description: Build your first GPUI application
+---
+
+# Getting Started with GPUI
+
+This guide will walk you through creating your first GPUI application.
+
+<Warning>
+GPUI is pre-1.0 and under active development. Breaking changes may occur between versions. Always use the latest stable Rust compiler.
+</Warning>
+
+## Prerequisites
+
+### System Requirements
+
+- **Rust**: Latest stable version
+- **Operating System**: macOS or Linux (Windows support in development)
+- **Platform Dependencies**: See below for your OS
+
+### macOS Dependencies
+
+GPUI uses Metal for rendering on macOS. You'll need:
+
+<Steps>
+  <Step title="Install Xcode">
+    Download from the [Mac App Store](https://apps.apple.com/us/app/xcode/id497799835) or [Apple Developer](https://developer.apple.com/download/all/) website (requires developer account).
+    
+    <Info>
+    Launch Xcode after installing and install the macOS components (default option).
+    </Info>
+  </Step>
+  
+  <Step title="Install Xcode Command Line Tools">
+    ```bash
+    xcode-select --install
+    ```
+  </Step>
+  
+  <Step title="Set Xcode Path">
+    Ensure command line tools use your Xcode installation:
+    ```bash
+    sudo xcode-select --switch /Applications/Xcode.app/Contents/Developer
+    ```
+  </Step>
+</Steps>
+
+### Linux Dependencies
+
+On Linux, GPUI requires various system libraries for Wayland/X11 support. Refer to the [Zed Linux documentation](https://github.com/zed-industries/zed/blob/main/docs/src/development/linux.md) for detailed setup.
+
+## Installation
+
+Add GPUI to your `Cargo.toml`:
+
+```toml Cargo.toml
+[dependencies]
+gpui = { version = "*" }
+gpui_platform = { git = "https://github.com/zed-industries/zed" }
+```
+
+<Note>
+Use `version = "*"` to get the latest version, as GPUI is evolving rapidly. Pin to a specific version for production use.
+</Note>
+
+## Hello World Example
+
+Let's create a simple "Hello World" application to understand GPUI's basics.
+
+### Create the Project
+
+```bash
+cargo new hello-gpui
+cd hello-gpui
+```
+
+### Write the Application
+
+Replace the contents of `src/main.rs`:
+
+```rust src/main.rs
+use gpui::{
+    App, Bounds, Context, SharedString, Window, WindowBounds, 
+    WindowOptions, div, prelude::*, px, rgb, size,
+};
+use gpui_platform::application;
+
+struct HelloWorld {
+    text: SharedString,
+}
+
+impl Render for HelloWorld {
+    fn render(&mut self, _window: &mut Window, _cx: &mut Context<Self>) -> impl IntoElement {
+        div()
+            .flex()
+            .flex_col()
+            .gap_3()
+            .bg(rgb(0x505050))
+            .size(px(500.0))
+            .justify_center()
+            .items_center()
+            .shadow_lg()
+            .border_1()
+            .border_color(rgb(0x0000ff))
+            .text_xl()
+            .text_color(rgb(0xffffff))
+            .child(format!("Hello, {}!", &self.text))
+    }
+}
+
+fn main() {
+    application().run(|cx: &mut App| {
+        let bounds = Bounds::centered(None, size(px(500.), px(500.0)), cx);
+        cx.open_window(
+            WindowOptions {
+                window_bounds: Some(WindowBounds::Windowed(bounds)),
+                ..Default::default()
+            },
+            |_, cx| {
+                cx.new(|_| HelloWorld {
+                    text: "World".into(),
+                })
+            },
+        )
+        .unwrap();
+        cx.activate(true);
+    });
+}
+```
+
+### Run the Application
+
+```bash
+cargo run
+```
+
+You should see a window with "Hello, World!" displayed.
+
+## Understanding the Code
+
+Let's break down the key components:
+
+### Application Entry Point
+
+Every GPUI app starts with `application().run()`:
+
+```rust
+application().run(|cx: &mut App| {
+    // App initialization
+});
+```
+
+The `App` context (`cx`) is your gateway to all application-level services.
+
+### Creating a Window
+
+Windows are created with `cx.open_window()`:
+
+```rust
+cx.open_window(
+    WindowOptions {
+        window_bounds: Some(WindowBounds::Windowed(bounds)),
+        ..Default::default()
+    },
+    |_, cx| {
+        // Create root view
+        cx.new(|_| HelloWorld { text: "World".into() })
+    },
+)
+```
+
+### The View (Entity)
+
+`HelloWorld` is an entity - state owned by GPUI:
+
+```rust
+struct HelloWorld {
+    text: SharedString,
+}
+```
+
+<Info>
+`SharedString` is used instead of `String` to avoid unnecessary copying. It's either a `&'static str` or `Arc<str>`.
+</Info>
+
+### Rendering
+
+The `Render` trait defines how your view displays:
+
+```rust
+impl Render for HelloWorld {
+    fn render(&mut self, _window: &mut Window, _cx: &mut Context<Self>) -> impl IntoElement {
+        div()
+            .flex()
+            .bg(rgb(0x505050))
+            .child(format!("Hello, {}!", &self.text))
+    }
+}
+```
+
+### Element API
+
+GPUI uses a Tailwind-style API for styling:
+
+- `.flex()` - Enable flexbox layout
+- `.flex_col()` - Vertical flex direction
+- `.gap_3()` - Gap between children
+- `.bg(color)` - Background color
+- `.size(px(500.0))` - Fixed size
+- `.text_xl()` - Text size
+- `.child(content)` - Add child element
+
+## Working with State
+
+Let's add interactivity with a counter:
+
+```rust
+use gpui::*;
+
+struct Counter {
+    count: usize,
+}
+
+impl Render for Counter {
+    fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        div()
+            .flex()
+            .flex_col()
+            .gap_2()
+            .child(format!("Count: {}", self.count))
+            .child(
+                div()
+                    .px_4()
+                    .py_2()
+                    .bg(rgb(0x0000ff))
+                    .text_color(rgb(0xffffff))
+                    .cursor_pointer()
+                    .on_click(cx.listener(|this, _event, _window, cx| {
+                        this.count += 1;
+                        cx.notify();
+                    }))
+                    .child("Increment")
+            )
+    }
+}
+```
+
+<Note>
+Calling `cx.notify()` tells GPUI that the view's state changed and needs re-rendering.
+</Note>
+
+## Event Handlers
+
+GPUI provides several event handler methods:
+
+- `.on_click()` - Mouse click events
+- `.on_mouse_down()` - Mouse button press
+- `.on_mouse_up()` - Mouse button release
+- `.on_mouse_move()` - Mouse movement
+- `.on_hover()` - Mouse enter/leave
+- `.on_action()` - Keyboard action dispatch
+
+Use `cx.listener()` to access the view's state in handlers:
+
+```rust
+.on_click(cx.listener(|this: &mut MyView, event, window, cx| {
+    // `this` is &mut MyView
+    // Handle the event
+}))
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Architecture" icon="sitemap" href="/gpui/architecture">
+    Learn about GPUI's architecture and design
+  </Card>
+  <Card title="Examples" icon="code" href="https://github.com/zed-industries/zed/tree/main/crates/gpui/examples">
+    Explore more GPUI examples
+  </Card>
+  <Card title="Zed Source" icon="book" href="https://github.com/zed-industries/zed">
+    Study real-world GPUI usage
+  </Card>
+  <Card title="gpui.rs" icon="graduation-cap" href="https://gpui.rs">
+    Complete tutorials and guides
+  </Card>
+</CardGroup>
+
+## Common Patterns
+
+### Conditional Rendering
+
+Use `.when()` and `.when_some()` for conditional elements:
+
+```rust
+div()
+    .when(is_active, |this| this.bg(rgb(0x00ff00)))
+    .when_some(maybe_text, |this, text| this.child(text))
+```
+
+### Styling
+
+Colors can be defined with `rgb()`, `rgba()`, or `Hsla`:
+
+```rust
+.bg(rgb(0x505050))           // Hex color
+.text_color(rgba(255, 0, 0, 0.5))  // RGBA
+.border_color(gpui::red())   // Named colors
+```
+
+### Layout
+
+Flexbox properties mirror CSS:
+
+```rust
+div()
+    .flex()
+    .flex_row()      // or .flex_col()
+    .justify_center() // Main axis alignment
+    .items_center()   // Cross axis alignment
+    .gap_2()         // Space between children
+```
+
+<Tip>
+GPUI's element API is modeled after Tailwind CSS. If you know Tailwind, you'll feel right at home!
+</Tip>

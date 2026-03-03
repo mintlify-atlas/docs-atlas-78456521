@@ -1,0 +1,247 @@
+---
+title: Release Notes
+description: Release notes, changelogs, and version history for Zed.
+---
+
+# Release Notes
+
+Zed releases follow a multi-channel strategy with Stable, Preview, and Nightly builds.
+
+## Release Channels
+
+<ParamField path="Stable" type="channel">
+  Production-ready releases with thorough testing.
+  
+  **Update frequency:** Every 1-2 weeks
+  
+  **Recommended for:** Daily use, production work
+</ParamField>
+
+<ParamField path="Preview" type="channel">
+  Releases about one week ahead of Stable with new features and fixes.
+  
+  **Update frequency:** Weekly (typically Wednesdays)
+  
+  **Recommended for:** Early access to new features, testing before Stable
+</ParamField>
+
+<ParamField path="Nightly" type="channel">
+  Bleeding-edge builds with the latest changes.
+  
+  **Update frequency:** Daily
+  
+  **Recommended for:** Testing latest features, contributing to development
+</ParamField>
+
+## Viewing Release Notes
+
+### Within Zed
+
+After updating Zed, you'll see release notes for the new version. To view release notes manually:
+
+1. Open the command palette (`Cmd+Shift+P` / `Ctrl+Shift+P`)
+2. Run `zed: view release notes`
+
+### Online
+
+View complete release history:
+
+- **Stable releases:** [zed.dev/releases/stable](https://zed.dev/releases/stable)
+- **Preview releases:** [zed.dev/releases/preview](https://zed.dev/releases/preview)
+- **Nightly releases:** [zed.dev/releases/nightly](https://zed.dev/releases/nightly)
+
+### GitHub
+
+Full source and release artifacts:
+
+- [github.com/zed-industries/zed/releases](https://github.com/zed-industries/zed/releases)
+
+## Switching Release Channels
+
+### macOS
+
+Install different channels side-by-side:
+
+```sh
+# Stable
+brew install --cask zed
+
+# Preview
+brew install --cask zed@preview
+```
+
+Or download from:
+- [Stable](https://zed.dev/download)
+- [Preview](https://zed.dev/releases/preview)
+- [Nightly](https://zed.dev/releases/nightly)
+
+### Linux
+
+Specify channel during installation:
+
+```sh
+# Stable (default)
+curl -f https://zed.dev/install.sh | sh
+
+# Preview
+curl -f https://zed.dev/install.sh | ZED_CHANNEL=preview sh
+
+# Nightly
+curl -f https://zed.dev/install.sh | ZED_CHANNEL=nightly sh
+```
+
+### Windows
+
+Download the installer for your preferred channel:
+
+- [Stable](https://zed.dev/download)
+- [Preview](https://zed.dev/releases/preview)
+
+Or use winget:
+
+```powershell
+winget install -e --id ZedIndustries.Zed
+```
+
+## Update Behavior
+
+### Automatic Updates
+
+Zed checks for updates automatically and prompts when a new version is available. Updates download in the background.
+
+### Manual Update Check
+
+1. Open command palette (`Cmd+Shift+P` / `Ctrl+Shift+P`)
+2. Run `zed: check for updates`
+
+### Disabling Auto-Update
+
+To disable automatic update checks (not recommended):
+
+```json
+{
+  "auto_update": false
+}
+```
+
+## Version Numbers
+
+Zed uses semantic versioning: `MAJOR.MINOR.PATCH`
+
+Example: `0.165.2`
+
+- **MAJOR:** Breaking changes (currently 0 during active development)
+- **MINOR:** New features, significant changes
+- **PATCH:** Bug fixes, minor improvements
+
+### Pre-1.0 Development
+
+Zed is currently in pre-1.0 development (0.x versions). This means:
+
+- Breaking changes may occur in minor versions
+- Settings or keybindings may change
+- New features are being added rapidly
+
+We maintain backward compatibility where possible and document breaking changes in release notes.
+
+## Notable Releases
+
+Key milestones in Zed's development:
+
+### v0.165.0 - Linux Support (January 2025)
+
+First official Linux release with Vulkan rendering.
+
+### v0.157.0 - Windows Support (November 2024)
+
+First official Windows release.
+
+### v0.150.0 - AI Agent (October 2024)
+
+Introduced the AI agent panel with multi-turn conversations and tool use.
+
+### v0.100.0 - Collaboration 2.0 (June 2024)
+
+Major collaboration overhaul with improved sharing and audio/video calls.
+
+## Release Schedule
+
+### Preview to Stable
+
+Preview releases typically move to Stable after:
+
+1. ~1 week of testing in Preview
+2. Critical bugs fixed
+3. Community feedback addressed
+
+### Hotfixes
+
+Critical bug fixes may be released outside the normal schedule as patch versions.
+
+## Subscribing to Updates
+
+### Email Newsletter
+
+Subscribe at [zed.dev](https://zed.dev) for major release announcements.
+
+### RSS Feed
+
+Subscribe to release feeds:
+
+- Stable: `https://zed.dev/releases/stable/feed`
+- Preview: `https://zed.dev/releases/preview/feed`
+- Nightly: `https://zed.dev/releases/nightly/feed`
+
+### GitHub Releases
+
+Watch the repository for release notifications:
+
+1. Go to [github.com/zed-industries/zed](https://github.com/zed-industries/zed)
+2. Click "Watch" → "Custom" → "Releases"
+
+### Discord
+
+Join the [Zed Discord](https://discord.gg/zed-community) for release announcements in the `#announcements` channel.
+
+## Release Note Format
+
+Release notes include:
+
+- **New features:** Major additions and improvements
+- **Bug fixes:** Resolved issues
+- **Performance:** Optimization and speed improvements
+- **Breaking changes:** Changes requiring action from users
+- **Deprecations:** Features being phased out
+
+### Example Release Note
+
+```markdown
+## v0.165.0
+
+### New Features
+- Added Linux support with Vulkan rendering
+- Improved AI agent with streaming responses
+- New terminal emulator with better performance
+
+### Bug Fixes
+- Fixed crash when opening large files
+- Resolved issue with Git integration on Windows
+
+### Breaking Changes
+- Changed default theme from "One Dark" to "Zed"
+- Removed deprecated `legacy_vim_mode` setting
+```
+
+## Reporting Issues
+
+If you encounter issues after updating:
+
+1. Check release notes for known issues
+2. Search [GitHub issues](https://github.com/zed-industries/zed/issues)
+3. File a new issue with:
+   - Zed version (`zed: about`)
+   - System specs (`zed: copy system specs into clipboard`)
+   - Steps to reproduce
+   - Expected vs. actual behavior
+
+See [Contributing](https://github.com/zed-industries/zed/blob/main/CONTRIBUTING.md) for guidelines.

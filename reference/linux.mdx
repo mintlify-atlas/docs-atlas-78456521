@@ -1,0 +1,266 @@
+---
+title: Linux Platform Support
+description: Zed platform support for Linux including installation methods, requirements, and distribution-specific information.
+---
+
+# Linux Platform Support
+
+Zed provides first-class support for Linux with native Vulkan rendering and broad distribution compatibility.
+
+## System Requirements
+
+<ParamField path="Architecture" type="requirement">
+  64-bit Intel/AMD (x86_64) or 64-bit ARM (aarch64) processors
+</ParamField>
+
+<ParamField path="Graphics" type="requirement">
+  Vulkan 1.3 compatible GPU and drivers required for rendering
+</ParamField>
+
+<ParamField path="Desktop Portals" type="requirement">
+  The following desktop portals are required:
+  - `org.freedesktop.portal.FileChooser`
+  - `org.freedesktop.portal.OpenURI`
+  - `org.freedesktop.portal.Secret` or `org.freedesktop.Secrets`
+</ParamField>
+
+<ParamField path="glibc" type="requirement">
+  System-wide glibc required:
+  - x86_64 (Intel/AMD): glibc >= 2.31 (Ubuntu 20+)
+  - aarch64 (ARM): glibc >= 2.35 (Ubuntu 22+)
+  
+  NixOS and Alpine do not have system-wide glibc by default but can use compatibility layers ([nix-ld](https://github.com/Mic92/nix-ld), [gcompat](https://wiki.alpinelinux.org/wiki/Running_glibc_programs)).
+</ParamField>
+
+## Installation Methods
+
+### Official Install Script (Recommended)
+
+The fastest way to install Zed on most Linux distributions:
+
+```sh
+curl -f https://zed.dev/install.sh | sh
+```
+
+Install preview build (~1 week ahead of stable):
+
+```sh
+curl -f https://zed.dev/install.sh | ZED_CHANNEL=preview sh
+```
+
+Install specific version:
+
+```sh
+curl -f https://zed.dev/install.sh | ZED_VERSION=0.216.0 sh
+```
+
+Supported architectures: `x86_64`, `aarch64`
+
+Supported distributions: Ubuntu, Arch, Debian, RedHat, CentOS, Fedora, and more
+
+### Package Managers
+
+Zed is available through various distribution package managers:
+
+<ParamField path="Flathub" type="package">
+  ```sh
+  flatpak install flathub dev.zed.Zed
+  ```
+  
+  Package: [`dev.zed.Zed`](https://flathub.org/apps/dev.zed.Zed)
+</ParamField>
+
+<ParamField path="Arch Linux" type="package">
+  ```sh
+  pacman -S zed
+  ```
+  
+  Package: [`zed`](https://archlinux.org/packages/extra/x86_64/zed/)
+  
+  AUR alternatives: [`zed-git`](https://aur.archlinux.org/packages/zed-git), [`zed-preview`](https://aur.archlinux.org/packages/zed-preview)
+</ParamField>
+
+<ParamField path="NixOS" type="package">
+  ```nix
+  environment.systemPackages = [ pkgs.zed-editor ];
+  ```
+  
+  Package: [`zed-editor`](https://search.nixos.org/packages?channel=unstable&show=zed-editor)
+</ParamField>
+
+<ParamField path="Fedora/Ultramarine (Terra)" type="package">
+  Packages: [`zed`](https://github.com/terrapkg/packages/tree/frawhide/anda/devs/zed/stable), [`zed-preview`](https://github.com/terrapkg/packages/tree/frawhide/anda/devs/zed/preview), [`zed-nightly`](https://github.com/terrapkg/packages/tree/frawhide/anda/devs/zed/nightly)
+</ParamField>
+
+<ParamField path="Debian/Ubuntu (Community)" type="package">
+  Community-maintained repository: [debian.griffo.io](https://debian.griffo.io/)
+  
+  Build instructions: [GitHub repository](https://github.com/dariogriffo/zed-debian)
+</ParamField>
+
+<ParamField path="Other Distributions" type="package">
+  - Alpine: `zed` ([aarch64](https://pkgs.alpinelinux.org/package/edge/testing/aarch64/zed), [x86_64](https://pkgs.alpinelinux.org/package/edge/testing/x86_64/zed))
+  - Conda: [`zed`](https://anaconda.org/conda-forge/zed)
+  - Solus: [`zed`](https://github.com/getsolus/packages/tree/main/packages/z/zed)
+  - Manjaro: [`zed`](https://packages.manjaro.org/?query=zed)
+  
+  See [Repology](https://repology.org/project/zed-editor/versions) for more distributions.
+</ParamField>
+
+### Manual Download
+
+Download pre-built `.tar.gz` archives:
+
+- [zed-linux-x86_64.tar.gz](https://cloud.zed.dev/releases/stable/latest/download?asset=zed&arch=x86_64&os=linux&source=docs) ([preview](https://cloud.zed.dev/releases/preview/latest/download?asset=zed&arch=x86_64&os=linux&source=docs))
+- [zed-linux-aarch64.tar.gz](https://cloud.zed.dev/releases/stable/latest/download?asset=zed&arch=aarch64&os=linux&source=docs) ([preview](https://cloud.zed.dev/releases/preview/latest/download?asset=zed&arch=aarch64&os=linux&source=docs))
+
+Extract and create a symlink:
+
+```sh
+mkdir -p ~/.local
+tar -xvf <path/to/download>.tar.gz -C ~/.local
+ln -sf ~/.local/zed.app/bin/zed ~/.local/bin/zed
+```
+
+Install desktop integration:
+
+```sh
+install -D ~/.local/zed.app/share/applications/dev.zed.Zed.desktop -t ~/.local/share/applications
+sed -i "s|Icon=zed|Icon=$HOME/.local/zed.app/share/icons/hicolor/512x512/apps/zed.png|g" ~/.local/share/applications/dev.zed.Zed.desktop
+sed -i "s|Exec=zed|Exec=$HOME/.local/zed.app/bin/zed|g" ~/.local/share/applications/dev.zed.Zed.desktop
+```
+
+### Building from Source
+
+Required for:
+- Architectures other than x86_64 or aarch64 (e.g., 32-bit, RISC-V)
+- RHEL 8.x, Rocky Linux 8, AlmaLinux 8, Amazon Linux 2
+- RHEL 9.x, Rocky Linux 9, AlmaLinux 9, Amazon Linux 2023 on aarch64
+
+See [Linux development documentation](../development/linux) for build instructions.
+
+## CLI
+
+The CLI is automatically included with Zed on Linux. The binary name may vary:
+
+- Official packages: `zed`
+- Some distributions: `zeditor` or `zedit` (to avoid conflicts)
+
+Verify installation:
+
+```sh
+zed --version
+```
+
+See the [CLI Reference](./cli) for usage.
+
+## Uninstalling
+
+### Standard Install Script
+
+If installed via the official script:
+
+```sh
+zed --uninstall
+```
+
+Or:
+
+```sh
+$HOME/.local/bin/zed --uninstall
+```
+
+The script will prompt whether to keep or delete your preferences.
+
+### Package Manager
+
+Uninstall using your package manager:
+
+```sh
+# Arch
+sudo pacman -R zed
+
+# Flatpak
+flatpak uninstall dev.zed.Zed
+
+# NixOS
+# Remove zed-editor from environment.systemPackages
+```
+
+## Troubleshooting
+
+### Zed Fails to Start
+
+**glibc version too old:**
+
+```
+/lib64/libc.so.6: version 'GLIBC_2.29' not found
+```
+
+Solution: Upgrade your system or [build from source](../development/linux).
+
+### Graphics Issues
+
+**No supported device found:**
+
+```
+Zed failed to open a window: NoSupportedDeviceFound
+```
+
+Zed requires Vulkan 1.3. Troubleshoot with [vkcube](https://github.com/krh/vkcube):
+
+```sh
+# Install vulkan-tools (package name varies by distro)
+sudo apt install vulkan-tools  # Debian/Ubuntu
+sudo pacman -S vulkan-tools     # Arch
+
+# Test Vulkan
+vkcube
+```
+
+If `vkcube` fails:
+
+1. Update GPU drivers
+2. Install Vulkan runtime libraries
+3. Check if your GPU supports Vulkan 1.3
+
+**Poor performance or rendering glitches:**
+
+1. Update GPU drivers to the latest version
+2. Ensure Vulkan 1.3 support
+3. Check for compositor conflicts (try disabling compositing)
+
+### Wayland vs X11
+
+Zed supports both Wayland and X11. If you experience issues:
+
+- **On Wayland:** Try forcing X11 with `GDK_BACKEND=x11 zed`
+- **On X11:** Try Wayland (if available) with `GDK_BACKEND=wayland zed`
+
+### Desktop Integration Issues
+
+If Zed doesn't appear in application menus:
+
+1. Verify the `.desktop` file exists in `~/.local/share/applications`
+2. Update desktop database: `update-desktop-database ~/.local/share/applications`
+3. Log out and back in
+
+See the [Troubleshooting guide](../troubleshooting) for more help.
+
+## Distribution-Specific Notes
+
+### NixOS
+
+Zed works on NixOS but requires glibc compatibility. Use [nix-ld](https://github.com/Mic92/nix-ld) or the community [NixOS package](https://search.nixos.org/packages?channel=unstable&show=zed-editor).
+
+### Alpine Linux
+
+Zed works on Alpine with [gcompat](https://wiki.alpinelinux.org/wiki/Running_glibc_programs) for glibc compatibility, or use the [Alpine package](https://pkgs.alpinelinux.org/package/edge/testing/x86_64/zed).
+
+### Flatpak Sandboxing
+
+The Flatpak version runs in a sandbox with limited access. To access host system files, grant additional permissions via Flatseal or `flatpak override`.
+
+## Contributing Packages
+
+Zed is open source and welcomes packaging contributions. See [notes for packaging Zed](../development/linux#notes-for-packaging-zed) in the development docs.

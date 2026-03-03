@@ -1,0 +1,226 @@
+---
+title: Actions Reference
+description: Complete reference for all Zed actions that can be triggered via keybindings or the command palette.
+---
+
+# Actions Reference
+
+Actions are the core commands in Zed that can be triggered through keyboard shortcuts, the command palette, or programmatically. This page provides a reference for working with actions.
+
+## What Are Actions?
+
+Actions in Zed are typed commands that can be:
+
+- Bound to keyboard shortcuts in your keymap
+- Executed from the command palette (`Cmd+Shift+P` / `Ctrl+Shift+P`)
+- Triggered programmatically in extensions
+- Context-sensitive based on the active editor or panel
+
+## Finding Actions
+
+### Command Palette
+
+The easiest way to discover actions is through the command palette:
+
+1. Press `Cmd+Shift+P` (macOS) or `Ctrl+Shift+P` (Windows/Linux)
+2. Start typing to search for actions
+3. See the current keybinding (if any) on the right side
+
+### Keymap Editor
+
+View all actions with their current keybindings:
+
+1. Open the keymap editor with `Cmd+K Cmd+S` (macOS) or `Ctrl+K Ctrl+S` (Windows/Linux)
+2. Search for specific actions
+3. Click to edit or add keybindings
+
+### Default Keymaps
+
+Browse all default actions and keybindings in Zed's source:
+
+- [macOS default keymap](https://github.com/zed-industries/zed/blob/main/assets/keymaps/default-macos.json)
+- [Windows default keymap](https://github.com/zed-industries/zed/blob/main/assets/keymaps/default-windows.json)
+- [Linux default keymap](https://github.com/zed-industries/zed/blob/main/assets/keymaps/default-linux.json)
+
+## Action Namespaces
+
+Actions are organized by namespace, indicating which part of Zed they control:
+
+<ParamField path="zed::" type="namespace">
+  Application-level actions like opening settings, updating Zed, or managing windows.
+  
+  Examples:
+  - `zed::OpenSettings`
+  - `zed::Quit`
+  - `zed::About`
+</ParamField>
+
+<ParamField path="editor::" type="namespace">
+  Editor actions for text manipulation, navigation, and selection.
+  
+  Examples:
+  - `editor::MoveLeft`
+  - `editor::SelectAll`
+  - `editor::ToggleComments`
+</ParamField>
+
+<ParamField path="workspace::" type="namespace">
+  Workspace-level actions for managing panes, panels, and navigation.
+  
+  Examples:
+  - `workspace::NewFile`
+  - `workspace::Save`
+  - `workspace::ToggleLeftDock`
+</ParamField>
+
+<ParamField path="agent::" type="namespace">
+  AI agent actions for interacting with the agent panel.
+  
+  Examples:
+  - `agent::ToggleFocus`
+  - `agent::NewThread`
+  - `agent::QuoteSelection`
+</ParamField>
+
+<ParamField path="project_panel::" type="namespace">
+  Project panel actions for file tree operations.
+  
+  Examples:
+  - `project_panel::ToggleFocus`
+  - `project_panel::NewFile`
+  - `project_panel::Delete`
+</ParamField>
+
+<ParamField path="terminal::" type="namespace">
+  Terminal actions for managing integrated terminal instances.
+  
+  Examples:
+  - `terminal::Deploy`
+  - `terminal::Clear`
+  - `terminal::Copy`
+</ParamField>
+
+<ParamField path="vim::" type="namespace">
+  Vim mode actions (only available when `vim_mode` is enabled).
+  
+  Examples:
+  - `vim::NormalMode`
+  - `vim::InsertMode`
+  - `vim::VisualMode`
+</ParamField>
+
+## Action Types
+
+### Simple Actions
+
+Most actions take no arguments and are bound as strings:
+
+```json
+{
+  "bindings": {
+    "ctrl-a": "editor::SelectAll",
+    "cmd-s": "workspace::Save"
+  }
+}
+```
+
+### Actions with Arguments
+
+Some actions require arguments and are bound as arrays:
+
+```json
+{
+  "bindings": {
+    "cmd-1": ["workspace::ActivatePane", 0],
+    "cmd-2": ["workspace::ActivatePane", 1]
+  }
+}
+```
+
+### Actions with Complex Arguments
+
+Actions requiring multiple parameters use an object:
+
+```json
+{
+  "bindings": {
+    "ctrl-h": ["buffer_search::Deploy", { "replace_enabled": true }]
+  }
+}
+```
+
+## Common Actions
+
+### Editor Actions
+
+- `editor::MoveUp` / `editor::MoveDown` / `editor::MoveLeft` / `editor::MoveRight`
+- `editor::SelectAll`
+- `editor::Copy` / `editor::Cut` / `editor::Paste`
+- `editor::Undo` / `editor::Redo`
+- `editor::ToggleComments`
+- `editor::Format`
+- `editor::GoToDefinition`
+- `editor::FindAllReferences`
+- `editor::Rename`
+
+### Workspace Actions
+
+- `workspace::NewFile`
+- `workspace::Open`
+- `workspace::Save` / `workspace::SaveAs`
+- `workspace::CloseActiveItem`
+- `workspace::NewWindow`
+- `workspace::ToggleLeftDock` / `workspace::ToggleRightDock` / `workspace::ToggleBottomDock`
+
+### Navigation Actions
+
+- `file_finder::Toggle`
+- `project_symbols::Toggle`
+- `outline::Toggle`
+- `diagnostics::Deploy`
+- `tab_switcher::Toggle`
+
+### AI Actions
+
+- `agent::ToggleFocus`
+- `agent::NewThread`
+- `agent::QuoteSelection`
+- `agent::InsertIntoEditor`
+
+## Binding Actions
+
+To bind an action to a key, edit your `keymap.json`:
+
+```json
+[
+  {
+    "bindings": {
+      "ctrl-shift-f": "project_search::ToggleFocus"
+    }
+  }
+]
+```
+
+For context-specific bindings:
+
+```json
+[
+  {
+    "context": "Editor && vim_mode == normal",
+    "bindings": {
+      "space f": "file_finder::Toggle"
+    }
+  }
+]
+```
+
+See the [Keybindings Reference](./keybindings) for more details.
+
+## Debugging Actions
+
+To see which actions are available in the current context:
+
+1. Open the command palette: `dev: open key context view`
+2. View the active contexts and available actions
+
+This is useful for understanding why a keybinding might not be working or for discovering context-specific actions.

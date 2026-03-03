@@ -1,0 +1,446 @@
+---
+title: Language Extensions
+description: Add programming language support with syntax highlighting, LSP servers, and Tree-sitter grammars
+---
+
+## Overview
+
+Language extensions provide comprehensive support for programming languages in Zed. Each language extension can include:
+
+- **Language metadata** - Configuration defining file associations, comment syntax, and indentation
+- **Grammar** - Tree-sitter parser for syntax understanding
+- **Queries** - Tree-sitter patterns for highlighting, outlining, and code navigation
+- **Language servers** - LSP server integration for completions, diagnostics, and refactoring
+
+## Language Metadata
+
+### Directory Structure
+
+Languages are defined in the `languages/` directory:
+
+```
+my-extension/
+  extension.toml
+  languages/
+    my-language/
+      config.toml
+      highlights.scm
+      brackets.scm
+      outline.scm
+      indents.scm
+```
+
+### Configuration (config.toml)
+
+```toml
+name = "My Language"
+grammar = "my-language"
+path_suffixes = ["myl"]
+line_comments = ["# "]
+tab_size = 4
+hard_tabs = false
+```
+
+**Required Fields:**
+
+- `name` - Human-readable name shown in the language selector
+- `grammar` - Name of the Tree-sitter grammar (registered separately in `extension.toml`)
+
+**Optional Fields:**
+
+- `path_suffixes` - File extensions (without glob patterns)
+- `line_comments` - Comment prefixes for toggling comments (`editor::ToggleComments`)
+- `tab_size` - Indentation size (default: `4`)
+- `hard_tabs` - Use tabs (`true`) or spaces (`false`, default)
+- `first_line_pattern` - Regex to match files (e.g., shebang lines)
+- `debuggers` - Array of debugger names for this language
+
+### Advanced Configuration
+
+```toml
+# Word boundary characters
+word_characters = ["#", "$"]
+
+# Bracket pairs
+[[brackets]]
+start = "{"
+end = "}"
+close = true
+newline = true
+not_in = ["comment", "string"]
+
+# Scope-specific overrides
+[overrides.string]
+completion_query_characters = ["-"]
+```
+
+## Tree-sitter Grammars
+
+### Registering Grammars
+
+Grammars are registered in `extension.toml`:
+
+```toml
+[grammars.my-language]
+repository = "https://github.com/user/tree-sitter-my-language"
+rev = "58b7cac8fc14c92b0677c542610d8738c373fa81"
+```
+
+- `repository` - Git repository URL (HTTPS or `file://` for local development)
+- `rev` - Git commit SHA to use
+
+### Tree-sitter Queries
+
+Zed uses Tree-sitter queries for editor features. Each query file uses the `.scm` (Scheme) format.
+
+#### Syntax Highlighting (highlights.scm)
+
+Define syntax highlighting rules:
+
+```scheme
+(string) @string
+
+(pair
+  key: (string) @property.json_key)
+
+(number) @number
+
+(comment) @comment
+```
+
+Supported captures:
+
+| Capture | Description |
+|---------|-------------|
+| `@attribute` | Attributes |
+| `@boolean` | Boolean values |
+| `@comment` | Comments |
+| `@comment.doc` | Documentation comments |
+| `@constant` | Constants |
+| `@constructor` | Constructors |
+| `@function` | Functions |
+| `@keyword` | Keywords |
+| `@number` | Numeric values |
+| `@operator` | Operators |
+| `@property` | Properties |
+| `@string` | String literals |
+| `@string.escape` | Escaped characters |
+| `@type` | Types |
+| `@variable` | Variables |
+| `@variable.parameter` | Function parameters |
+
+See the [full capture list](https://zed.dev/docs/extensions/languages#syntax-highlighting) for all supported types.
+
+#### Bracket Matching (brackets.scm)
+
+Define matching brackets for rainbow highlighting:
+
+```scheme
+("[" @open "]" @close)
+("{" @open "}" @close)
+("\"" @open "\"" @close)
+```
+
+Disable rainbow coloring for specific pairs:
+
+```scheme
+(("\"" @open "\"" @close) (#set! rainbow.exclude))
+```
+
+#### Code Outline (outline.scm)
+
+Define outline structure for the file navigator:
+
+```scheme
+(function_definition
+  name: (identifier) @name) @item
+
+(class_definition
+  name: (identifier) @name) @item
+```
+
+| Capture | Description |
+|---------|-------------|
+| `@name` | Item name |
+| `@item` | Entire item range |
+| `@context` | Contextual information |
+| `@annotation` | Decorators, doc comments |
+
+#### Auto-indentation (indents.scm)
+
+Define indentation rules:
+
+```scheme
+(array "]" @end) @indent
+(object "}" @end) @indent
+
+(function_definition) @indent
+```
+
+#### Text Objects (textobjects.scm)
+
+Define navigation targets for Vim mode:
+
+```scheme
+; Function bodies
+(method_definition
+    body: (_
+        "{"
+        (_)* @function.inside
+        "}")) @function.around
+
+; Classes
+(class_definition) @class.around
+
+; Comments
+(comment)+ @comment.around
+```
+
+| Capture | Vim Motion | Description |
+|---------|------------|-------------|
+| `@function.around` | `[m`, `]m`, `af` | Entire function |
+| `@function.inside` | `if` | Function body |
+| `@class.around` | `[[`, `]]`, `ac` | Entire class |
+| `@class.inside` | `ic` | Class body |
+| `@comment.around` | `gc` | Comment block |
+
+#### Code Injections (injections.scm)
+
+Embed languages within each other:
+
+```scheme
+(fenced_code_block
+  (info_string
+    (language) @injection.language)
+  (code_fence_content) @injection.content)
+```
+
+#### Syntax Overrides (overrides.scm)
+
+Define scopes for setting overrides:
+
+```scheme
+[
+  (string)
+  (template_string)
+] @string
+
+(comment) @comment.inclusive
+```
+
+Use `.inclusive` suffix to include delimiters in the scope.
+
+#### Text Redactions (redactions.scm)
+
+Redact sensitive values during screen sharing:
+
+```scheme
+(pair value: (number) @redact)
+(pair value: (string) @redact)
+```
+
+#### Runnable Detection (runnables.scm)
+
+Detect runnable code (e.g., npm scripts):
+
+```scheme
+(
+    (document
+        (object
+            (pair
+                key: (string
+                    (string_content) @_name
+                    (#eq? @_name "scripts")
+                )
+                value: (object
+                    (pair
+                        key: (string (string_content) @run @script)
+                    )
+                )
+            )
+        )
+    )
+    (#set! tag package-script)
+)
+```
+
+The `@run` capture determines where the run button appears. Other captures (except `@_name`) are exposed as `ZED_CUSTOM_$(capture_name)` environment variables.
+
+## Language Servers
+
+### Registering Language Servers
+
+Register LSP servers in `extension.toml`:
+
+```toml
+[language_servers.my-language-server]
+name = "My Language LSP"
+languages = ["My Language"]
+```
+
+The `languages` array must match the `name` field from language `config.toml` files.
+
+### Implementing Language Server Command
+
+```rust
+use zed_extension_api as zed;
+use zed::{Command, LanguageServerId, Result, Worktree};
+
+impl zed::Extension for MyExtension {
+    fn language_server_command(
+        &mut self,
+        language_server_id: &LanguageServerId,
+        worktree: &Worktree,
+    ) -> Result<Command> {
+        let server_path = self.download_language_server()?;
+        
+        Ok(Command {
+            command: server_path,
+            args: vec!["--stdio".to_string()],
+            env: vec![("NODE_ENV".to_string(), "production".to_string())],
+        })
+    }
+}
+```
+
+### Customizing Language Server Behavior
+
+The `Extension` trait provides methods to customize LSP integration:
+
+```rust
+// Initialization options
+fn language_server_initialization_options(
+    &mut self,
+    language_server_id: &LanguageServerId,
+    worktree: &Worktree,
+) -> Result<Option<serde_json::Value>> {
+    Ok(Some(serde_json::json!({
+        "trace": "verbose"
+    })))
+}
+
+// Workspace configuration
+fn language_server_workspace_configuration(
+    &mut self,
+    language_server_id: &LanguageServerId,
+    worktree: &Worktree,
+) -> Result<Option<serde_json::Value>> {
+    Ok(Some(serde_json::json!({
+        "myLanguage": {
+            "linting": true
+        }
+    })))
+}
+
+// Completion label styling
+fn label_for_completion(
+    &self,
+    language_server_id: &LanguageServerId,
+    completion: Completion,
+) -> Option<CodeLabel> {
+    // Return custom code label
+    None
+}
+```
+
+See the [Extension API docs](https://docs.rs/zed_extension_api) for all available methods.
+
+### Multi-Language Support
+
+Map Zed languages to LSP language identifiers:
+
+```toml
+[language_servers.my-language-server]
+name = "Multi-Language LSP"
+languages = ["JavaScript", "TypeScript", "TSX"]
+
+[language_servers.my-language-server.language_ids]
+"JavaScript" = "javascript"
+"TypeScript" = "typescript"
+"TSX" = "typescriptreact"
+```
+
+## Semantic Tokens
+
+Zed supports semantic highlighting from language servers.
+
+### Enabling Semantic Tokens
+
+```json
+{
+  // Enable globally with Tree-sitter fallback
+  "semantic_tokens": "combined",
+  
+  // Or per-language
+  "languages": {
+    "Rust": {
+      "semantic_tokens": "full"
+    }
+  }
+}
+```
+
+Options:
+- `"off"` (default) - Disable semantic tokens
+- `"combined"` - Use LSP tokens with Tree-sitter fallback
+- `"full"` - Use only LSP tokens
+
+### Extension-Provided Token Rules
+
+Provide default semantic token mappings in `languages/my-language/semantic_token_rules.json`:
+
+```json
+[
+  {
+    "token_type": "lifetime",
+    "style": ["type.lifetime"]
+  },
+  {
+    "token_type": "builtinType",
+    "style": ["type.builtin"]
+  },
+  {
+    "token_type": "selfKeyword",
+    "style": ["variable.special"]
+  }
+]
+```
+
+### Customizing Token Styles
+
+Users can override token styles in settings:
+
+```json
+{
+  "global_lsp_settings": {
+    "semantic_token_rules": [
+      {
+        "token_type": "macro",
+        "style": ["syntax.keyword"]
+      },
+      {
+        "token_type": "unresolvedReference",
+        "foreground_color": "#c93f3f",
+        "font_weight": "bold"
+      },
+      {
+        "token_modifiers": ["mutable"],
+        "underline": true
+      }
+    ]
+  }
+}
+```
+
+Rule priority:
+1. User settings (`semantic_token_rules`)
+2. Extension rules (`semantic_token_rules.json`)
+3. Zed default rules
+
+## Examples
+
+See published language extensions:
+
+- [Gleam](https://github.com/zed-extensions/gleam) - Complete language extension
+- [Rust](https://github.com/zed-industries/zed/tree/main/crates/languages/src/rust) - Built-in language with all features
+- [Python](https://github.com/zed-industries/zed/tree/main/crates/languages/src/python) - Complex grammar and LSP integration

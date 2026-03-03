@@ -1,0 +1,240 @@
+---
+title: Windows Platform Support
+description: Zed platform support for Windows including installation, requirements, and Windows-specific features.
+---
+
+# Windows Platform Support
+
+Zed provides native Windows support with DirectX 11 rendering and full integration with Windows features including WSL.
+
+## System Requirements
+
+<ParamField path="Operating System" type="requirement">
+  Windows 10 version 1903 or later, or Windows 11 version 22H2 or later
+  
+  | Version | Zed Status |
+  |---------|------------|
+  | Windows 11, version 22H2 and later | Supported |
+  | Windows 10, version 1903 and later | Supported |
+  
+  A 64-bit operating system is required.
+</ParamField>
+
+<ParamField path="Hardware" type="requirement">
+  x64 (Intel, AMD) or Arm64 (Qualcomm) processors
+</ParamField>
+
+<ParamField path="Graphics" type="requirement">
+  GPU that supports DirectX 11 (most PCs from 2012+)
+  
+  Current NVIDIA/AMD/Intel/Qualcomm driver required (not the Microsoft Basic Display Adapter).
+</ParamField>
+
+## Installation
+
+### Download from Website
+
+1. Visit the [download page](https://zed.dev/download)
+2. Download the installer
+3. Run the installer
+4. Launch Zed from the Start menu
+
+For preview builds: [preview releases page](https://zed.dev/releases/preview)
+
+After installation, Zed checks for updates automatically.
+
+### Windows Package Manager (winget)
+
+```powershell
+winget install -e --id ZedIndustries.Zed
+```
+
+### Building from Source
+
+See [Windows development documentation](../development/windows) for build instructions.
+
+## CLI
+
+The CLI is included with Zed on Windows.
+
+### Adding to PATH
+
+To use `zed` from any command prompt or PowerShell window, add Zed's installation directory to your PATH:
+
+1. Open "Edit the system environment variables" from the Start menu
+2. Click "Environment Variables"
+3. Under "User variables," select "Path" and click "Edit"
+4. Add Zed's installation directory (typically `%LOCALAPPDATA%\Programs\Zed`)
+5. Click OK and restart your terminal
+
+Or use the full path:
+
+```powershell
+& "$env:LOCALAPPDATA\Programs\Zed\zed.exe" myfile.txt
+```
+
+See the [CLI Reference](./cli) for usage.
+
+## Remote Development
+
+Zed supports remote development on Windows through:
+
+- **SSH:** Connect to remote Linux/macOS servers
+- **WSL:** Work with files in Windows Subsystem for Linux distributions
+
+See the [Remote Development documentation](../remote-development) for setup instructions.
+
+## Uninstalling
+
+### Installed via Installer
+
+1. Open Settings → Apps → Installed apps
+2. Search for "Zed"
+3. Click the three dots and select "Uninstall"
+
+### Installed via winget
+
+```powershell
+winget uninstall ZedIndustries.Zed
+```
+
+### Built from Source
+
+Remove the build output directory (e.g., `target/install`).
+
+### Settings and Extensions
+
+Your settings and extensions are stored in your user profile at `%APPDATA%\Zed`. When uninstalling, you can choose to keep or remove them.
+
+To manually remove:
+
+```powershell
+Remove-Item -Recurse -Force "$env:APPDATA\Zed"
+Remove-Item -Recurse -Force "$env:LOCALAPPDATA\Zed"
+```
+
+## Troubleshooting
+
+### Zed Fails to Start or Shows Blank Window
+
+1. **Check system requirements:** Verify your Windows version and hardware meet the minimum requirements
+2. **Update GPU drivers:** Download the latest drivers from your GPU vendor:
+   - NVIDIA: [nvidia.com/drivers](https://www.nvidia.com/drivers)
+   - AMD: [amd.com/support](https://www.amd.com/support)
+   - Intel: [intel.com/content/www/us/en/download-center](https://www.intel.com/content/www/us/en/download-center)
+   - Qualcomm: Via Windows Update
+3. **Ensure hardware acceleration is enabled:** Check Windows settings and ensure it's not blocked by third-party software
+4. **Try launching without extensions:** Rename `%APPDATA%\Zed\extensions` temporarily
+
+### DirectX 11 Compatibility Check
+
+Verify your GPU supports DirectX 11:
+
+1. Press `Win+R` and type `dxdiag`
+2. Check "DirectX Version" under System → System Information
+3. It should show "DirectX 12" or "DirectX 11"
+
+### Virtual Machine Performance
+
+If running Zed in a virtual machine:
+
+- Zed uses the emulated adapter provided by your VM
+- Performance may be degraded
+- Ensure VM has GPU acceleration enabled (if available)
+- Allocate sufficient memory and CPU cores
+
+### Terminal Issues
+
+**Activation scripts don't run:**
+
+1. Update to the latest Zed version
+2. Verify shell profile files don't exit early
+3. Check terminal configuration in Zed settings
+
+**Git operations fail:**
+
+Confirm Git Bash or PowerShell is available and on PATH:
+
+```powershell
+git --version
+```
+
+Install Git for Windows: [git-scm.com](https://git-scm.com/download/win)
+
+### SSH Remoting Problems
+
+**Credential prompts don't appear:**
+
+1. Check for credential manager conflicts
+2. Ensure GUI prompts aren't blocked by your terminal
+3. Try using SSH keys instead of passwords
+
+**Connection timeouts:**
+
+1. Verify SSH server is accessible: `ssh user@host`
+2. Check firewall settings
+3. Review SSH server logs
+
+See the [Remote Development documentation](../remote-development) for more SSH troubleshooting.
+
+### WSL Integration Issues
+
+**Cannot open WSL files:**
+
+1. Ensure WSL is installed and running: `wsl --status`
+2. Update WSL to the latest version: `wsl --update`
+3. Verify the distribution is running: `wsl -l -v`
+
+**Performance issues with WSL files:**
+
+- Keep project files inside the WSL filesystem (not Windows `/mnt/c`)
+- WSL 2 provides better performance than WSL 1
+- Ensure Windows Defender excludes WSL directories
+
+See the [Troubleshooting guide](../troubleshooting) for more help.
+
+## Windows-Specific Features
+
+### WSL Integration
+
+Seamlessly work with files and projects inside Windows Subsystem for Linux:
+
+```powershell
+# From Windows PowerShell
+zed \\wsl$\Ubuntu\home\user\project
+
+# From inside WSL
+zed .
+```
+
+### File Associations
+
+Set Zed as the default editor for file types:
+
+1. Right-click a file in File Explorer
+2. Select "Open with" → "Choose another app"
+3. Select Zed
+4. Check "Always use this app to open .ext files"
+
+### Context Menu Integration
+
+Zed adds "Open with Zed" to the File Explorer context menu during installation.
+
+### Windows Terminal Integration
+
+Use Zed with Windows Terminal:
+
+```json
+// Add to Windows Terminal settings.json
+{
+  "profiles": {
+    "list": [
+      {
+        "commandline": "zed.exe",
+        "name": "Zed Editor",
+        "icon": "%LOCALAPPDATA%\\Programs\\Zed\\zed.exe"
+      }
+    ]
+  }
+}
+```

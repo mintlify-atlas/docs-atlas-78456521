@@ -1,0 +1,113 @@
+---
+title: Installing Extensions
+description: Browse, install, and manage Zed extensions
+---
+
+## Extension Gallery
+
+Extensions add functionality to Zed, including languages, themes, debuggers, and AI tools. The Extension Gallery provides a central place to discover and install extensions.
+
+Open the Extension Gallery:
+- Use the keybinding for `zed::Extensions`
+- Select **Zed > Extensions** from the menu bar
+
+## Installation Location
+
+Extensions are installed in platform-specific directories:
+
+<CodeGroup>
+```bash macOS
+~/Library/Application Support/Zed/extensions
+```
+
+```bash Linux
+# XDG_DATA_HOME is set
+$XDG_DATA_HOME/zed/extensions
+
+# XDG_DATA_HOME is not set
+~/.local/share/zed/extensions
+```
+
+```bash Windows
+%LOCALAPPDATA%\Zed\extensions
+```
+</CodeGroup>
+
+The extension directory contains two subdirectories:
+
+- `installed/` - Extension source code and manifests
+- `work/` - Files created by extensions (downloaded language servers, cached data, etc.)
+
+## Auto-Installing Extensions
+
+Configure extensions to install automatically when Zed starts:
+
+<Steps>
+  <Step title="Open Settings">
+    Use or select **Zed > Settings > Open Settings** from the menu bar.
+  </Step>
+  
+  <Step title="Add Extension IDs">
+    Add the `auto_install_extensions` setting with extension IDs:
+
+    ```json
+    {
+      "auto_install_extensions": {
+        "html": true,
+        "ruby": true,
+        "dockerfile": true
+      }
+    }
+    ```
+  </Step>
+</Steps>
+
+Extensions are automatically installed on Zed startup if not already present. Set an extension to `false` to uninstall it.
+
+## Managing Extensions
+
+### Viewing Installed Extensions
+
+The Extension Gallery shows all installed extensions with an **Installed** badge. Extensions can be filtered by:
+
+- **Languages** - Programming language support
+- **Themes** - Color schemes
+- **Debug Adapters** - Debugger integration
+- **Context Servers** - MCP server providers
+
+### Updating Extensions
+
+Extensions update automatically when new versions are published to the extension registry. Updates are applied the next time Zed starts.
+
+### Uninstalling Extensions
+
+To remove an extension:
+
+1. Open the Extension Gallery with
+2. Find the installed extension
+3. Click **Uninstall**
+
+Alternatively, remove it from `auto_install_extensions` by setting it to `false`.
+
+## Dev Extensions
+
+Developers can install local extensions for testing without publishing:
+
+1. Open the Extension Gallery
+2. Click **Install Dev Extension**
+3. Select the extension directory containing `extension.toml`
+
+Dev extensions override published versions if both are installed. The Extension Gallery indicates this with "Overridden by dev extension".
+
+<Note>
+Dev extensions require Rust installed via [rustup](https://www.rust-lang.org/tools/install). Homebrew-installed Rust is not supported.
+</Note>
+
+To troubleshoot dev extensions:
+
+- Check **Zed > View > Debug > Log** with
+- Launch Zed from the terminal with `zed --foreground` for verbose INFO-level logs
+
+## Extension Security
+
+Extensions run in a sandboxed WebAssembly environment with restricted capabilities. See [Extension Capabilities](/extensions/capabilities) to configure security policies.

@@ -1,0 +1,392 @@
+---
+title: Performance Profiling
+description: Tools and techniques for profiling Zed performance
+---
+
+Profiling helps identify performance bottlenecks in CPU usage, memory consumption, and I/O operations.
+
+## CPU Profiling
+
+### Linux Perf Recording
+
+`perf` is a powerful CPU profiler for Linux that can capture call stacks and generate flamegraphs.
+
+#### During a Performance Issue
+
+1. **Find the Zed process ID**:
+   ```sh
+   ps -eo size,pid,comm | grep zed | sort | head -n 1 | cut -d ' ' -f 2
+   ```
+   Or find `zed-editor` with highest RAM in htop/btop/top.
+
+2. **Install perf** (Ubuntu/derivatives):
+   ```sh
+   sudo apt install linux-tools-generic
+   ```
+
+3. **Record performance data**:
+   ```sh
+   sudo perf record -p <pid>
+   ```
+   Wait a few seconds to gather data, then press `Ctrl+C`.
+
+4. **Make the output file user-owned**:
+   ```sh
+   sudo chown $USER:$USER perf.data
+   ```
+
+5. **Get the exact build info**:
+   - Run Zed and type `zed: about` in the command palette
+   - Note the exact commit SHA
+
+#### Analyzing Perf Data
+
+<Info>
+  Analysis with symbols typically requires the original build environment and can be done by Zed staff.
+</Info>
+
+1. **Build Zed with symbols**:
+   ```sh
+   git checkout <commit-from-about>
+   ```
+   
+   Modify `Cargo.toml`:
+   ```diff
+   [profile.release]
+   -debug = "limited"
+   +debug = "full"
+   ```
+   
+   Build:
+   ```sh
+   cargo build --release
+   ```
+
+2. **Add symbols to perf database**:
+   ```sh
+   perf buildid-cache -v -a target/release/zed
+   ```
+
+3. **Resolve symbols**:
+   ```sh
+   perf inject -i perf.data -o perf_with_symbols.data
+   ```
+
+4. **Generate flamegraph**:
+   ```sh
+   cargo install cargo-flamegraph
+   flamegraph --perfdata perf_with_symbols.data
+   ```
+
+This creates `flamegraph.svg` showing where CPU time is spent.
+
+<Tip>
+  Use this when Zed is using excessive CPU. Not useful for hangs or freezes.
+</Tip>
+
+### macOS Instruments
+
+macOS includes Instruments for profiling:
+
+1. Open Xcode's Instruments app
+2. Choose the "Time Profiler" template
+3. Select the Zed process
+4. Start recording
+5. Reproduce the performance issue
+6. Stop and analyze the call tree
+
+### Sampling Profiler
+
+For quick profiling without external tools:
+
+```rust
+use std::time::Instant;
+
+let start = Instant::now();
+// Code to profile
+let duration = start.elapsed();
+println!("Operation took: {:?}", duration);
+```
+
+## Memory Profiling
+
+### Linux Heaptrack
+
+`heaptrack` diagnoses memory leaks and tracks allocations.
+
+#### Setup
+
+```sh
+sudo apt install heaptrack heaptrack-gui
+cargo install cargo-heaptrack
+```
+
+#### Profiling Memory Usage
+
+```sh
+cargo heaptrack -b zed
+```
+
+When Zed exits, terminal output includes:
+- Peak memory usage
+- Total allocations
+- Command to convert profile for GUI viewing
+
+#### Analyzing Results
+
+Convert the raw profile:
+```sh
+heaptrack_interpret profile.raw.zst profile.zst
+```
+
+View in GUI:
+```sh
+heaptrack_gui profile.zst
+```
+
+The GUI shows:
+- Allocation hotspots
+- Call trees for allocations
+- Memory leaks (allocations never freed)
+- Temporary allocations
+
+### macOS Memory Graph
+
+Xcode's Memory Graph Debugger:
+
+1. Run Zed from Xcode or attach to running process
+2. Click the Memory Graph Debug button (three squares)
+3. Inspect object relationships
+4. Find retain cycles and leaks
+
+### Manual Memory Tracking
+
+Add debug prints for memory-intensive operations:
+
+```rust
+let initial = get_memory_usage();
+// Operation
+let used = get_memory_usage() - initial;
+log::info!("Operation used {} MB", used / 1024 / 1024);
+```
+
+## Build Performance
+
+### Cargo Build Timing
+
+Analyze build times:
+
+```sh
+cargo build --timings
+```
+
+Generates `cargo-timing.html` showing:
+- Per-crate build times
+- Dependency graph
+- Parallelism utilization
+- Blocking dependencies
+
+### Linker Performance
+
+Linker choice significantly impacts build times on Linux:
+
+- **LLD** - Default, decent performance
+- **Mold** - Used in CI, mature
+- **Wild** - Recommended for development, 5-20% faster than Mold
+
+Install Wild:
+```sh
+script/install-wild
+```
+
+Configure in `~/.cargo/config.toml`:
+```toml
+[target.x86_64-unknown-linux-gnu]
+linker = "clang"
+rustflags = ["-C", "link-arg=--ld-path=wild"]
+```
+
+### Compiler Performance
+
+Use `sccache` to cache compilations across builds:
+
+```sh
+cargo install sccache
+export RUSTC_WRAPPER=sccache
+```
+
+Check cache statistics:
+```sh
+sccache --show-stats
+```
+
+## I/O Profiling
+
+### Monitoring File Operations
+
+On Linux, use `strace` to monitor system calls:
+
+```sh
+strace -p <pid> -e trace=open,read,write,close -tt
+```
+
+On macOS, use `fs_usage`:
+
+```sh
+sudo fs_usage -w -f filesystem Zed
+```
+
+### Disk I/O Metrics
+
+On Linux, check process I/O:
+
+```sh
+cat /proc/<pid>/io
+```
+
+Look for:
+- `read_bytes` - Total bytes read
+- `write_bytes` - Total bytes written
+- `cancelled_write_bytes` - Wasted writes
+
+## Runtime Tracing
+
+### RUST_LOG Environment Variable
+
+Enable detailed logging:
+
+```sh
+# All modules at debug level
+RUST_LOG=debug cargo run
+
+# Specific modules
+RUST_LOG=editor=trace,project=debug cargo run
+
+# Performance-relevant modules
+RUST_LOG=gpui=debug,project=trace cargo run
+```
+
+### Custom Performance Instrumentation
+
+Add instrumentation for critical paths:
+
+```rust
+use std::time::Instant;
+
+fn expensive_operation() {
+    let _timer = Timer::new("expensive_operation");
+    // Implementation
+}
+
+struct Timer {
+    name: &'static str,
+    start: Instant,
+}
+
+impl Timer {
+    fn new(name: &'static str) -> Self {
+        Self { name, start: Instant::now() }
+    }
+}
+
+impl Drop for Timer {
+    fn drop(&mut self) {
+        log::debug!("{} took {:?}", self.name, self.start.elapsed());
+    }
+}
+```
+
+## Windows Performance Analysis
+
+### ETW Tracing
+
+Zed includes ETW (Event Tracing for Windows) support via the `etw_tracing` crate.
+
+Capture ETW events:
+
+```powershell
+wpr -start GeneralProfile
+# Reproduce issue
+wpr -stop output.etl
+```
+
+Analyze with Windows Performance Analyzer (WPA).
+
+## Benchmarking
+
+### Criterion Benchmarks
+
+For microbenchmarks, use the `criterion` crate:
+
+```rust
+#[cfg(test)]
+mod benches {
+    use criterion::{black_box, criterion_group, criterion_main, Criterion};
+
+    fn benchmark_function(c: &mut Criterion) {
+        c.bench_function("operation", |b| {
+            b.iter(|| {
+                // Code to benchmark
+                black_box(expensive_operation())
+            })
+        });
+    }
+
+    criterion_group!(benches, benchmark_function);
+    criterion_main!(benches);
+}
+```
+
+Run benchmarks:
+```sh
+cargo bench
+```
+
+### Integration Benchmarks
+
+For larger benchmarks, see `crates/fs_benchmarks`:
+
+```sh
+cargo run -p fs_benchmarks --release
+```
+
+## Profiling Best Practices
+
+1. **Use release builds** - Debug builds have different performance characteristics
+2. **Warm up before measuring** - First run may include cache misses
+3. **Measure multiple times** - Reduce noise from system variance
+4. **Profile realistic workloads** - Synthetic tests may not reflect real usage
+5. **Focus on hot paths** - Optimize the 20% of code that uses 80% of resources
+6. **Validate improvements** - Measure before and after changes
+7. **Consider memory vs speed tradeoffs** - Faster often means more memory
+
+## Common Performance Issues
+
+### High CPU Usage
+
+- **Infinite loops** - Use breakpoints to detect
+- **Excessive polling** - Check event loop patterns
+- **Inefficient algorithms** - Profile hot functions
+- **Blocking operations** - Move to background threads
+
+### High Memory Usage
+
+- **Memory leaks** - Use heaptrack/memory graph
+- **Large allocations** - Profile with heaptrack
+- **Unbounded caches** - Add size limits
+- **Retained data** - Check for unnecessary Arcs/Rcs
+
+### Slow Startup
+
+- **Too much initialization** - Defer non-critical work
+- **Blocking I/O** - Load asynchronously
+- **Large data structures** - Lazy initialization
+- **Extension loading** - Parallelize or delay
+
+## Additional Resources
+
+- [Linux perf tutorial](https://perf.wiki.kernel.org/index.php/Tutorial)
+- [Flamegraph interpretation](https://www.brendangregg.com/flamegraphs.html)
+- [Heaptrack documentation](https://github.com/KDE/heaptrack)
+- [Instruments User Guide](https://developer.apple.com/library/archive/documentation/DeveloperTools/Conceptual/InstrumentsUserGuide/)
+- [Debugging Zed](/development/debugging)

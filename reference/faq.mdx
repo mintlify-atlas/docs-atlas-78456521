@@ -1,0 +1,383 @@
+---
+title: Frequently Asked Questions
+description: Common questions about Zed including features, pricing, platform support, and workflows.
+---
+
+# Frequently Asked Questions
+
+Quick answers to common questions about Zed.
+
+## General
+
+### What is Zed?
+
+Zed is a high-performance, collaborative code editor built by the creators of Atom and Tree-sitter. It features native GPU-accelerated rendering, built-in AI assistance, and real-time collaboration.
+
+### Is Zed free?
+
+Yes. Zed is free and open-source software licensed under GPL v3 and the Apache 2 License. You can use it for personal or commercial projects at no cost.
+
+### Is Zed open source?
+
+Yes. Zed's source code is available on [GitHub](https://github.com/zed-industries/zed) under dual GPL v3 / Apache 2 licensing.
+
+### How is Zed funded?
+
+Zed Industries is a venture-backed company. The editor is free, and we plan to offer premium collaboration features for teams in the future.
+
+## Platform Support
+
+### What platforms does Zed support?
+
+- **macOS:** 10.15.7 (Catalina) or later
+- **Linux:** 64-bit Intel/AMD and ARM with Vulkan 1.3
+- **Windows:** Windows 10 version 1903 or later, Windows 11 22H2 or later
+- **FreeBSD:** Can be built from source (not officially supported)
+
+See [System Requirements](./requirements) for details.
+
+### Why doesn't Zed support older operating systems?
+
+Zed uses modern graphics APIs (Metal on macOS, Vulkan on Linux, DirectX 11 on Windows) for GPU-accelerated rendering. These APIs aren't available on older systems.
+
+### Will Zed support web browsers?
+
+Not currently planned. Zed's architecture relies on native performance and GPU access that isn't feasible in browsers.
+
+### Can I use Zed in a Docker container?
+
+Zed requires GPU access for rendering, which is challenging in containers. Consider using Zed on the host with remote development (SSH) to work with containerized environments.
+
+## Features
+
+### Does Zed have Vim mode?
+
+Yes. Enable Vim mode in settings:
+
+```json
+{
+  "vim_mode": true
+}
+```
+
+See the [Vim documentation](../vim) for full capabilities.
+
+### Does Zed support remote development?
+
+Yes. Zed supports SSH remoting to Linux and macOS servers. See [Remote Development](../remote-development) for setup.
+
+Dev Containers and WSL direct integration are not yet supported (use SSH to WSL as a workaround).
+
+### Does Zed have a built-in terminal?
+
+Yes. Open with `` Ctrl+` `` or run `terminal: deploy` from the command palette. See [Terminal](../terminal) for features.
+
+### Can I use Zed with WSL?
+
+On Windows, you can SSH into WSL from Zed. Direct WSL integration (like VS Code's Remote-WSL) is planned but not yet available.
+
+### Does Zed support multiple cursors?
+
+Yes. Use:
+- `Cmd+D` / `Ctrl+D` - Add next match
+- `Cmd+Click` / `Ctrl+Click` - Add cursor at position  
+- `Cmd+Shift+L` / `Ctrl+Shift+L` - Add cursors to all matches
+
+### Does Zed have a debugger?
+
+Yes. Zed supports debugging via the Debug Adapter Protocol (DAP). See [Debugger](../debugger) for setup and usage.
+
+### Can I use GitHub Copilot with Zed?
+
+GitHub Copilot is not directly supported. Instead, Zed has a built-in AI agent with support for Anthropic, OpenAI, Google, and other providers. See [AI Configuration](../ai/configuration).
+
+### Does Zed have IntelliSense?
+
+Yes. Zed uses Language Server Protocol (LSP) for code completion, diagnostics, go-to-definition, and other IDE features. Most popular languages are supported out of the box.
+
+### Can I use Zed for pair programming?
+
+Yes. Zed has built-in real-time collaboration with:
+- Shared editing
+- Following other users
+- Audio/video calls
+- Screen sharing (macOS 12+)
+
+See [Collaboration](../collaboration) for details.
+
+## Performance
+
+### Why is Zed faster than other editors?
+
+Zed is written in Rust and uses:
+- Native platform rendering (Metal/Vulkan/DirectX)
+- GPU-accelerated text rendering
+- Efficient tree-sitter parsing
+- Multi-threaded architecture
+
+### How much RAM does Zed use?
+
+Typical usage: 200-500 MB for small projects, up to 1-2 GB for large projects with many language servers. AI features can use additional memory for large context windows.
+
+### Does Zed work well with large projects?
+
+Yes. Zed is designed for large codebases with:
+- Fast project-wide search (ripgrep)
+- Incremental parsing
+- Smart indexing with exclusions
+
+For very large projects (e.g., Linux kernel), exclude unnecessary directories using `file_scan_exclusions`.
+
+## Extensions and Customization
+
+### Does Zed have extensions?
+
+Yes. Zed has a built-in extension system for:
+- Language support
+- Themes
+- Tools and integrations
+
+Install via `zed: extensions` in the command palette. See [Extensions](../extensions).
+
+### How do I install themes?
+
+Themes are installed as extensions:
+
+1. Open command palette (`Cmd+Shift+P` / `Ctrl+Shift+P`)
+2. Run `zed: extensions`
+3. Search for theme name
+4. Click Install
+
+Or browse [zed.dev/extensions](https://zed.dev/extensions).
+
+### Can I use my VS Code theme?
+
+Some VS Code themes have been ported to Zed as extensions. Check the extensions catalog or create a port yourself.
+
+### How do I customize keybindings?
+
+Edit `~/.config/zed/keymap.json` (all platforms) or use the keymap editor (`Cmd+K Cmd+S` / `Ctrl+K Ctrl+S`).
+
+See [Keybindings Reference](./keybindings) for syntax.
+
+### Can I import my VS Code settings?
+
+There's no automatic import, but many settings map directly. See the [VS Code Migration Guide](../migrate/vs-code) for equivalents.
+
+## AI Features
+
+### What AI providers does Zed support?
+
+Zed supports:
+- Anthropic (Claude)
+- OpenAI (GPT-4, GPT-3.5)
+- Google (Gemini)
+- Ollama (local models)
+- And more
+
+See [AI Configuration](../ai/configuration) for setup.
+
+### Do I need an API key?
+
+Yes, for cloud providers (Anthropic, OpenAI, Google). Local providers like Ollama don't require API keys.
+
+### Are AI features free?
+
+Zed itself is free, but cloud AI providers charge for API usage. Check your provider's pricing:
+- [Anthropic pricing](https://www.anthropic.com/pricing)
+- [OpenAI pricing](https://openai.com/pricing)
+- [Google AI pricing](https://ai.google.dev/pricing)
+
+Ollama is free for local models.
+
+### Is my code sent to Zed's servers?
+
+No. When using AI features, your code is sent directly to your chosen AI provider (Anthropic, OpenAI, etc.). Zed doesn't proxy or store your code.
+
+For local models via Ollama, everything stays on your machine.
+
+### Can I use Zed offline?
+
+Yes, for editing. AI features and collaboration require an internet connection.
+
+## Collaboration
+
+### Is collaboration free?
+
+Yes. Zed's collaboration features are currently free for all users.
+
+### Do I need a Zed account?
+
+Yes, for collaboration. Create a free account at [zed.dev](https://zed.dev).
+
+### Can I share a session with VS Code users?
+
+No. Collaboration is currently only between Zed users. Cross-editor collaboration isn't supported.
+
+### How many people can collaborate?
+
+There's no hard limit, but performance is best with 2-4 people. Larger groups may experience degraded performance.
+
+### Is screen sharing available on all platforms?
+
+Screen sharing requires macOS 12 (Monterey) or later due to ScreenCaptureKit framework requirements. It's not available on Linux or Windows yet.
+
+## Licensing and Privacy
+
+### What license is Zed under?
+
+Zed is dual-licensed under:
+- GNU General Public License v3.0 (GPL v3)
+- Apache License 2.0
+
+### Can I use Zed for commercial projects?
+
+Yes. Zed is free for commercial use under both licenses.
+
+### What data does Zed collect?
+
+Zed collects minimal anonymous telemetry to improve the product:
+- Crash reports
+- Basic usage statistics (feature usage, not code content)
+- Performance metrics
+
+You can opt out of telemetry in settings. See [Telemetry](../telemetry) for details.
+
+### Is my code private?
+
+Yes. Your code stays on your machine unless you:
+- Use collaboration (shared with invited users only)
+- Use AI features (sent to your chosen provider)
+- Enable crash reporting (stack traces may include code context)
+
+## Migrating to Zed
+
+### I'm coming from VS Code. Where do I start?
+
+1. Install Zed and set base keymap to VS Code:
+   ```json
+   { "base_keymap": "VSCode" }
+   ```
+2. Read the [VS Code Migration Guide](../migrate/vs-code)
+3. Install extensions you need
+4. Customize settings
+
+### I'm a Vim user. Does Zed feel natural?
+
+Yes. Enable Vim mode and Zed provides modal editing with most Vim motions, text objects, and commands. See [Vim mode documentation](../vim).
+
+### Can I use my JetBrains keymap?
+
+Yes. Set base keymap to JetBrains:
+
+```json
+{
+  "base_keymap": "JetBrains"
+}
+```
+
+See the [JetBrains Migration Guide](../migrate/intellij).
+
+### How do I bring my extensions?
+
+Check [zed.dev/extensions](https://zed.dev/extensions) for equivalents. Many popular extensions are available. If one is missing, consider creating it or requesting it on GitHub.
+
+## Troubleshooting
+
+### Zed won't start. What should I do?
+
+1. Check [System Requirements](./requirements)
+2. Update GPU drivers
+3. Try with clean profile (move `~/.config/zed` temporarily)
+4. See [Troubleshooting guide](./troubleshooting)
+
+### Where are the logs?
+
+Run `zed: open log` from the command palette, or find them at:
+- **macOS:** `~/Library/Logs/Zed/Zed.log`
+- **Windows:** `%LOCALAPPDATA%\Zed\logs\Zed.log`
+- **Linux:** `~/.local/share/zed/logs/Zed.log`
+
+### How do I report a bug?
+
+1. Search [existing issues](https://github.com/zed-industries/zed/issues)
+2. Gather system info: `zed: copy system specs into clipboard`
+3. File a new issue with reproduction steps and logs
+
+See [Troubleshooting](./troubleshooting#filing-bug-reports) for details.
+
+### Language server isn't working. Help?
+
+1. Restart language server: `editor: restart language server`
+2. Check log for errors: `zed: open log`
+3. Verify language is detected (check status bar)
+4. See [Language Server Troubleshooting](./troubleshooting#language-server-issues)
+
+## Contributing
+
+### How can I contribute to Zed?
+
+Ways to contribute:
+- Report bugs and request features
+- Write documentation
+- Create extensions or themes
+- Submit code (Rust, GPUI framework)
+
+See [CONTRIBUTING.md](https://github.com/zed-industries/zed/blob/main/CONTRIBUTING.md).
+
+### I want to build an extension. Where do I start?
+
+See [Developing Extensions](../extensions/developing-extensions) for a complete guide.
+
+### Can I contribute themes?
+
+Yes! Themes are extensions. See [Theme development](../extensions/themes) documentation.
+
+### Where can I discuss Zed development?
+
+- [GitHub Discussions](https://github.com/zed-industries/zed/discussions)
+- [Discord](https://discord.gg/zed-community) (`#contributors` channel)
+- Weekly community calls (announced in Discord)
+
+## Updates and Releases
+
+### How often is Zed updated?
+
+- **Stable:** Every 1-2 weeks
+- **Preview:** Weekly (typically Wednesdays)
+- **Nightly:** Daily
+
+### How do I update Zed?
+
+Zed checks for updates automatically. Or manually: `zed: check for updates` from command palette.
+
+### What's the difference between Stable, Preview, and Nightly?
+
+- **Stable:** Production-ready, thoroughly tested
+- **Preview:** ~1 week ahead, early access to features
+- **Nightly:** Bleeding edge, may be unstable
+
+See [Release Notes](./release-notes) for details.
+
+### How do I switch release channels?
+
+**macOS:**
+```sh
+brew install --cask zed         # Stable
+brew install --cask zed@preview # Preview
+```
+
+**Linux:**
+```sh
+curl -f https://zed.dev/install.sh | ZED_CHANNEL=preview sh
+```
+
+**Windows:**
+Download from [releases page](https://zed.dev/releases/preview).
+
+## Still Have Questions?
+
+- **Documentation:** Search this site
+- **Discord:** Join [discord.gg/zed-community](https://discord.gg/zed-community)
+- **GitHub:** Browse [discussions](https://github.com/zed-industries/zed/discussions)
+- **Email:** Contact support@zed.dev for account or billing issues

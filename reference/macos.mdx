@@ -1,0 +1,211 @@
+---
+title: macOS Platform Support
+description: Zed platform support for macOS including installation, requirements, and macOS-specific features.
+---
+
+# macOS Platform Support
+
+Zed is developed primarily on macOS, making it a first-class platform with full feature support and native macOS integration.
+
+## System Requirements
+
+<ParamField path="Operating System" type="requirement">
+  macOS 10.15.7 (Catalina) or later
+  
+  | Version | Codename | Apple Status | Zed Status |
+  |---------|----------|--------------|------------|
+  | macOS 26.x | Tahoe | Supported | Supported |
+  | macOS 15.x | Sequoia | Supported | Supported |
+  | macOS 14.x | Sonoma | Supported | Supported |
+  | macOS 13.x | Ventura | Supported | Supported |
+  | macOS 12.x | Monterey | EOL 2024-09-16 | Supported |
+  | macOS 11.x | Big Sur | EOL 2023-09-26 | Partially Supported |
+  | macOS 10.15.x | Catalina | EOL 2022-09-12 | Partially Supported |
+</ParamField>
+
+<ParamField path="Hardware" type="requirement">
+  Apple Silicon (M1/M2/M3/M4) or Intel processor
+  
+  Supported Mac models:
+  - MacBook Pro (Early 2015 and newer)
+  - MacBook Air (Early 2015 and newer)
+  - MacBook (Early 2016 and newer)
+  - Mac Mini (Late 2014 and newer)
+  - Mac Pro (Late 2013 or newer)
+  - iMac (Late 2015 and newer)
+  - iMac Pro (all models)
+  - Mac Studio (all models)
+</ParamField>
+
+<ParamField path="Graphics" type="requirement">
+  Metal support required for GPU-accelerated rendering (available on all supported macOS versions)
+</ParamField>
+
+## Feature Support
+
+### Partially Supported macOS Versions
+
+macOS Big Sur (11.x) and Catalina (10.15.x) do not support screen sharing via Zed Collaboration. These features require [ScreenCaptureKit.framework](https://developer.apple.com/documentation/screencapturekit/) which is only available on macOS 12 (Monterey) and newer.
+
+### Full Feature Support
+
+All other Zed features are fully supported on macOS 10.15.7 and later, including:
+
+- Code editing with language servers
+- AI agent integration
+- Terminal integration
+- Git integration
+- Extensions
+- Remote development (SSH)
+- Collaboration (text sharing on all versions, screen sharing on macOS 12+)
+
+## Installation
+
+### Download from Website
+
+1. Visit the [download page](https://zed.dev/download)
+2. Download the `.dmg` file
+3. Open the `.dmg` and drag Zed to your Applications folder
+4. Launch Zed from Applications
+
+For preview builds (updated ~1 week ahead of stable): [preview releases page](https://zed.dev/releases/preview)
+
+### Homebrew
+
+Install Zed stable:
+
+```sh
+brew install --cask zed
+```
+
+Install Zed preview:
+
+```sh
+brew install --cask zed@preview
+```
+
+### Building from Source
+
+See [macOS development documentation](../development/macos) for instructions on building Zed from source.
+
+## CLI Installation
+
+Zed includes a command-line tool for opening files and projects:
+
+1. Open Zed
+2. Press `Cmd+Shift+P` to open the command palette
+3. Run `cli: install`
+
+This installs the `zed` command to `/usr/local/bin/zed`.
+
+```sh
+zed .                    # Open current folder
+zed file.txt             # Open a file
+zed project/ file.txt    # Open a folder and a file
+```
+
+See the [CLI Reference](./cli) for all available options.
+
+## Updates
+
+Zed checks for updates automatically and prompts you when a new version is available. You can also manually check for updates:
+
+1. Open the command palette (`Cmd+Shift+P`)
+2. Run `zed: check for updates`
+
+## Uninstalling
+
+### Remove Application
+
+1. Quit Zed if it's running
+2. Drag Zed from Applications to the Trash
+
+### Remove Settings and Data
+
+Optionally remove your settings, extensions, and cached data:
+
+```sh
+rm -rf ~/.config/zed
+rm -rf ~/Library/Application\ Support/Zed
+rm -rf ~/Library/Caches/Zed
+rm -rf ~/Library/Logs/Zed
+rm -rf ~/Library/Saved\ Application\ State/dev.zed.Zed.savedState
+```
+
+### Remove CLI
+
+If you installed the CLI:
+
+```sh
+rm /usr/local/bin/zed
+```
+
+## Troubleshooting
+
+### Damaged or Untrusted Application
+
+If macOS reports that Zed is damaged or can't be opened (Gatekeeper issue):
+
+1. Right-click (or Control-click) Zed in Applications
+2. Select "Open" from the context menu
+3. Click "Open" in the dialog
+
+If that doesn't work:
+
+```sh
+xattr -cr /Applications/Zed.app
+```
+
+### CLI Command Not Found
+
+If the `zed` command isn't available:
+
+1. Verify `/usr/local/bin` is in your PATH
+2. Reinstall the CLI via `cli: install` in the command palette
+3. Open a new terminal window to reload your PATH
+
+### GPU or Rendering Issues
+
+Zed uses Metal for rendering. If you experience graphical glitches:
+
+1. Ensure macOS is up to date
+2. Restart your Mac to reset GPU state
+3. Check Activity Monitor for GPU pressure from other apps
+
+### High Memory or CPU Usage
+
+If Zed uses excessive resources:
+
+1. Check for runaway language servers: `zed: open log`
+2. Disable extensions one by one to identify conflicts
+3. For large projects, exclude unnecessary folders from indexing using project settings
+
+See the [Troubleshooting guide](../troubleshooting) for more help.
+
+## macOS-Specific Features
+
+### Release Channel Switching
+
+Launch specific Zed release channels from the command line:
+
+```sh
+zed --stable myfile.txt
+zed --preview myfile.txt
+zed --nightly myfile.txt
+```
+
+### System Integration
+
+- **Spotlight:** Zed integrates with Spotlight search
+- **Quick Look:** Preview Zed project files
+- **Touch Bar:** Basic Touch Bar support on compatible MacBooks
+- **Accessibility:** VoiceOver and accessibility API support
+
+### File Associations
+
+Set Zed as the default editor for file types:
+
+1. Right-click a file in Finder
+2. Select "Get Info"
+3. Under "Open with," select Zed
+4. Click "Change All..." to apply to all files of that type

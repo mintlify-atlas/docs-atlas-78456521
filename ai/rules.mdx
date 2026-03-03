@@ -1,0 +1,691 @@
+---
+title: AI Rules and Instructions
+description: Guide AI behavior with custom rules and instructions
+---
+
+Rules allow you to provide custom instructions that guide AI agent behavior in your projects. By creating `.zed/rules` files, you can tell agents about your project's conventions, preferences, and specific requirements.
+
+## What Are Rules?
+
+Rules are plain text files that provide context to AI agents:
+
+- **Project conventions**: Coding style, architecture patterns
+- **Domain knowledge**: Business logic, terminology
+- **Constraints**: What to avoid, security requirements
+- **Preferences**: Preferred libraries, approaches
+
+## Rules Files
+
+Zed looks for rules in these locations:
+
+### Project Rules
+
+Create a `.zed/rules` file in your project root:
+
+```bash
+project/
+  .zed/
+    rules          # Project-wide rules
+  src/
+    ...
+```
+
+### Alternative File Names
+
+Zed also recognizes:
+
+- `.cursorrules`
+- `.clinerules`
+- `.aiderules`
+
+These are compatible with other AI coding tools.
+
+### User Rules
+
+Create personal rules via the prompt store:
+
+1. Open Agent Panel
+2. Settings → Manage Prompts
+3. Create a new "default" prompt
+4. This applies to all projects
+
+## Writing Rules
+
+### Basic Format
+
+Rules are plain text:
+
+```
+Project: Web Application Backend
+
+Coding Standards:
+- Use TypeScript for all new code
+- Follow Airbnb style guide
+- Maximum function length: 50 lines
+- Prefer functional programming patterns
+
+Architecture:
+- Use layered architecture (routes → services → data)
+- Keep business logic in service layer
+- Use dependency injection
+
+Testing:
+- Write tests for all new features
+- Minimum 80% code coverage
+- Use Jest for unit tests
+- Use Supertest for integration tests
+
+Security:
+- Never log sensitive data
+- Always validate user input
+- Use parameterized queries
+- Follow OWASP guidelines
+```
+
+### Sections
+
+Organize rules into sections:
+
+```
+# Code Style
+
+Use 2 spaces for indentation
+Prefer const over let
+Use async/await instead of .then()
+
+# Error Handling
+
+Always use try/catch for async operations
+Return proper HTTP status codes
+Log errors with context
+
+# Database
+
+Use Prisma ORM
+Always use transactions for multi-step operations
+Index foreign keys
+```
+
+### Specific Instructions
+
+Be specific about what you want:
+
+❌ **Vague**:
+```
+Write good code
+Be careful with errors
+```
+
+✅ **Specific**:
+```
+When implementing API endpoints:
+1. Validate input using Zod schemas
+2. Handle errors with try/catch
+3. Return { success: boolean, data?: T, error?: string }
+4. Log errors with request ID
+
+When writing database queries:
+1. Use Prisma client
+2. Wrap multiple operations in $transaction
+3. Use select to limit returned fields
+4. Include relevant relations with include
+```
+
+## Rule Categories
+
+### Coding Standards
+
+```
+Code Style:
+- Use Prettier with default settings
+- ESLint with airbnb config
+- TypeScript strict mode enabled
+
+Naming Conventions:
+- camelCase for variables and functions
+- PascalCase for classes and types
+- UPPER_CASE for constants
+- Prefix interfaces with I (e.g., IUser)
+
+File Organization:
+- One component per file
+- Group related files in directories
+- Index files for barrel exports
+```
+
+### Architecture Patterns
+
+```
+Architecture:
+This project uses Clean Architecture:
+
+- domain/: Core business logic (entities, use cases)
+- application/: Application services
+- infrastructure/: External concerns (DB, API clients)
+- presentation/: UI components
+
+Dependency Rule:
+- Inner layers never depend on outer layers
+- Use interfaces for cross-layer communication
+```
+
+### Technology Preferences
+
+```
+Preferred Libraries:
+- HTTP client: axios
+- Date manipulation: date-fns
+- Form validation: react-hook-form + Zod
+- State management: Zustand
+- Styling: Tailwind CSS
+
+Avoid:
+- Moment.js (use date-fns instead)
+- Redux (use Zustand instead)
+- CSS-in-JS libraries (use Tailwind)
+```
+
+### Testing Guidelines
+
+```
+Testing:
+
+Unit Tests:
+- Test all business logic
+- Mock external dependencies
+- Use describe/it structure
+- Follow AAA pattern (Arrange, Act, Assert)
+
+Integration Tests:
+- Test API endpoints end-to-end
+- Use test database
+- Clean up after each test
+- Test error cases
+
+Test File Location:
+- Place tests next to the code: Component.tsx → Component.test.tsx
+- Or in __tests__/ directory
+```
+
+### Security Requirements
+
+```
+Security:
+
+Authentication:
+- Use JWT tokens
+- Store in httpOnly cookies
+- Refresh tokens every 15 minutes
+
+Authorization:
+- Check permissions on every request
+- Use role-based access control
+- Deny by default
+
+Data Validation:
+- Validate all user input
+- Sanitize before database storage
+- Escape before HTML output
+
+Sensitive Data:
+- Never log passwords, tokens, or API keys
+- Use environment variables for secrets
+- Don't commit .env files
+```
+
+### API Design
+
+```
+API Design:
+
+Endpoints:
+- Use RESTful conventions
+- Versioned: /api/v1/
+- Plural nouns: /users, /posts
+- IDs in path: /users/:id
+
+Request/Response:
+- Accept JSON only
+- Return consistent structure:
+  {
+    success: boolean,
+    data?: T,
+    error?: { message: string, code: string }
+  }
+
+Status Codes:
+- 200: Success
+- 201: Created
+- 400: Bad Request (validation errors)
+- 401: Unauthorized
+- 403: Forbidden
+- 404: Not Found
+- 500: Internal Server Error
+
+Pagination:
+- Use query params: ?page=1&limit=20
+- Return metadata: { items, total, page, totalPages }
+```
+
+### Documentation
+
+```
+Documentation:
+
+Code Comments:
+- Explain WHY, not WHAT
+- Document complex algorithms
+- Note gotchas and edge cases
+- Keep comments up to date
+
+Function Documentation:
+- Use JSDoc for all public functions
+- Include @param, @returns, @throws
+- Provide usage examples
+
+README:
+- Keep README updated
+- Include setup instructions
+- Document environment variables
+- Link to architecture docs
+```
+
+## Domain-Specific Rules
+
+### E-commerce Example
+
+```
+Domain: E-commerce Platform
+
+Business Rules:
+- Prices are always in cents (integer)
+- Order total = subtotal + tax + shipping
+- Inventory is reserved when order is created
+- Inventory is released after 15 minutes if unpaid
+
+Payment Processing:
+- Use Stripe for payment processing
+- Support credit cards and PayPal
+- Capture payment on order fulfillment
+- Refund to original payment method
+
+Inventory:
+- Track stock levels per warehouse
+- Allow backorders if configured
+- Send low stock notifications at threshold
+- Update stock on order completion
+```
+
+### Data Science Example
+
+```
+Domain: Machine Learning Pipeline
+
+Data Processing:
+- Use pandas for data manipulation
+- Handle missing values explicitly
+- Document data transformations
+- Validate data schemas with pandera
+
+Model Training:
+- Use scikit-learn pipelines
+- Save models with joblib
+- Version models with timestamp
+- Log metrics with MLflow
+
+Experiments:
+- Track all experiments in MLflow
+- Use random seeds for reproducibility
+- Save hyperparameters with results
+- Document model assumptions
+```
+
+## How Agents Use Rules
+
+When you open an agent thread, Zed:
+
+1. Loads project rules from `.zed/rules` (and alternatives)
+2. Loads user default prompts from prompt store
+3. Includes them in the agent's system prompt
+4. Refreshes when files change
+
+Agents see rules as part of their instructions and follow them when:
+
+- Generating code
+- Suggesting changes
+- Making architectural decisions
+- Choosing libraries and patterns
+
+## Rules Best Practices
+
+### Be Specific
+
+❌ **Too vague**:
+```
+Write clean code
+Handle errors properly
+```
+
+✅ **Specific**:
+```
+Error Handling:
+- Wrap async operations in try/catch
+- Log errors with logger.error(err, { context })
+- Return user-friendly error messages
+- Use custom error classes: ValidationError, NotFoundError
+```
+
+### Provide Examples
+
+Show what you want:
+
+```
+API Response Format:
+
+Success:
+{
+  "success": true,
+  "data": {
+    "user": {
+      "id": 123,
+      "name": "John Doe"
+    }
+  }
+}
+
+Error:
+{
+  "success": false,
+  "error": {
+    "message": "User not found",
+    "code": "USER_NOT_FOUND"
+  }
+}
+```
+
+### Explain Why
+
+Help agents understand reasoning:
+
+```
+Database Connections:
+- Use connection pooling (improves performance)
+- Set max connections to 20 (prevents DB overload)
+- Use connection timeout of 30s (detects connection issues)
+- Close connections in finally blocks (prevents leaks)
+```
+
+### Keep Updated
+
+Rules should reflect current practices:
+
+- Review periodically
+- Update when conventions change
+- Remove outdated rules
+- Add rules based on common issues
+
+### Prioritize Important Rules
+
+Put critical rules first:
+
+```
+# CRITICAL SECURITY RULES
+
+1. Never log sensitive data (passwords, tokens, SSNs)
+2. Always use parameterized queries (prevents SQL injection)
+3. Validate all user input (prevents XSS)
+4. Use HTTPS only (encrypts data in transit)
+
+# Other Guidelines
+...
+```
+
+## Example Rules Files
+
+### Minimal Rules
+
+```
+Project: Simple REST API
+
+Language: TypeScript
+Framework: Express.js
+Database: PostgreSQL with Prisma
+
+Code Style:
+- Use Prettier defaults
+- ESLint with recommended config
+
+Error Handling:
+- Use try/catch for async operations
+- Return proper HTTP status codes
+```
+
+### Comprehensive Rules
+
+```
+# Project: Enterprise SaaS Platform
+
+## Architecture
+
+This is a multi-tenant SaaS application using:
+- Next.js 14 (App Router)
+- TypeScript (strict mode)
+- PostgreSQL (via Prisma)
+- Redis (caching)
+- AWS S3 (file storage)
+
+Layers:
+1. API Routes: /app/api/
+2. Server Actions: /app/actions/
+3. Services: /lib/services/
+4. Data Access: /lib/db/
+
+## Code Standards
+
+TypeScript:
+- Enable strict mode
+- No any types (use unknown instead)
+- Prefer interfaces over types
+- Use discriminated unions for variants
+
+Naming:
+- Components: PascalCase (UserProfile.tsx)
+- Functions: camelCase (getUserById)
+- Constants: UPPER_SNAKE_CASE (MAX_RETRIES)
+- Types/Interfaces: PascalCase with I prefix (IUser)
+
+File Structure:
+- One component per file
+- Colocate tests: Component.tsx + Component.test.tsx
+- Use index.ts for barrel exports
+
+## Multi-tenancy
+
+Every database query MUST include tenantId:
+
+```typescript
+// Good
+const users = await prisma.user.findMany({
+  where: { tenantId: currentTenantId }
+});
+
+// Bad - security vulnerability!
+const users = await prisma.user.findMany();
+```
+
+Middleware ensures tenantId is available in request context.
+
+## Authentication & Authorization
+
+Auth:
+- Use NextAuth.js
+- Support email/password and OAuth (Google, GitHub)
+- Session in database (not JWT)
+- CSRF protection enabled
+
+Authorization:
+- Role-based: admin, user, viewer
+- Check permissions on every request
+- Use @requireAuth and @requireRole decorators
+
+## Testing
+
+Unit Tests:
+- Jest for unit tests
+- React Testing Library for components
+- Mock external dependencies
+- Aim for 80%+ coverage
+
+Integration Tests:
+- Playwright for E2E tests
+- Test critical user flows
+- Run against staging environment
+
+Test Data:
+- Use factories (via Fishery)
+- Clean database before each test
+- Never use production data
+
+## Performance
+
+Database:
+- Use select to limit fields
+- Include only needed relations
+- Use pagination (limit 50 default)
+- Index frequently queried columns
+
+Caching:
+- Cache expensive queries in Redis
+- Cache duration: 5 minutes default
+- Invalidate on data changes
+- Use stale-while-revalidate pattern
+
+API:
+- Use React Query for data fetching
+- Enable response compression
+- Use CDN for static assets
+
+## Security
+
+Input Validation:
+- Use Zod for all input validation
+- Validate on both client and server
+- Sanitize before rendering HTML
+
+Sensitive Data:
+- Never log passwords, tokens, or PII
+- Use environment variables for secrets
+- Rotate API keys quarterly
+- Encrypt sensitive data at rest
+
+Rate Limiting:
+- 100 requests/minute per IP (API)
+- 10 requests/minute (auth endpoints)
+- Use Upstash rate limiting
+
+## Error Handling
+
+Client-Side:
+- Show user-friendly messages
+- Log detailed errors to Sentry
+- Provide recovery options
+
+Server-Side:
+- Use custom error classes
+- Include error codes
+- Log with context (user, tenant, action)
+- Never expose internal details to client
+
+## Deployment
+
+Environments:
+- Development: localhost
+- Staging: staging.example.com
+- Production: app.example.com
+
+CI/CD:
+- GitHub Actions for CI
+- Auto-deploy staging on merge to develop
+- Manual approval for production
+- Run tests and type-check before deploy
+
+Monitoring:
+- Sentry for error tracking
+- Vercel Analytics for performance
+- Custom metrics to DataDog
+- Alert on error rate > 1%
+
+## Documentation
+
+Code:
+- JSDoc for all public functions
+- Inline comments for complex logic
+- Update README on architecture changes
+
+API:
+- OpenAPI spec in /docs/api/
+- Keep examples up to date
+- Document breaking changes
+```
+
+## Troubleshooting
+
+### Rules Not Being Used
+
+1. Check file location: `.zed/rules` in project root
+2. Verify file name is correct
+3. Restart agent thread
+4. Check file isn't gitignored
+
+### Rules Being Ignored
+
+1. Be more specific in instructions
+2. Place important rules at the top
+3. Use examples to clarify
+4. Avoid contradictory rules
+
+### Too Many Rules
+
+1. Focus on what's most important
+2. Remove obvious/standard practices
+3. Keep file under 500 lines
+4. Split into multiple prompt store entries if needed
+
+<Note>
+Rules files are read when agent threads start and when files change. Modifications take effect immediately in new messages.
+</Note>
+
+## Implementation Details
+
+Rules are loaded in:
+
+- **File loading**: `agent/src/agent.rs` (load_worktree_rules_file)
+- **System prompt**: `prompt_store/src/`
+- **File watching**: Auto-reloads on changes
+
+Supported file names (from `prompt_store::RULES_FILE_NAMES`):
+
+- `.zed/rules`
+- `.cursorrules`
+- `.clinerules`
+- `.aiderules`
+
+## Related Documentation
+
+<CardGroup cols={2}>
+  <Card title="Agent Panel" icon="comments" href="/ai/agent-panel">
+    Using AI agents in Zed
+  </Card>
+  
+  <Card title="Configuration" icon="gear" href="/ai/configuration">
+    AI provider and model settings
+  </Card>
+  
+  <Card title="Tools" icon="wrench" href="/ai/tools">
+    Agent tools and permissions
+  </Card>
+  
+  <Card title="Prompt Store" icon="book" href="/features/prompt-store">
+    Managing user prompts and templates
+  </Card>
+</CardGroup>

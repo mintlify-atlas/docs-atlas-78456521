@@ -1,0 +1,527 @@
+---
+title: Rust Development
+description: Configure Rust language support in Zed with rust-analyzer, including LSP configuration, formatting, debugging, and performance optimization
+---
+
+# Rust Development
+
+Rust support is available natively in Zed with first-class integration for rust-analyzer, formatting, and debugging.
+
+<Info>
+**Key Technologies:**
+- **Tree-sitter**: [tree-sitter/tree-sitter-rust](https://github.com/tree-sitter/tree-sitter-rust)
+- **Language Server**: [rust-analyzer](https://github.com/rust-lang/rust-analyzer)
+- **Debug Adapters**: [CodeLLDB](https://github.com/vadimcn/codelldb) (primary), [GDB](https://sourceware.org/gdb/) (secondary, not available on Apple silicon)
+</Info>
+
+## Getting Started
+
+Zed automatically downloads and configures rust-analyzer when you open Rust files. No manual setup is required for basic functionality.
+
+<Steps>
+  <Step title="Open a Rust Project">
+    Open any folder containing Rust code (with `Cargo.toml`).
+  </Step>
+  
+  <Step title="Automatic Setup">
+    Zed detects `.rs` files and automatically:
+    - Downloads rust-analyzer if not present
+    - Starts the language server
+    - Enables code completion, diagnostics, and navigation
+  </Step>
+  
+  <Step title="Verify Functionality">
+    Try features like:
+    - Code completion (start typing)
+    - Go to definition (`F12`)
+    - Find references (`Shift+F12`)
+  </Step>
+</Steps>
+
+## Rust-Analyzer Configuration
+
+rust-analyzer provides extensive configuration options through `initialization_options` in your `settings.json`.
+
+### Inlay Hints
+
+Inlay hints display additional type information and parameter names inline with your code:
+
+<CodeGroup>
+```json settings.json
+{
+  "lsp": {
+    "rust-analyzer": {
+      "initialization_options": {
+        "inlayHints": {
+          "maxLength": null,
+          "lifetimeElisionHints": {
+            "enable": "skip_trivial",
+            "useParameterNames": true
+          },
+          "closureReturnTypeHints": {
+            "enable": "always"
+          }
+        }
+      }
+    }
+  }
+}
+```
+</CodeGroup>
+
+See [Inlay Hints](https://rust-analyzer.github.io/book/features.html#inlay-hints) in the rust-analyzer manual for complete options.
+
+### Target Directory
+
+Customize where rust-analyzer stores its build artifacts:
+
+<CodeGroup>
+```json settings.json
+{
+  "lsp": {
+    "rust-analyzer": {
+      "initialization_options": {
+        "rust": {
+          "analyzerTargetDir": true
+        }
+      }
+    }
+  }
+}
+```
+</CodeGroup>
+
+- `true` - Uses `target/rust-analyzer`
+- `"target/analyzer"` - Uses a custom directory path
+
+This prevents rust-analyzer builds from interfering with your regular `cargo build` artifacts.
+
+### Alternate Targets
+
+Configure rust-analyzer to provide diagnostics for targets other than your current platform:
+
+<CodeGroup>
+```json settings.json
+{
+  "lsp": {
+    "rust-analyzer": {
+      "initialization_options": {
+        "cargo": {
+          "target": "x86_64-pc-windows-msvc"
+        }
+      }
+    }
+  }
+}
+```
+</CodeGroup>
+
+Find available target triples with:
+
+```bash
+rustup target list --installed
+```
+
+Common targets:
+- `aarch64-apple-darwin` - macOS ARM64
+- `x86_64-unknown-linux-gnu` - Linux x86_64
+- `x86_64-pc-windows-msvc` - Windows MSVC
+- `wasm32-unknown-unknown` - WebAssembly
+
+### Check on Save Configuration
+
+By default, rust-analyzer runs `cargo check --workspace --all-targets` on every save. This can be resource-intensive on large projects.
+
+<Tabs>
+  <Tab title="Disable Check on Save">
+    ```json settings.json
+    {
+      "lsp": {
+        "rust-analyzer": {
+          "initialization_options": {
+            "checkOnSave": false
+          }
+        }
+      }
+    }
+    ```
+    
+    Use manual cargo diagnostics with `editor: run flycheck` command.
+  </Tab>
+  
+  <Tab title="Check Current Package Only">
+    ```json settings.json
+    {
+      "lsp": {
+        "rust-analyzer": {
+          "initialization_options": {
+            "cargo": {
+              "allTargets": false
+            },
+            "check": {
+              "workspace": false
+            }
+          }
+        }
+      }
+    }
+    ```
+    
+    Limits checking to the current package instead of the entire workspace.
+  </Tab>
+  
+  <Tab title="Use Clippy">
+    ```json settings.json
+    {
+      "lsp": {
+        "rust-analyzer": {
+          "initialization_options": {
+            "check": {
+              "command": "clippy"
+            }
+          }
+        }
+      }
+    }
+    ```
+    
+    Replaces `cargo check` with `cargo clippy` for additional lints.
+  </Tab>
+</Tabs>
+
+### Multi-Project Workspaces
+
+For multiple Rust projects in the same folder that aren't in a Cargo workspace:
+
+<CodeGroup>
+```json .zed/settings.json
+{
+  "lsp": {
+    "rust-analyzer": {
+      "initialization_options": {
+        "linkedProjects": [
+          "./path/to/a/Cargo.toml",
+          "./path/to/b/Cargo.toml"
+        ]
+      }
+    }
+  }
+}
+```
+</CodeGroup>
+
+### Custom Snippets
+
+Define custom completion snippets for common patterns:
+
+<CodeGroup>
+```json settings.json
+{
+  "lsp": {
+    "rust-analyzer": {
+      "initialization_options": {
+        "completion": {
+          "snippets": {
+            "custom": {
+              "Arc::new": {
+                "postfix": "arc",
+                "body": ["Arc::new(${receiver})"],
+                "requires": "std::sync::Arc",
+                "scope": "expr"
+              },
+              "Some": {
+                "postfix": "some",
+                "body": ["Some(${receiver})"],
+                "scope": "expr"
+              },
+              "Ok": {
+                "postfix": "ok",
+                "body": ["Ok(${receiver})"],
+                "scope": "expr"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+```
+</CodeGroup>
+
+Type `value.arc` and accept the completion to get `Arc::new(value)`.
+
+## Binary Management
+
+Zed provides flexible options for managing the rust-analyzer binary.
+
+### Default Behavior
+
+By default, Zed:
+1. Searches for `rust-analyzer` in your `PATH`
+2. Validates it with `rust-analyzer --help`
+3. Falls back to downloading its own stable version if not found
+
+### Pre-release Versions
+
+Install pre-release rust-analyzer versions:
+
+<CodeGroup>
+```json settings.json
+{
+  "lsp": {
+    "rust-analyzer": {
+      "fetch": {
+        "pre_release": true
+      }
+    }
+  }
+}
+```
+</CodeGroup>
+
+### Ignore System Version
+
+Force Zed to use its own rust-analyzer instead of your system installation:
+
+<CodeGroup>
+```json settings.json
+{
+  "lsp": {
+    "rust-analyzer": {
+      "binary": {
+        "ignore_system_version": true
+      }
+    }
+  }
+}
+```
+</CodeGroup>
+
+### Custom Binary Path
+
+Use a rust-analyzer binary from a specific location:
+
+<CodeGroup>
+```json settings.json
+{
+  "lsp": {
+    "rust-analyzer": {
+      "binary": {
+        "path": "/Users/example/bin/rust-analyzer",
+        "arguments": [],
+        "env": {
+          "RUST_LOG": "rust_analyzer=debug"
+        }
+      }
+    }
+  }
+}
+```
+</CodeGroup>
+
+<Note>
+The `path` must be an absolute path, not a relative path.
+</Note>
+
+## Debugging Rust Code
+
+Zed supports debugging Rust binaries and tests with CodeLLDB and GDB.
+
+### Zero-Configuration Debugging
+
+Run `debugger: start` (default: `F4`) to see automatically detected debug targets:
+
+- Rust binaries (`fn main`)
+- Rust test functions
+- Rust benchmarks
+
+### Custom Debug Configurations
+
+Create `.zed/debug.json` for more control:
+
+<Tabs>
+  <Tab title="Build & Debug Binary">
+    ```json .zed/debug.json
+    [
+      {
+        "label": "Build & Debug native binary",
+        "build": {
+          "command": "cargo",
+          "args": ["build"]
+        },
+        "program": "$ZED_WORKTREE_ROOT/target/debug/my-binary",
+        "sourceLanguages": ["rust"],
+        "request": "launch",
+        "adapter": "CodeLLDB"
+      }
+    ]
+    ```
+  </Tab>
+  
+  <Tab title="Auto-locate Binary">
+    ```json .zed/debug.json
+    [
+      {
+        "label": "Auto-detect binary",
+        "adapter": "CodeLLDB",
+        "build": {
+          "command": "cargo",
+          "args": ["build"]
+        },
+        "sourceLanguages": ["rust"]
+      }
+    ]
+    ```
+    
+    Zed infers the binary path from the build command output.
+  </Tab>
+  
+  <Tab title="Debug Tests">
+    ```json .zed/debug.json
+    [
+      {
+        "label": "Debug test",
+        "adapter": "CodeLLDB",
+        "build": {
+          "command": "cargo",
+          "args": ["test", "--no-run"]
+        },
+        "sourceLanguages": ["rust"]
+      }
+    ]
+    ```
+  </Tab>
+</Tabs>
+
+<Info>
+CodeLLDB requires the `sourceLanguages` field to be set to `["rust"]` for proper debugging.
+</Info>
+
+See:
+- [CodeLLDB configuration docs](https://github.com/vadimcn/codelldb/blob/master/MANUAL.md#starting-a-new-debug-session)
+- [GDB configuration docs](https://sourceware.org/gdb/current/onlinedocs/gdb.html/Debugger-Adapter-Protocol.html)
+
+## LSP Tasks
+
+rust-analyzer provides LSP-based tasks for running and testing your code:
+
+<CodeGroup>
+```json settings.json
+{
+  "lsp": {
+    "rust-analyzer": {
+      "enable_lsp_tasks": true
+    }
+  }
+}
+```
+</CodeGroup>
+
+With this enabled, rust-analyzer adds contextual tasks like:
+- Run binary
+- Run tests
+- Run benchmarks
+
+These appear in the task picker and integrate with rust-analyzer's code lenses.
+
+## Performance Optimization
+
+### Large Projects
+
+For large Rust projects, consider these optimizations:
+
+<CodeGroup>
+```json settings.json
+{
+  "lsp": {
+    "rust-analyzer": {
+      "initialization_options": {
+        "diagnostics": {
+          "experimental": {
+            "enable": true
+          }
+        },
+        "checkOnSave": false,
+        "cargo": {
+          "allTargets": false
+        },
+        "check": {
+          "workspace": false
+        }
+      }
+    }
+  }
+}
+```
+</CodeGroup>
+
+This configuration:
+- Disables check on save (run manually with `editor: run flycheck`)
+- Limits cargo to the current package
+- Enables experimental rust-analyzer diagnostics
+
+See [rust-analyzer performance guide](https://rust-analyzer.github.io/manual.html#performance) for more optimization tips.
+
+### Manual Cargo Diagnostics
+
+When `checkOnSave: false` is set, fetch diagnostics manually:
+
+- `editor: run flycheck` - Run cargo check
+- `editor: cancel flycheck` - Cancel running check
+- `editor: clear flycheck` - Clear diagnostics
+
+These commands work in Rust files and the project diagnostics panel.
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="rust-analyzer fails to start">
+    **Solution**:
+    1. Check Zed logs: Command Palette → `zed: open log`
+    2. Verify Rust installation: `rustc --version`
+    3. Try ignoring system version and using Zed's built-in rust-analyzer
+    4. Restart language server: Command Palette → `editor: restart language server`
+  </Accordion>
+  
+  <Accordion title="Unresolved imports in workspace">
+    **Solution**:
+    1. Ensure you have a `Cargo.toml` workspace file
+    2. Check `linkedProjects` configuration for multi-project setups
+    3. Run `cargo build` to ensure dependencies are downloaded
+    4. Restart rust-analyzer
+  </Accordion>
+  
+  <Accordion title="High CPU or memory usage">
+    **Solution**:
+    1. Disable `checkOnSave` or limit it to current package
+    2. Set `analyzerTargetDir` to separate build artifacts
+    3. Reduce `allTargets` to false
+    4. Consider upgrading to a pre-release rust-analyzer version
+  </Accordion>
+  
+  <Accordion title="Debugger not stopping at breakpoints">
+    **Solution**:
+    1. Ensure you're building with debug symbols (debug mode, not release)
+    2. Verify `sourceLanguages: ["rust"]` is set in debug configuration
+    3. Check that the binary path matches the built artifact
+    4. Try using GDB instead of CodeLLDB
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="rust-analyzer Manual" icon="book" href="https://rust-analyzer.github.io/manual.html">
+    Comprehensive guide to rust-analyzer features and configuration
+  </Card>
+  <Card title="Debugging Guide" icon="bug" href="https://docs.zed.dev/debugging">
+    Learn more about debugging in Zed
+  </Card>
+  <Card title="Tasks" icon="play" href="https://docs.zed.dev/tasks">
+    Configure custom tasks for Rust projects
+  </Card>
+  <Card title="Language Configuration" icon="gear" href="/languages/configuring">
+    General language configuration options
+  </Card>
+</CardGroup>

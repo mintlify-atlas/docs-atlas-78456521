@@ -1,0 +1,134 @@
+---
+title: Language Support Overview
+description: Complete overview of programming languages supported in Zed, including built-in languages and extension-based support
+---
+
+# Language Support Overview
+
+Zed provides comprehensive language support through a combination of built-in languages and community extensions. Language features are powered by two core technologies:
+
+1. **Tree-sitter** - Provides fast, incremental syntax highlighting and structural analysis for the outline panel
+2. **Language Server Protocol (LSP)** - Delivers semantic features including code completion, diagnostics, go-to-definition, and refactoring
+
+## Built-in Language Support
+
+Zed includes native support for the following languages without requiring any extensions:
+
+### Systems Programming
+
+- **[Rust](/languages/rust)** - Full-featured support with rust-analyzer, debugging via CodeLLDB/GDB
+- **C** - Native support with clangd language server
+- **C++** - Comprehensive C++ support with clangd
+- **Go** - First-class support with gopls and Delve debugging
+
+### Web Development
+
+- **[TypeScript](/languages/typescript)** - Advanced TypeScript/TSX support with vtsls or typescript-language-server
+- **JavaScript** - Full JavaScript and JSX support with debugging capabilities
+- **HTML** - HTML5 support with formatting and validation
+- **CSS** - CSS3 support with language server features
+- **[Tailwind CSS](/languages/configuring#tailwind-css)** - Dedicated language server for Tailwind utilities
+
+### Scripting Languages
+
+- **[Python](/languages/python)** - Multiple language server options (basedpyright, Ruff, Pyright, PyLSP) with debugpy
+- **Bash/Shell** - Shell script support with shellcheck integration
+- **Ruby** - Ruby language support with Solargraph
+- **Lua** - Lua and Luau dialect support
+
+### Data & Configuration
+
+- **JSON/JSONC** - JSON with comments support
+- **YAML** - YAML language server integration
+- **TOML** - Configuration file support
+- **XML** - XML parsing and validation
+- **Markdown** - Rich markdown support with preview capabilities
+
+### Other Languages
+
+Zed also provides built-in support for:
+
+- **Elixir** - Functional programming with Elixir LS
+- **Erlang** - Erlang language support
+- **Haskell** - Haskell language server integration
+- **Java** - Java development support
+- **Kotlin** - Kotlin language features
+- **Swift** - Swift development on macOS
+- **Dart** - Dart and Flutter development
+- **Zig** - Zig language support
+- **Nim** - Nim language features
+- **OCaml** - OCaml and Reason support
+- **Clojure** - Clojure REPL integration
+- **Scala** - Scala language server support
+- **R** - Statistical programming language
+- **Julia** - Scientific computing language
+
+### Framework & Domain-Specific
+
+- **Astro** - Astro framework support
+- **Svelte** - Svelte component files
+- **Vue** - Vue.js single-file components
+- **Prisma** - Prisma schema files
+- **Docker** - Dockerfile syntax
+- **Terraform/OpenTofu** - Infrastructure as code
+- **SQL** - SQL query support
+- **GraphQL** - GraphQL schema and queries
+
+For a complete list of supported languages, see the [languages directory](https://github.com/zed-industries/zed/tree/main/crates/languages) in the Zed repository.
+
+## Language Server Features
+
+<Note>
+Language servers provide intelligent code editing features. Not all languages support all features - capabilities depend on the specific language server implementation.
+</Note>
+
+Common language server features include:
+
+- **Code Completion** - Context-aware completions as you type
+- **Diagnostics** - Real-time error checking and warnings
+- **Go to Definition** - Navigate to symbol definitions (`F12`)
+- **Find References** - Find all uses of a symbol (`Shift+F12`)
+- **Hover Information** - View documentation and type information
+- **Code Actions** - Quick fixes and refactoring options
+- **Rename Symbol** - Project-wide symbol renaming (`F2`)
+- **Inlay Hints** - Inline parameter names and type hints
+- **Semantic Tokens** - Enhanced syntax highlighting using type information
+
+## Extension-Based Languages
+
+Many additional languages are available through the Zed Extensions system. Browse available extensions in the Extensions panel or visit the [Zed Extensions repository](https://github.com/zed-industries/extensions).
+
+## Getting Started
+
+1. **Open a file** - Zed automatically detects languages by file extension
+2. **Language server downloads** - Zed downloads required language servers automatically on first use
+3. **Configure settings** - Customize language-specific settings in your `settings.json`
+
+For detailed configuration options, see:
+
+- [Configuring Languages](/languages/configuring)
+- [Toolchain Management](/languages/toolchains)
+- Language-specific guides: [Rust](/languages/rust), [TypeScript](/languages/typescript), [Python](/languages/python), [Go](/languages/go)
+
+## Platform Availability
+
+<Note>
+Language server availability may vary by platform. Some language servers or debug adapters are not available on all operating systems (e.g., GDB is not available on Apple silicon).
+</Note>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Configure Languages" icon="gear" href="/languages/configuring">
+    Learn how to configure language servers, formatters, and linters
+  </Card>
+  <Card title="Toolchains" icon="wrench" href="/languages/toolchains">
+    Manage language toolchains and virtual environments
+  </Card>
+  <Card title="Rust Development" icon="rust" href="/languages/rust">
+    Detailed guide for Rust development in Zed
+  </Card>
+  <Card title="Python Development" icon="python" href="/languages/python">
+    Complete Python setup and configuration guide
+  </Card>
+</CardGroup>

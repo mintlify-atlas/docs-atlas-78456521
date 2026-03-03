@@ -1,0 +1,439 @@
+---
+title: Interactive Elements
+description: Handle user input with mouse events, keyboard events, and actions in GPUI
+---
+
+GPUI provides comprehensive support for interactive elements through mouse events, keyboard input, and action handlers.
+
+## Mouse Events
+
+### Click Events
+
+Handle click events with the `.on_click()` method:
+
+```rust
+use gpui::*;
+
+struct ClickableButton {
+    click_count: usize,
+}
+
+impl Render for ClickableButton {
+    fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        div()
+            .p_4()
+            .bg(rgb(0x3b82f6))
+            .text_color(white())
+            .rounded_md()
+            .cursor_pointer()
+            .on_click(cx.listener(|this, event: &ClickEvent, _window, cx| {
+                this.click_count += 1;
+                cx.notify();
+            }))
+            .child(format!("Clicked {} times", self.click_count))
+    }
+}
+```
+
+### Mouse Down and Up
+
+Handle individual mouse button events:
+
+```rust
+div()
+    .on_mouse_down(
+        MouseButton::Left,
+        cx.listener(|this, event: &MouseDownEvent, window, cx| {
+            // Handle mouse down
+        })
+    )
+    .on_mouse_up(
+        MouseButton::Right,
+        cx.listener(|this, event: &MouseUpEvent, window, cx| {
+            // Handle right-click
+        })
+    )
+```
+
+Available mouse buttons:
+- `MouseButton::Left`
+- `MouseButton::Right`
+- `MouseButton::Middle`
+- `MouseButton::Navigate(NavigationDirection::Back)`
+- `MouseButton::Navigate(NavigationDirection::Forward)`
+
+### Mouse Move and Hover
+
+```rust
+struct HoverableElement {
+    is_hovered: bool,
+}
+
+impl Render for HoverableElement {
+    fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        div()
+            .p_4()
+            .bg(if self.is_hovered { 
+                rgb(0x60a5fa) 
+            } else { 
+                rgb(0x3b82f6) 
+            })
+            .on_mouse_move(cx.listener(|this, event: &MouseMoveEvent, window, cx| {
+                this.is_hovered = true;
+                cx.notify();
+            }))
+            .child("Hover over me")
+    }
+}
+```
+
+### Scroll Events
+
+Handle scroll wheel input:
+
+```rust
+div()
+    .on_scroll_wheel(cx.listener(|this, event: &ScrollWheelEvent, window, cx| {
+        let delta = event.delta.pixel_delta(window.line_height());
+        // Handle scroll
+    }))
+```
+
+## Click Event Details
+
+The `ClickEvent` provides useful information:
+
+```rust
+.on_click(cx.listener(|this, event: &ClickEvent, window, cx| {
+    // Check modifiers
+    if event.modifiers().shift {
+        // Shift-click behavior
+    }
+    
+    // Get mouse position
+    let position = event.position();
+    
+    // Check click type
+    if event.is_right_click() {
+        // Right-click behavior
+    }
+    
+    // Check click count for double-clicks
+    if event.click_count() == 2 {
+        // Double-click behavior
+    }
+}))
+```
+
+## Keyboard Events
+
+### Key Down and Key Up
+
+```rust
+struct KeyboardHandler;
+
+impl Render for KeyboardHandler {
+    fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        div()
+            .on_key_down(cx.listener(|this, event: &KeyDownEvent, window, cx| {
+                let keystroke = &event.keystroke;
+                println!("Key pressed: {}", keystroke.key);
+                
+                // Check modifiers
+                if keystroke.modifiers.control {
+                    println!("Control is held");
+                }
+            }))
+            .on_key_up(cx.listener(|this, event: &KeyUpEvent, window, cx| {
+                // Handle key release
+            }))
+    }
+}
+```
+
+### Keystroke Structure
+
+Keystroke contains:
+- `key`: The key name (e.g., "a", "enter", "escape")
+- `modifiers`: Modifier keys held during the event
+  - `control`
+  - `alt`
+  - `shift`
+  - `command` (macOS)
+  - `function`
+
+## Actions
+
+Actions provide a high-level way to handle user commands with keyboard shortcuts.
+
+### Defining Actions
+
+```rust
+use gpui::*;
+
+// Simple actions without data
+actions!(text_editor, [Copy, Paste, Cut, Undo, Redo]);
+
+// Actions with data
+#[derive(Clone, PartialEq, Debug, gpui::Action)]
+struct InsertText {
+    text: String,
+}
+```
+
+### Handling Actions
+
+```rust
+struct TextEditor {
+    content: String,
+}
+
+impl Render for TextEditor {
+    fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        div()
+            .on_action(cx.listener(|this, _: &Copy, window, cx| {
+                // Handle copy action
+                println!("Copying: {}", this.content);
+            }))
+            .on_action(cx.listener(|this, action: &InsertText, window, cx| {
+                this.content.push_str(&action.text);
+                cx.notify();
+            }))
+            .child(&self.content)
+    }
+}
+```
+
+### Binding Actions to Keystrokes
+
+```rust
+use gpui::*;
+
+// In your app initialization
+cx.bind_keys(vec![
+    KeyBinding::new("cmd-c", Copy, Some("text_editor")),
+    KeyBinding::new("cmd-v", Paste, Some("text_editor")),
+    KeyBinding::new("cmd-z", Undo, Some("text_editor")),
+]);
+```
+
+### Key Contexts
+
+Actions can be scoped to specific contexts:
+
+```rust
+div()
+    .key_context("text_editor")
+    .on_action(cx.listener(|this, _: &Copy, window, cx| {
+        // This only triggers when focused and in "text_editor" context
+    }))
+```
+
+## Focus Management
+
+Manage keyboard focus for interactive elements:
+
+```rust
+struct FocusableInput {
+    focus_handle: FocusHandle,
+    value: String,
+}
+
+impl FocusableInput {
+    fn new(cx: &mut Context<Self>) -> Self {
+        Self {
+            focus_handle: cx.focus_handle(),
+            value: String::new(),
+        }
+    }
+}
+
+impl Render for FocusableInput {
+    fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        div()
+            .track_focus(&self.focus_handle)
+            .on_click(cx.listener(|this, event, window, cx| {
+                // Focus on click
+                this.focus_handle.focus(window, cx);
+            }))
+            .child(&self.value)
+    }
+}
+```
+
+### Focus Methods
+
+```rust
+// Focus the element
+focus_handle.focus(window, cx);
+
+// Check if focused
+if focus_handle.is_focused(cx) {
+    // Element is focused
+}
+
+// Blur (unfocus)
+focus_handle.blur(cx);
+```
+
+## Drag and Drop
+
+Implement drag and drop interactions:
+
+```rust
+struct DraggableItem {
+    id: usize,
+}
+
+impl Render for DraggableItem {
+    fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        div()
+            .id(format!("draggable-{}", self.id))
+            .on_drag(self.id, |item, cx| {
+                // Return the drag representation
+                div().child(format!("Dragging item {}", item))
+            })
+            .on_drop(cx.listener(|this, dragged: &usize, window, cx| {
+                println!("Dropped item {} onto {}", dragged, this.id);
+            }))
+            .child(format!("Item {}", self.id))
+    }
+}
+```
+
+## Event Propagation
+
+Control how events propagate through the element tree:
+
+```rust
+div()
+    .on_click(cx.listener(|this, event, window, cx| {
+        // Stop event from propagating to parent
+        cx.stop_propagation();
+    }))
+```
+
+### Capture Phase
+
+Handle events during the capture phase (before bubbling):
+
+```rust
+div()
+    .capture_any_mouse_down(cx.listener(|this, event, window, cx| {
+        // Runs before child elements see the event
+    }))
+```
+
+## Tooltips
+
+Add tooltips to elements:
+
+```rust
+div()
+    .tooltip(|cx| {
+        div()
+            .p_2()
+            .bg(rgb(0x1f2937))
+            .text_color(white())
+            .rounded_md()
+            .child("This is a tooltip")
+    })
+    .child("Hover for tooltip")
+```
+
+## Complete Interactive Example
+
+```rust
+use gpui::*;
+
+actions!(counter_app, [Increment, Decrement, Reset]);
+
+struct Counter {
+    count: i32,
+    focus_handle: FocusHandle,
+}
+
+impl Counter {
+    fn new(cx: &mut Context<Self>) -> Self {
+        Self {
+            count: 0,
+            focus_handle: cx.focus_handle(),
+        }
+    }
+}
+
+impl Render for Counter {
+    fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        div()
+            .flex()
+            .flex_col()
+            .gap_4()
+            .p_6()
+            .track_focus(&self.focus_handle)
+            .key_context("counter")
+            .on_action(cx.listener(|this, _: &Increment, window, cx| {
+                this.count += 1;
+                cx.notify();
+            }))
+            .on_action(cx.listener(|this, _: &Decrement, window, cx| {
+                this.count -= 1;
+                cx.notify();
+            }))
+            .on_action(cx.listener(|this, _: &Reset, window, cx| {
+                this.count = 0;
+                cx.notify();
+            }))
+            .child(
+                div()
+                    .text_2xl()
+                    .text_center()
+                    .child(format!("Count: {}", self.count))
+            )
+            .child(
+                div()
+                    .flex()
+                    .gap_2()
+                    .child(
+                        div()
+                            .p_2()
+                            .bg(rgb(0x3b82f6))
+                            .text_color(white())
+                            .rounded_md()
+                            .cursor_pointer()
+                            .on_click(cx.listener(|this, event, window, cx| {
+                                this.count += 1;
+                                cx.notify();
+                            }))
+                            .child("+")
+                    )
+                    .child(
+                        div()
+                            .p_2()
+                            .bg(rgb(0xef4444))
+                            .text_color(white())
+                            .rounded_md()
+                            .cursor_pointer()
+                            .on_click(cx.listener(|this, event, window, cx| {
+                                this.count -= 1;
+                                cx.notify();
+                            }))
+                            .child("-")
+                    )
+            )
+    }
+}
+```
+
+## Best Practices
+
+<Tip>
+Use `cx.listener()` to create event handlers that have access to your component's state.
+</Tip>
+
+<Note>
+Call `cx.notify()` after modifying state to trigger a re-render.
+</Note>
+
+<Warning>
+Be careful with event propagation - use `cx.stop_propagation()` to prevent events from bubbling when needed.
+</Warning>

@@ -1,0 +1,388 @@
+---
+title: Keybindings Reference
+description: Complete reference for Zed's keybinding system including syntax, contexts, and customization.
+---
+
+# Keybindings Reference
+
+Zed's keybinding system is fully customizable. This page provides a complete reference for configuring keyboard shortcuts.
+
+## Keymap File Location
+
+The keymap file is stored at:
+
+- **macOS/Linux:** `~/.config/zed/keymap.json`
+- **Windows:** `~\AppData\Roaming\Zed/keymap.json`
+
+Open it with `Cmd+K Cmd+S` (macOS) or `Ctrl+K Ctrl+S` (Windows/Linux), or run `zed: open keymap` from the command palette.
+
+## Keymap File Structure
+
+The keymap file contains a JSON array of binding groups:
+
+```json
+[
+  {
+    "bindings": {
+      "ctrl-right": "editor::SelectLargerSyntaxNode",
+      "ctrl-left": "editor::SelectSmallerSyntaxNode"
+    }
+  },
+  {
+    "context": "ProjectPanel && not_editing",
+    "bindings": {
+      "o": "project_panel::Open"
+    }
+  }
+]
+```
+
+## Keybinding Syntax
+
+### Basic Syntax
+
+Each key in the `"bindings"` map is a sequence of keypresses separated by spaces. Each keypress consists of modifiers followed by a key.
+
+<ParamField path="Modifiers" type="syntax">
+  - `ctrl-` — The Control key
+  - `cmd-`, `win-`, `super-` — Platform modifier (Command on macOS, Windows key on Windows, Super on Linux)
+  - `alt-` — Alt (Option on macOS)
+  - `shift-` — The Shift key
+  - `fn-` — The Function key
+  - `secondary-` — Equivalent to `cmd` on macOS, `ctrl` on Windows/Linux
+</ParamField>
+
+### Key Sequences
+
+Bind to multiple keypresses in sequence:
+
+```json
+{
+  "bindings": {
+    "cmd-k cmd-s": "zed::OpenKeymap",
+    "space e": "editor::ShowCompletions"
+  }
+}
+```
+
+### Special Keys
+
+Keys can be any Unicode character or named key:
+
+- Single characters: `a`, `0`, `£`, `ç`
+- Named keys: `tab`, `enter`, `escape`, `space`, `backspace`, `delete`
+- Function keys: `f1`, `f2`, ..., `f24`
+- Arrow keys: `up`, `down`, `left`, `right`
+- Modifier keys alone: `shift`, `ctrl`, `cmd`, `alt`
+
+### Shift Modifier
+
+The `shift-` modifier can only be used with letters to indicate uppercase:
+
+```json
+{
+  "bindings": {
+    "shift-g": "editor::GoToLine"
+  }
+}
+```
+
+Note: `shift-g` matches typing `G`. You cannot use `shift-(` — instead use `(` directly.
+
+### Modifier Keys Alone
+
+You can bind to pressing a modifier key on its own (triggers on key release):
+
+```json
+{
+  "bindings": {
+    "shift shift": "file_finder::Toggle"
+  }
+}
+```
+
+## Contexts
+
+Context expressions determine when a keybinding is active.
+
+### Context Syntax
+
+<ParamField path="&&" type="operator">
+  Logical AND — both conditions must be true.
+  
+  ```json
+  "context": "Editor && mode == full"
+  ```
+</ParamField>
+
+<ParamField path="||" type="operator">
+  Logical OR — either condition must be true.
+  
+  ```json
+  "context": "Editor || Terminal"
+  ```
+</ParamField>
+
+<ParamField path="!" type="operator">
+  Logical NOT — condition must be false.
+  
+  ```json
+  "context": "!Editor"
+  ```
+</ParamField>
+
+<ParamField path=">" type="operator">
+  Ancestor match — an ancestor matches the left expression and the current node matches the right.
+  
+  ```json
+  "context": "Workspace > Editor"
+  ```
+</ParamField>
+
+<ParamField path="()" type="operator">
+  Grouping for precedence.
+  
+  ```json
+  "context": "(Editor || Terminal) && vim_mode == normal"
+  ```
+</ParamField>
+
+### Common Contexts
+
+<ParamField path="Workspace" type="context">
+  The root context, always active.
+</ParamField>
+
+<ParamField path="Editor" type="context">
+  Any editor (including inline inputs).
+  
+  Attributes:
+  - `mode` — `"full"` for main editors, `"single_line"` for inputs
+  - `extension` — File extension (e.g., `"rs"`, `"md"`)
+  - `vim_mode` — Current Vim mode (e.g., `"normal"`, `"insert"`, `"visual"`)
+</ParamField>
+
+<ParamField path="Terminal" type="context">
+  Integrated terminal panel.
+</ParamField>
+
+<ParamField path="ProjectPanel" type="context">
+  Project file tree panel.
+  
+  Attributes:
+  - `not_editing` — Not renaming a file
+</ParamField>
+
+<ParamField path="Pane" type="context">
+  A pane containing editors or other items.
+</ParamField>
+
+<ParamField path="Dock" type="context">
+  Left, right, or bottom dock containing panels.
+</ParamField>
+
+### Viewing Active Contexts
+
+To see which contexts are currently active:
+
+1. Run `dev: open key context view` from the command palette
+2. View the context tree and active attributes
+
+Example context tree:
+
+```
+Workspace os=macos keyboard_layout=com.apple.keylayout.QWERTY
+  Pane
+    Editor mode=full extension=md vim_mode=insert
+```
+
+## Precedence
+
+### Context Precedence
+
+When multiple keybindings match the same keystroke:
+
+1. Bindings matching lower in the context tree win (more specific contexts)
+2. Within the same level, bindings defined later take precedence
+3. User keybindings (in your `keymap.json`) override default keybindings
+
+### Key Sequence Conflicts
+
+When one binding is a prefix of another:
+
+```json
+{
+  "bindings": {
+    "ctrl-w": "editor::DeleteToNextWordEnd",
+    "ctrl-w left": "editor::DeleteToEndOfLine"
+  }
+}
+```
+
+Zed waits 1 second after `ctrl-w` to see if you type `left`. If you don't, `DeleteToNextWordEnd` triggers.
+
+## Predefined Keymaps
+
+Zed provides several base keymaps matching other editors:
+
+<ParamField path="VSCode" type="base_keymap" default="true">
+  Visual Studio Code keybindings (default).
+</ParamField>
+
+<ParamField path="Atom" type="base_keymap">
+  Atom editor keybindings.
+</ParamField>
+
+<ParamField path="JetBrains" type="base_keymap">
+  JetBrains IDE keybindings.
+</ParamField>
+
+<ParamField path="SublimeText" type="base_keymap">
+  Sublime Text keybindings.
+</ParamField>
+
+<ParamField path="Emacs" type="base_keymap">
+  Emacs keybindings (Beta).
+</ParamField>
+
+<ParamField path="None" type="base_keymap">
+  Disables all default keybindings.
+</ParamField>
+
+Change your base keymap in settings:
+
+```json
+{
+  "base_keymap": "JetBrains"
+}
+```
+
+Or via the command palette: `zed: toggle base keymap selector`.
+
+## Special Actions
+
+### Null Bindings
+
+Disable a keybinding in a specific context:
+
+```json
+[
+  {
+    "context": "Workspace",
+    "bindings": {
+      "cmd-r": null
+    }
+  }
+]
+```
+
+### SendKeystrokes
+
+Remap a single key to a sequence of keystrokes:
+
+```json
+[
+  {
+    "bindings": {
+      "alt-down": ["workspace::SendKeystrokes", "down down down down"],
+      "j k": ["workspace::SendKeystrokes", "escape"]
+    }
+  }
+]
+```
+
+Limitations:
+- Asynchronous operations don't complete until after all keystrokes
+- Maximum 100 simulated keys
+- Cannot send keystrokes to newly opened views in the same sequence
+
+### Terminal SendKeystroke
+
+Forward specific keys to the terminal (Linux/Windows):
+
+```json
+[
+  {
+    "context": "Terminal",
+    "bindings": {
+      "ctrl-n": ["terminal::SendKeystroke", "ctrl-n"]
+    }
+  }
+]
+```
+
+## Non-QWERTY Keyboards
+
+### macOS
+
+Zed automatically maps keys to ASCII equivalents when `cmd` is held. For extended Latin layouts (French AZERTY, German QWERTZ), Zed remaps shortcuts to ensure they're typeable.
+
+Enable key equivalent mapping in your keymap:
+
+```json
+[
+  {
+    "use_key_equivalents": true,
+    "bindings": {
+      "ctrl->" : "editor::Indent"
+    }
+  }
+]
+```
+
+### Linux
+
+Since v0.196.0, non-ASCII keys use QWERTY-equivalent keys for shortcuts. Not all shortcuts may be typeable on all layouts — custom keybindings may be needed.
+
+## Default Keymaps
+
+View all default keybindings:
+
+- [macOS](https://github.com/zed-industries/zed/blob/main/assets/keymaps/default-macos.json)
+- [Windows](https://github.com/zed-industries/zed/blob/main/assets/keymaps/default-windows.json)
+- [Linux](https://github.com/zed-industries/zed/blob/main/assets/keymaps/default-linux.json)
+
+## Examples
+
+### Custom Editor Shortcuts
+
+```json
+[
+  {
+    "context": "Editor",
+    "bindings": {
+      "ctrl-shift-up": "editor::SelectLargerSyntaxNode",
+      "ctrl-shift-down": "editor::SelectSmallerSyntaxNode"
+    }
+  }
+]
+```
+
+### Vim-Style Shortcuts
+
+```json
+[
+  {
+    "context": "Editor && vim_mode == normal",
+    "bindings": {
+      "space f": "file_finder::Toggle",
+      "space b": "tab_switcher::Toggle"
+    }
+  }
+]
+```
+
+### Project Panel Shortcuts
+
+```json
+[
+  {
+    "context": "ProjectPanel && not_editing",
+    "bindings": {
+      "a": "project_panel::NewFile",
+      "shift-a": "project_panel::NewDirectory",
+      "d": "project_panel::Delete"
+    }
+  }
+]
+```

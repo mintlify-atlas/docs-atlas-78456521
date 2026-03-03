@@ -1,0 +1,251 @@
+---
+title: Building Zed for macOS
+description: Guide to building Zed on macOS for development
+---
+
+## Repository
+
+Clone the [Zed repository](https://github.com/zed-industries/zed):
+
+```bash
+git clone https://github.com/zed-industries/zed.git
+cd zed
+```
+
+## Dependencies
+
+<Steps>
+  <Step title="Install Rust">
+    Install [rustup](https://www.rust-lang.org/tools/install):
+
+    ```bash
+    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+    ```
+  </Step>
+
+  <Step title="Install Xcode">
+    Install [Xcode](https://apps.apple.com/us/app/xcode/id497799835?mt=12) from the macOS App Store or from the [Apple Developer](https://developer.apple.com/download/all/) website.
+
+    <Note>
+    The Apple Developer download requires a developer account. Launch Xcode after installation and install the macOS components (the default option).
+    </Note>
+  </Step>
+
+  <Step title="Install Xcode command line tools">
+    ```bash
+    xcode-select --install
+    ```
+  </Step>
+
+  <Step title="Configure Xcode command line tools">
+    Ensure the command line tools use your newly installed Xcode:
+
+    ```bash
+    sudo xcode-select --switch /Applications/Xcode.app/Contents/Developer
+    sudo xcodebuild -license accept
+    ```
+  </Step>
+
+  <Step title="Install CMake">
+    Install `cmake` (required by [a dependency](https://docs.rs/wasmtime-c-api-impl/latest/wasmtime_c_api/)):
+
+    ```bash
+    brew install cmake
+    ```
+  </Step>
+</Steps>
+
+## Building from source
+
+Once you have the dependencies installed, you can build Zed using [Cargo](https://doc.rust-lang.org/cargo/).
+
+<Tabs>
+  <Tab title="Debug build">
+    ```bash
+    cargo run
+    ```
+
+    Debug builds are unoptimized and include debugging symbols. Use these for development and debugging.
+  </Tab>
+
+  <Tab title="Release build">
+    ```bash
+    cargo run --release
+    ```
+
+    Release builds are optimized and suitable for performance testing.
+  </Tab>
+</Tabs>
+
+### Running tests
+
+```bash
+cargo test --workspace
+```
+
+## Visual regression tests
+
+Zed includes visual regression tests that capture screenshots of real Zed windows and compare them against baseline images. These tests require macOS with Screen Recording permission.
+
+### Prerequisites
+
+You must grant Screen Recording permission to your terminal:
+
+<Steps>
+  <Step title="Trigger permission prompt">
+    Run the visual test runner once - macOS will prompt for permission:
+
+    ```bash
+    cargo run -p zed --bin zed_visual_test_runner --features visual-tests
+    ```
+  </Step>
+
+  <Step title="Or configure manually">
+    1. Open System Settings > Privacy & Security > Screen Recording
+    2. Enable your terminal app (Terminal.app, iTerm2, Ghostty, etc.)
+    3. Restart your terminal after granting permission
+  </Step>
+</Steps>
+
+### Baseline images
+
+Baseline images are stored in `crates/zed/test_fixtures/visual_tests/` but are **gitignored** to avoid bloating the repository. You must generate them locally before running tests.
+
+#### Initial setup
+
+Before making any UI changes, generate baseline images from a known-good state:
+
+```bash
+git checkout origin/main
+UPDATE_BASELINE=1 cargo run -p zed --bin visual_test_runner --features visual-tests
+git checkout -
+```
+
+This creates baselines that reflect the current expected UI.
+
+#### Updating baselines
+
+When UI changes are intentional, update the baseline images after your changes:
+
+```bash
+UPDATE_BASELINE=1 cargo run -p zed --bin zed_visual_test_runner --features visual-tests
+```
+
+<Note>
+In the future, baselines may be stored externally. For now, they remain local-only to keep the git repository lightweight.
+</Note>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Error compiling metal shaders">
+    If you see:
+
+    ```
+    error: failed to run custom build command for gpui v0.1.0
+    xcrun: error: unable to find utility "metal", not a developer tool or in PATH
+    ```
+
+    Try:
+
+    ```bash
+    sudo xcode-select --switch /Applications/Xcode.app/Contents/Developer
+    ```
+
+    If you're on macOS 26, try:
+
+    ```bash
+    xcodebuild -downloadComponent MetalToolchain
+    ```
+  </Accordion>
+
+  <Accordion title="Cargo errors claiming dependency uses unstable features">
+    Try cleaning and rebuilding:
+
+    ```bash
+    cargo clean
+    cargo build
+    ```
+  </Accordion>
+
+  <Accordion title="'dispatch/dispatch.h' file not found">
+    If you encounter:
+
+    ```
+    src/platform/mac/dispatch.h:1:10: fatal error: 'dispatch/dispatch.h' file not found
+    ```
+
+    This file is part of Xcode. Make sure the command line tools are installed and configured:
+
+    ```bash
+    xcode-select --install
+    sudo xcode-select --switch /Applications/Xcode.app/Contents/Developer
+    ```
+
+    Then set the `BINDGEN_EXTRA_CLANG_ARGS` environment variable:
+
+    ```bash
+    export BINDGEN_EXTRA_CLANG_ARGS="--sysroot=$(xcrun --show-sdk-path)"
+    ```
+
+    Clean and rebuild:
+
+    ```bash
+    cargo clean
+    cargo run
+    ```
+  </Accordion>
+
+  <Accordion title="Tests failing: Too many open files (os error 24)">
+    This error is caused by OS resource constraints. Installing and running tests with `cargo-nextest` should resolve the issue:
+
+    ```bash
+    cargo install cargo-nextest --locked
+    cargo nextest run --workspace --no-fail-fast
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Tips and tricks
+
+### Avoiding continual rebuilds
+
+If Zed continually rebuilds root crates, you may be opening the Zed codebase itself in your development build.
+
+This causes problems because `cargo run` exports environment variables which are picked up by `rust-analyzer` running in the development build of Zed. These environment variables are passed to `cargo check`, invalidating the build cache.
+
+<Tip>
+To avoid this, run the built binary against a different project:
+
+```bash
+cargo run ~/path/to/other/project
+```
+</Tip>
+
+### Speeding up verification
+
+If you build Zed frequently, macOS may keep verifying new builds, adding a few seconds to each iteration.
+
+To fix this:
+
+<Steps>
+  <Step title="Enable Developer Tools panel">
+    ```bash
+    sudo spctl developer-mode enable-terminal
+    ```
+  </Step>
+
+  <Step title="Add terminal to Developer Tools">
+    1. Open System Settings
+    2. Search for "Developer Tools"
+    3. Add your terminal (iTerm, Ghostty, etc.) to the list under "Allow applications to use developer tools"
+  </Step>
+
+  <Step title="Restart terminal">
+    Restart your terminal for changes to take effect.
+  </Step>
+</Steps>
+
+<Note>
+Thanks to the nextest developers for publishing [this solution](https://nexte.st/docs/installation/macos/#gatekeeper).
+</Note>

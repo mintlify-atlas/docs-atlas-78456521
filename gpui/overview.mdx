@@ -1,0 +1,166 @@
+---
+title: GPUI Overview
+description: An introduction to GPUI, Zed's GPU-accelerated UI framework for Rust
+---
+
+# Welcome to GPUI
+
+GPUI is a hybrid immediate and retained mode, GPU-accelerated UI framework for Rust, designed to support a wide variety of applications. It powers [Zed](https://zed.dev), a high-performance code editor.
+
+<Info>
+GPUI is currently in active development and is pre-1.0. Breaking changes may occur between versions as the framework evolves alongside Zed.
+</Info>
+
+## What is GPUI?
+
+GPUI provides a complete toolkit for building native desktop applications with:
+
+- **GPU Acceleration**: Hardware-accelerated rendering using Metal on macOS and Vulkan on Linux/Windows
+- **Hybrid Rendering Model**: Combines immediate and retained mode rendering for optimal performance
+- **Reactive State Management**: Built-in entity system for managing application state and communication
+- **Declarative UI**: Tailwind-style API for building user interfaces
+- **Type-Safe Actions**: Keyboard shortcuts and commands with full type safety
+- **Async Runtime**: Integrated async executor with platform event loop integration
+
+## Key Features
+
+### State Management with Entities
+
+GPUI uses an entity system where the framework owns all application state. Entities are accessed through smart pointers similar to `Rc`, but only provide access when a context reference is available.
+
+```rust
+let counter: Entity<Counter> = cx.new(|_cx| Counter { count: 0 });
+
+counter.update(cx, |counter, cx| {
+    counter.count += 1;
+    cx.notify(); // Notify observers of state change
+});
+```
+
+### Declarative UI with Views
+
+All UI in GPUI starts with views - entities that implement the `Render` trait. Views build element trees that are laid out using flexbox and styled with a Tailwind-style API.
+
+```rust
+impl Render for MyView {
+    fn render(&mut self, _window: &mut Window, _cx: &mut Context<Self>) -> impl IntoElement {
+        div()
+            .flex()
+            .flex_col()
+            .gap_3()
+            .bg(rgb(0x505050))
+            .child("Hello, GPUI!")
+    }
+}
+```
+
+### Elements
+
+Elements are the building blocks of GPUI's UI system. They provide complete control over rendering and layout:
+
+- **High-level elements**: `div`, `img`, `svg`, `canvas` for common use cases
+- **Custom elements**: Full control over layout and painting for specialized needs
+- **Efficient rendering**: Smart caching and invalidation for optimal performance
+
+### Actions
+
+Actions are user-defined structs that convert keystrokes into logical operations:
+
+```rust
+actions!(editor, [MoveUp, MoveDown, MoveLeft, MoveRight]);
+
+// Or with data:
+#[derive(Clone, PartialEq, Action)]
+#[action(namespace = editor)]
+pub struct SelectNext {
+    pub replace_newest: bool,
+}
+```
+
+### Async Execution
+
+GPUI provides an integrated async executor that works seamlessly with the platform event loop:
+
+```rust
+cx.spawn(|cx| async move {
+    // Work on foreground thread
+}).detach();
+
+cx.background_spawn(async move {
+    // Work on background threads
+}).detach();
+```
+
+## Platform Support
+
+<CardGroup cols={2}>
+  <Card title="macOS" icon="apple">
+    Full support with Metal rendering
+  </Card>
+  <Card title="Linux" icon="linux">
+    Production ready with Wayland and X11 support
+  </Card>
+  <Card title="Windows" icon="windows">
+    In development
+  </Card>
+  <Card title="WebAssembly" icon="globe">
+    Experimental support
+  </Card>
+</CardGroup>
+
+## Three Levels of Abstraction
+
+GPUI offers three different registers depending on your needs:
+
+<Steps>
+  <Step title="State Management">
+    Use `Entity`'s for storing application state that communicates between different parts of your application. Entities are owned by GPUI and accessed through smart pointers.
+  </Step>
+  
+  <Step title="Declarative UI">
+    Build views that implement the `Render` trait. Views construct element trees, lay them out with flexbox, and style them with a Tailwind-style API.
+  </Step>
+  
+  <Step title="Imperative Elements">
+    Implement custom elements for maximum control over rendering and layout. Use this for specialized widgets like code editors or virtual lists.
+  </Step>
+</Steps>
+
+## Additional Services
+
+GPUI provides a range of services for building complex applications:
+
+- **Actions**: Keyboard shortcuts and commands with type safety
+- **Platform Services**: Native APIs for app lifecycle, URLs, and system integration
+- **Testing**: `#[gpui::test]` macro with `TestAppContext` for simulating platform input
+- **Async Executor**: Integrated with the platform event loop
+- **Text System**: Advanced text rendering and layout
+
+## Learn More
+
+<CardGroup cols={2}>
+  <Card title="Getting Started" icon="rocket" href="/gpui/getting-started">
+    Set up your first GPUI application
+  </Card>
+  <Card title="Architecture" icon="sitemap" href="/gpui/architecture">
+    Deep dive into GPUI's architecture
+  </Card>
+  <Card title="gpui.rs" icon="graduation-cap" href="https://gpui.rs">
+    Complete examples and tutorials
+  </Card>
+  <Card title="Zed Source" icon="code" href="https://github.com/zed-industries/zed">
+    Real-world usage in the Zed editor
+  </Card>
+</CardGroup>
+
+## Community
+
+The best way to learn more about GPUI is to:
+
+- Read the [Zed source code](https://github.com/zed-industries/zed)
+- Join the [Zed Discord](https://zed.dev/community-links)
+- Follow the [Zed blog](https://zed.dev/blog) for guides and updates
+
+<Warning>
+GPUI requires the latest stable Rust compiler and is currently available for macOS and Linux. Windows support is in active development.
+</Warning>

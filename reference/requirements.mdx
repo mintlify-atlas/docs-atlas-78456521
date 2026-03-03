@@ -1,0 +1,262 @@
+---
+title: System Requirements
+description: Complete system requirements for running Zed on macOS, Linux, Windows, and FreeBSD.
+---
+
+# System Requirements
+
+This page details the hardware and software requirements for running Zed on supported platforms.
+
+## macOS
+
+<ParamField path="Operating System" type="requirement">
+  macOS 10.15.7 (Catalina) or later
+  
+  | Version | Codename | Apple Status | Zed Status |
+  |---------|----------|--------------|------------|
+  | macOS 26.x | Tahoe | Supported | Supported |
+  | macOS 15.x | Sequoia | Supported | Supported |
+  | macOS 14.x | Sonoma | Supported | Supported |
+  | macOS 13.x | Ventura | Supported | Supported |
+  | macOS 12.x | Monterey | EOL 2024-09-16 | Supported |
+  | macOS 11.x | Big Sur | EOL 2023-09-26 | Partially Supported |
+  | macOS 10.15.x | Catalina | EOL 2022-09-12 | Partially Supported |
+</ParamField>
+
+<ParamField path="Hardware" type="requirement">
+  **Processor:** Apple Silicon (M1/M2/M3/M4) or Intel (x86_64)
+  
+  **Supported Models:**
+  - MacBook Pro (Early 2015 and newer)
+  - MacBook Air (Early 2015 and newer)
+  - MacBook (Early 2016 and newer)
+  - Mac Mini (Late 2014 and newer)
+  - Mac Pro (Late 2013 or newer)
+  - iMac (Late 2015 and newer)
+  - iMac Pro (all models)
+  - Mac Studio (all models)
+</ParamField>
+
+<ParamField path="Graphics" type="requirement">
+  Metal support required (available on all supported macOS versions)
+</ParamField>
+
+### Limited Features on Older macOS
+
+macOS Big Sur (11.x) and Catalina (10.15.x) do not support screen sharing in Zed Collaboration due to missing [ScreenCaptureKit.framework](https://developer.apple.com/documentation/screencapturekit/) (requires macOS 12+).
+
+## Linux
+
+<ParamField path="Architecture" type="requirement">
+  64-bit Intel/AMD (x86_64) or 64-bit ARM (aarch64)
+  
+  Other architectures (32-bit, RISC-V) require building from source.
+</ParamField>
+
+<ParamField path="Operating System" type="requirement">
+  **Recommended:**
+  - Ubuntu 20.04 or newer (x86_64)
+  - Ubuntu 22.04 or newer (aarch64)
+  
+  **Supported distributions:**
+  - Arch Linux
+  - Debian
+  - Fedora
+  - RHEL 9+ (x86_64 only; aarch64 requires source build)
+  - openSUSE
+  - Manjaro
+  - And more (see [Linux platform support](./linux))
+  
+  **Special cases:**
+  - NixOS: Requires [nix-ld](https://github.com/Mic92/nix-ld) or community package
+  - Alpine: Requires [gcompat](https://wiki.alpinelinux.org/wiki/Running_glibc_programs) or community package
+</ParamField>
+
+<ParamField path="glibc" type="requirement">
+  System-wide glibc required:
+  - x86_64: glibc >= 2.31 (Ubuntu 20.04+)
+  - aarch64: glibc >= 2.35 (Ubuntu 22.04+)
+</ParamField>
+
+<ParamField path="Graphics" type="requirement">
+  **Vulkan 1.3 or later** with compatible GPU and drivers
+  
+  Test Vulkan support:
+  ```sh
+  # Install vulkan-tools
+  sudo apt install vulkan-tools  # Debian/Ubuntu
+  sudo pacman -S vulkan-tools     # Arch
+  
+  # Test
+  vkcube
+  ```
+</ParamField>
+
+<ParamField path="Desktop Portals" type="requirement">
+  Required freedesktop.org portals:
+  - `org.freedesktop.portal.FileChooser`
+  - `org.freedesktop.portal.OpenURI`
+  - `org.freedesktop.portal.Secret` or `org.freedesktop.Secrets`
+</ParamField>
+
+## Windows
+
+<ParamField path="Operating System" type="requirement">
+  **Windows 10:** Version 1903 (May 2019 Update) or later
+  
+  **Windows 11:** Version 22H2 or later
+  
+  A 64-bit operating system is required.
+</ParamField>
+
+<ParamField path="Hardware" type="requirement">
+  **Processor:** x64 (Intel, AMD) or Arm64 (Qualcomm)
+</ParamField>
+
+<ParamField path="Graphics" type="requirement">
+  **DirectX 11 compatible GPU** (most PCs from 2012+)
+  
+  **Driver:** Current driver from GPU vendor (NVIDIA/AMD/Intel/Qualcomm)
+  
+  The Microsoft Basic Display Adapter is not sufficient.
+  
+  **Check DirectX version:**
+  ```
+  1. Press Win+R
+  2. Type "dxdiag" and press Enter
+  3. Check DirectX Version under System Information
+  ```
+</ParamField>
+
+### Virtual Machines
+
+Zed works in Windows virtual machines but uses the emulated adapter provided by the VM. Performance may be degraded. Ensure:
+
+- VM has GPU acceleration enabled (if available)
+- Sufficient memory and CPU cores allocated
+- Latest VM guest tools installed
+
+## FreeBSD
+
+<ParamField path="Status" type="requirement">
+  Not yet available as an official download.
+  
+  Can be built from source following [FreeBSD development documentation](../development/freebsd).
+</ParamField>
+
+## Web Browsers
+
+<ParamField path="Status" type="requirement">
+  Not supported at this time.
+  
+  See [Platform Support issue #5391](https://github.com/zed-industries/zed/issues/5391) for updates.
+</ParamField>
+
+## Minimum vs. Recommended
+
+### Minimum Requirements
+
+The specifications above represent minimum requirements. Zed will run but may not provide optimal performance.
+
+### Recommended for Best Performance
+
+<ParamField path="RAM" type="recommendation">
+  8 GB or more (16 GB+ for large projects)
+</ParamField>
+
+<ParamField path="Storage" type="recommendation">
+  SSD for improved project loading and indexing performance
+</ParamField>
+
+<ParamField path="GPU" type="recommendation">
+  - **macOS:** M-series chip or recent Intel integrated graphics
+  - **Linux:** Modern GPU with up-to-date Vulkan 1.3 drivers
+  - **Windows:** Dedicated GPU or recent integrated graphics with DirectX 12 support
+</ParamField>
+
+<ParamField path="Network" type="recommendation">
+  Stable internet connection for:
+  - AI features
+  - Collaboration
+  - Extension downloads
+  - Remote development (SSH)
+</ParamField>
+
+## Feature-Specific Requirements
+
+### AI Features
+
+<ParamField path="AI Agent" type="feature">
+  - Internet connection
+  - API key for chosen provider (Anthropic, OpenAI, Google, etc.)
+  - Recommended: 16 GB RAM for large context windows
+</ParamField>
+
+### Collaboration
+
+<ParamField path="Real-time Collaboration" type="feature">
+  - Stable internet connection
+  - Zed account
+  - Microphone/speakers for audio calls
+  - Webcam for video calls
+</ParamField>
+
+<ParamField path="Screen Sharing" type="feature">
+  **macOS only:**
+  - macOS 12 (Monterey) or later
+  - ScreenCaptureKit.framework support
+  
+  Not available on macOS 11 (Big Sur) or macOS 10.15 (Catalina).
+</ParamField>
+
+### Remote Development (SSH)
+
+<ParamField path="SSH" type="feature">
+  - SSH client installed locally
+  - SSH server on remote machine
+  - Network connectivity between local and remote machines
+  - Zed supported platform on remote machine (Linux or macOS)
+</ParamField>
+
+### Language Servers
+
+<ParamField path="Language Support" type="feature">
+  Requirements vary by language:
+  - **Rust:** Rust toolchain installed
+  - **Python:** Python interpreter and language server
+  - **TypeScript/JavaScript:** Node.js
+  - **Go:** Go toolchain
+  
+  See language-specific documentation for details.
+</ParamField>
+
+## Checking Your System
+
+### Get System Information
+
+From within Zed:
+
+1. Open command palette (`Cmd/Ctrl+Shift+P`)
+2. Run `zed: copy system specs into clipboard`
+3. Paste to view your system information
+
+Or run:
+
+```sh
+zed --version
+```
+
+## Troubleshooting Compatibility
+
+If Zed won't start or has performance issues:
+
+1. **Verify requirements:** Check your system meets minimum requirements above
+2. **Update drivers:** Especially GPU drivers
+3. **Update OS:** Install latest OS updates
+4. **Check logs:** Run `zed: open log` from command palette
+5. **Test graphics:** 
+   - macOS: Check Activity Monitor for GPU usage
+   - Linux: Run `vkcube` to test Vulkan
+   - Windows: Run `dxdiag` to verify DirectX
+
+See the [Troubleshooting guide](../troubleshooting) for detailed help.

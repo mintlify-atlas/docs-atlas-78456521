@@ -1,0 +1,118 @@
+---
+title: Extensions Overview
+description: Extend Zed with languages, themes, debuggers, slash commands, and more
+---
+
+## What are Extensions?
+
+Zed extensions are Git repositories that add functionality to the editor. They are written in Rust, compiled to WebAssembly, and can provide:
+
+- **Languages** - Add support for programming languages with syntax highlighting, language servers, and Tree-sitter grammars
+- **Themes** - Customize Zed's appearance with color schemes for the editor and UI
+- **Icon Themes** - Change file and folder icons in the project panel
+- **Debuggers** - Integrate Debug Adapter Protocol (DAP) servers for debugging
+- **Slash Commands** - Create custom commands for the Assistant panel
+- **MCP Servers** - Expose Model Context Protocol servers for AI tools
+
+## Extension Structure
+
+Every extension requires an `extension.toml` manifest file at the repository root:
+
+```toml
+id = "my-extension"
+name = "My Extension"
+version = "0.0.1"
+schema_version = 1
+authors = ["Your Name <you@example.com>"]
+description = "Example extension"
+repository = "https://github.com/your-name/my-zed-extension"
+```
+
+<Note>
+If you're creating a theme extension for publication, suffix the ID with `-theme` (e.g., `dracula-theme`).
+</Note>
+
+Optional components are organized in subdirectories:
+
+```
+my-extension/
+  extension.toml
+  Cargo.toml          # For WebAssembly code
+  src/
+    lib.rs
+  languages/          # Language definitions
+    my-language/
+      config.toml
+      highlights.scm
+  themes/             # Theme JSON files
+    my-theme.json
+  icon_themes/        # Icon theme definitions
+    my-icons.json
+```
+
+## Extension Capabilities
+
+Extensions run in a sandboxed WebAssembly environment with controlled capabilities:
+
+- **process:exec** - Execute external commands
+- **download_file** - Download files from the internet
+- **npm:install** - Install npm packages
+
+Users can restrict these capabilities through the `granted_extension_capabilities` setting. See [Extension Capabilities](/extensions/capabilities) for details.
+
+## Discovery and Installation
+
+Extensions are available through:
+
+- **Extension Gallery** - Browse and install using the `zed::Extensions` keybinding
+- **Auto-installation** - Configure extensions to install automatically
+- **Dev Extensions** - Load local extensions during development
+
+The extension ecosystem is hosted in the [zed-industries/extensions](https://github.com/zed-industries/extensions) repository.
+
+## Extension API
+
+Extensions implement the `Extension` trait from the [`zed_extension_api`](https://docs.rs/zed_extension_api) crate:
+
+```rust
+use zed_extension_api as zed;
+
+struct MyExtension {
+    // Extension state
+}
+
+impl zed::Extension for MyExtension {
+    fn new() -> Self {
+        Self {}
+    }
+
+    fn language_server_command(
+        &mut self,
+        language_server_id: &LanguageServerId,
+        worktree: &Worktree,
+    ) -> Result<Command> {
+        // Return language server command
+    }
+}
+
+zed::register_extension!(MyExtension);
+```
+
+The extension API version follows semantic versioning. Check [compatibility](https://github.com/zed-industries/zed/blob/main/crates/extension_api#compatible-zed-versions) when selecting a version.
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Installing Extensions" icon="download" href="/extensions/installing">
+    Browse and install extensions from the gallery
+  </Card>
+  <Card title="Developing Extensions" icon="code" href="/extensions/developing">
+    Create your own extension
+  </Card>
+  <Card title="Language Extensions" icon="language" href="/extensions/language-extensions">
+    Add programming language support
+  </Card>
+  <Card title="Theme Extensions" icon="palette" href="/extensions/theme-extensions">
+    Design custom themes
+  </Card>
+</CardGroup>

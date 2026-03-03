@@ -1,0 +1,510 @@
+---
+title: Configuration Guide
+description: Configure Zed with the Settings Editor, JSON files, and project-specific overrides. Complete guide to customizing your editor.
+---
+
+# Configuring Zed
+
+Zed offers flexible configuration through both a graphical Settings Editor and JSON configuration files. This guide covers all aspects of customizing Zed to match your workflow.
+
+## Settings Editor
+
+The **Settings Editor** is the primary way to configure Zed. It provides a searchable interface to browse, modify, and discover settings.
+
+<Steps>
+  <Step title="Open Settings">
+    Press `Cmd+,` (macOS) or `Ctrl+,` (Linux/Windows)
+
+    Or run `zed: open settings` from the command palette.
+  </Step>
+  <Step title="Search for settings">
+    Type in the search box to filter settings. All matching options appear with descriptions.
+  </Step>
+  <Step title="Modify values">
+    Use dropdowns, checkboxes, and text fields to change settings. Changes save automatically.
+  </Step>
+</Steps>
+
+<Note>
+  Not all settings are available in the Settings Editor yet. Advanced options like language-specific formatters require editing the JSON file directly.
+</Note>
+
+## Settings Files
+
+Zed uses JSON files for configuration. These files support `//` comments for documentation.
+
+### User Settings
+
+Your user settings apply globally across all projects.
+
+**Open with:**
+- Keyboard: `Cmd+Shift+P` (macOS) or `Ctrl+Shift+P` (Linux/Windows), then run `zed: open settings file`
+- Or edit directly at:
+
+<Tabs>
+  <Tab title="macOS">
+    ```
+    ~/.config/zed/settings.json
+    ```
+  </Tab>
+  <Tab title="Linux">
+    ```
+    ~/.config/zed/settings.json
+    ```
+    Or `$XDG_CONFIG_HOME/zed/settings.json` if using XDG directories.
+  </Tab>
+  <Tab title="Windows">
+    ```
+    %APPDATA%\Zed\settings.json
+    ```
+  </Tab>
+</Tabs>
+
+### Default Settings
+
+View all available settings with their default values by running `zed: open default settings` from the command palette. This opens a read-only reference file.
+
+### Project Settings
+
+Override user settings for a specific project by creating a `.zed/settings.json` file in your project root.
+
+<Steps>
+  <Step title="Create project settings">
+    Run `zed: open project settings` from the command palette.
+
+    This creates `.zed/settings.json` in your project root.
+  </Step>
+  <Step title="Add overrides">
+    Project settings take precedence over user settings:
+
+    ```json
+    {
+      "tab_size": 2,
+      "formatter": "prettier",
+      "format_on_save": "on"
+    }
+    ```
+  </Step>
+  <Step title="Use subdirectories (optional)">
+    Create settings files in subdirectories for more granular control.
+  </Step>
+</Steps>
+
+<Warning>
+  Not all settings work at the project level. Settings that affect the editor globally (like `theme` or `vim_mode`) only work in user settings. Project settings are limited to editor behavior and language tooling.
+</Warning>
+
+## How Settings Merge
+
+Settings are applied in layers, with later layers overriding earlier ones:
+
+<Steps>
+  <Step title="Default settings">
+    Zed's built-in defaults provide baseline configuration.
+  </Step>
+  <Step title="User settings">
+    Your global preferences override defaults.
+  </Step>
+  <Step title="Project settings">
+    Project-specific overrides have the highest priority.
+  </Step>
+</Steps>
+
+For object settings (like `terminal`), properties merge rather than replace entirely:
+
+```json
+// Default settings
+{
+  "terminal": {
+    "font_size": 14,
+    "shell": { "program": "/bin/bash" }
+  }
+}
+
+// User settings (merged with defaults)
+{
+  "terminal": {
+    "font_size": 16
+    // shell remains /bin/bash from defaults
+  }
+}
+```
+
+## Common Configuration Examples
+
+### Appearance
+
+<Tabs>
+  <Tab title="Theme">
+    Configure your color theme:
+
+    ```json
+    {
+      "theme": "One Dark"
+    }
+    ```
+
+    Or use system theme:
+
+    ```json
+    {
+      "theme": {
+        "mode": "system",
+        "light": "One Light",
+        "dark": "One Dark"
+      }
+    }
+    ```
+
+    Change themes quickly: `Cmd+K Cmd+T` (macOS) or `Ctrl+K Ctrl+T` (Linux/Windows)
+  </Tab>
+
+  <Tab title="Fonts">
+    Customize editor and UI fonts:
+
+    ```json
+    {
+      "buffer_font_family": "JetBrains Mono",
+      "buffer_font_size": 14,
+      "buffer_font_weight": 400,
+      "ui_font_size": 16,
+      "terminal": {
+        "font_family": "JetBrains Mono",
+        "font_size": 14
+      }
+    }
+    ```
+  </Tab>
+
+  <Tab title="Layout">
+    Configure editor layout:
+
+    ```json
+    {
+      "tab_size": 2,
+      "hard_tabs": false,
+      "show_wrap_guides": true,
+      "wrap_guides": [80, 120],
+      "preferred_line_length": 100,
+      "soft_wrap": "none"
+    }
+    ```
+  </Tab>
+</Tabs>
+
+### Editor Behavior
+
+<Tabs>
+  <Tab title="Auto-save & Formatting">
+    Configure save behavior:
+
+    ```json
+    {
+      "autosave": "on_focus_change",
+      "format_on_save": "on",
+      "ensure_final_newline_on_save": true,
+      "remove_trailing_whitespace_on_save": true
+    }
+    ```
+
+    Options for `autosave`:
+    - `"off"` - Manual save only
+    - `"on_focus_change"` - Save when switching files
+    - `"on_window_change"` - Save when leaving Zed
+    - `"after_delay"` - Save after typing stops
+  </Tab>
+
+  <Tab title="Language-Specific">
+    Configure settings per language:
+
+    ```json
+    {
+      "tab_size": 2,
+      "languages": {
+        "Python": {
+          "tab_size": 4,
+          "format_on_save": "on",
+          "formatter": "language_server"
+        },
+        "JavaScript": {
+          "tab_size": 2,
+          "formatter": "prettier"
+        },
+        "Rust": {
+          "format_on_save": "on",
+          "formatter": "language_server"
+        }
+      }
+    }
+    ```
+  </Tab>
+
+  <Tab title="Code Actions">
+    Enable inlay hints and format settings:
+
+    ```json
+    {
+      "inlay_hints": {
+        "enabled": true,
+        "show_type_hints": true,
+        "show_parameter_hints": true
+      },
+      "code_actions_on_format": {
+        "source.organizeImports": true,
+        "source.fixAll": true
+      }
+    }
+    ```
+  </Tab>
+</Tabs>
+
+### Terminal Configuration
+
+<Tabs>
+  <Tab title="Shell & Environment">
+    Configure the integrated terminal:
+
+    ```json
+    {
+      "terminal": {
+        "shell": {
+          "program": "/bin/zsh",
+          "args": ["-l"]
+        },
+        "env": {
+          "EDITOR": "zed --wait"
+        },
+        "working_directory": "current_project_directory",
+        "blinking": "terminal_controlled"
+      }
+    }
+    ```
+  </Tab>
+
+  <Tab title="Appearance">
+    Customize terminal appearance:
+
+    ```json
+    {
+      "terminal": {
+        "font_family": "JetBrains Mono",
+        "font_size": 14,
+        "line_height": "comfortable",
+        "option_as_meta": false,
+        "button": true,
+        "toolbar": {
+          "title": true
+        }
+      }
+    }
+    ```
+  </Tab>
+</Tabs>
+
+### AI Configuration
+
+<Tabs>
+  <Tab title="Default Model">
+    Set your preferred AI model:
+
+    ```json
+    {
+      "agent": {
+        "default_model": {
+          "provider": "anthropic",
+          "model": "claude-sonnet-4"
+        }
+      }
+    }
+    ```
+  </Tab>
+
+  <Tab title="Edit Prediction">
+    Configure AI code completions:
+
+    ```json
+    {
+      "edit_prediction": {
+        "enabled": true,
+        "provider": "zeta"
+      }
+    }
+    ```
+
+    Options: `"zeta"` (default), `"copilot"`, `"codestral"`
+  </Tab>
+
+  <Tab title="Custom API Keys">
+    Use your own API keys:
+
+    ```json
+    {
+      "agent": {
+        "anthropic_api_key": "sk-ant-...",
+        "openai_api_key": "sk-...",
+        "google_api_key": "AIza..."
+      }
+    }
+    ```
+
+    See [AI Configuration](https://zed.dev/docs/ai/configuration) for full details.
+  </Tab>
+</Tabs>
+
+## Per-Release Channel Overrides
+
+Use different settings for Stable, Preview, or Nightly builds:
+
+```json
+{
+  "theme": "One Dark",
+  "vim_mode": false,
+  "nightly": {
+    "theme": "Rosé Pine",
+    "vim_mode": true
+  },
+  "preview": {
+    "theme": "Catppuccin Mocha"
+  }
+}
+```
+
+With this configuration:
+- **Stable**: One Dark theme, Vim mode off
+- **Preview**: Catppuccin Mocha theme, Vim mode off
+- **Nightly**: Rosé Pine theme, Vim mode on
+
+<Note>
+  Changes made in the Settings Editor apply across all channels.
+</Note>
+
+## Settings Deep Links
+
+Zed supports deep links to open specific settings:
+
+```
+zed://settings/theme
+zed://settings/vim_mode
+zed://settings/buffer_font_size
+```
+
+Useful for sharing configuration tips or creating shortcuts.
+
+## Example: Complete Configuration
+
+Here's a complete example settings file:
+
+```json
+{
+  // Appearance
+  "theme": {
+    "mode": "system",
+    "light": "One Light",
+    "dark": "One Dark"
+  },
+  "buffer_font_family": "JetBrains Mono",
+  "buffer_font_size": 14,
+  "ui_font_size": 16,
+
+  // Editor behavior
+  "tab_size": 2,
+  "hard_tabs": false,
+  "soft_wrap": "none",
+  "show_wrap_guides": true,
+  "wrap_guides": [80, 120],
+
+  // Save behavior
+  "autosave": "on_focus_change",
+  "format_on_save": "on",
+  "ensure_final_newline_on_save": true,
+  "remove_trailing_whitespace_on_save": true,
+
+  // Terminal
+  "terminal": {
+    "shell": {
+      "program": "/bin/zsh"
+    },
+    "font_family": "JetBrains Mono",
+    "font_size": 14
+  },
+
+  // AI
+  "agent": {
+    "default_model": {
+      "provider": "anthropic",
+      "model": "claude-sonnet-4"
+    }
+  },
+  "edit_prediction": {
+    "enabled": true,
+    "provider": "zeta"
+  },
+
+  // Language-specific
+  "languages": {
+    "Python": {
+      "tab_size": 4,
+      "format_on_save": "on"
+    },
+    "JavaScript": {
+      "formatter": "prettier"
+    },
+    "Rust": {
+      "format_on_save": "on"
+    }
+  },
+
+  // Vim mode (optional)
+  "vim_mode": false
+}
+```
+
+## What's Next
+
+<CardGroup cols={2}>
+  <Card title="Appearance" icon="palette" href="https://zed.dev/docs/appearance">
+    Themes, fonts, and visual customization
+  </Card>
+  <Card title="Key Bindings" icon="keyboard" href="https://zed.dev/docs/key-bindings">
+    Customize keyboard shortcuts
+  </Card>
+  <Card title="AI Configuration" icon="sparkles" href="https://zed.dev/docs/ai/configuration">
+    Set up AI providers and models
+  </Card>
+  <Card title="Language Configuration" icon="code" href="https://zed.dev/docs/configuring-languages">
+    Configure language servers and formatters
+  </Card>
+  <Card title="All Settings Reference" icon="book" href="https://zed.dev/docs/reference/all-settings">
+    Complete settings documentation
+  </Card>
+  <Card title="Vim Mode" icon="terminal" href="https://zed.dev/docs/vim">
+    Configure Vim keybindings
+  </Card>
+</CardGroup>
+
+## Troubleshooting
+
+### Settings not applying
+
+1. Check for JSON syntax errors (Zed will show error indicators)
+2. Ensure you're editing the correct settings file (user vs. project)
+3. Some settings require restarting Zed
+4. Project settings may be overriding user settings
+
+### Finding setting names
+
+1. Open default settings (`zed: open default settings`) to see all available options
+2. Use the Settings Editor to discover settings with descriptions
+3. Check the [All Settings Reference](https://zed.dev/docs/reference/all-settings)
+
+### Reset to defaults
+
+To reset all settings:
+
+1. Open your settings file
+2. Delete all content or remove specific settings
+3. Zed will use default values for any missing settings
+
+<Tip>
+  You can also backup your settings before making major changes by copying the settings file to a safe location.
+</Tip>

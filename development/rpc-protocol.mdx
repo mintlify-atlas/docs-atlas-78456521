@@ -1,0 +1,597 @@
+---
+title: RPC Protocol
+description: Understanding Zed's RPC protocol for collaboration and remote development
+---
+
+Zed's RPC (Remote Procedure Call) protocol enables real-time collaboration and
+remote development. This guide explains the protocol architecture, message
+format, and how entities are synchronized across clients.
+
+## Architecture Overview
+
+The RPC system consists of several layers:
+
+```
+┌──────────────┐         ┌──────────────┐         ┌──────────────┐
+│   Client A   │         │    Server    │         │   Client B   │
+│              │         │   (collab)   │         │              │
+│  ┌────────┐  │         │              │         │  ┌────────┐  │
+│  │ Entity │  │◄────────┼──────────────┼────────►│  │ Entity │  │
+│  └────────┘  │         │              │         │  └────────┘  │
+│      │       │         │              │         │      │       │
+│  ┌────────┐  │         │  ┌────────┐  │         │  ┌────────┐  │
+│  │  RPC   │  │◄───────►│  │  RPC   │  │◄───────►│  │  RPC   │  │
+│  └────────┘  │         │  └────────┘  │         │  └────────┘  │
+│      │       │         │      │       │         │      │       │
+│  ┌────────┐  │         │  ┌────────┐  │         │  ┌────────┐  │
+│  │WebSocket│ │◄───────►│  │WebSocket│ │◄───────►│  │WebSocket│ │
+│  └────────┘  │         │  └────────┘  │         │  └────────┘  │
+└──────────────┘         └──────────────┘         └──────────────┘
+```
+
+Key components:
+
+- **Client**: Zed application with `rpc` and `client` crates
+- **Server**: `collab` binary running on zed.dev infrastructure
+- **Protocol**: Defined in `proto` crate as Protocol Buffers
+- **Transport**: WebSocket connections with message framing
+
+## Core Crates
+
+### proto Crate
+
+**`crates/proto/`**
+
+Defines the protocol using Protocol Buffers:
+
+```
+crates/proto/proto/
+├── zed.proto          # Main envelope and message routing
+├── buffer.proto       # Buffer synchronization messages
+├── worktree.proto     # File tree messages
+├── lsp.proto          # LSP request/response messages
+├── call.proto         # Voice/video call messages
+├── channel.proto      # Channel and chat messages
+├── debugger.proto     # Debugger protocol messages
+├── task.proto         # Task execution messages
+└── *.proto            # Additional protocol definitions
+```
+
+Generated Rust types via `prost` at build time.
+
+### rpc Crate
+
+**`crates/rpc/`**
+
+Provides protocol-agnostic peer-to-peer communication:
+
+```rust
+pub const PROTOCOL_VERSION: u32 = 68;
+
+pub struct Peer {
+    // Connection management
+    // Message routing
+    // Request/response handling
+}
+```
+
+Key types:
+
+- **`Peer`**: Manages connections and message routing
+- **`Connection`**: Single WebSocket connection to another peer
+- **`TypedEnvelope<T>`**: Type-safe message wrapper
+- **`Receipt`**: Handle for tracking request lifecycle
+
+### client Crate
+
+**`crates/client/`**
+
+Client-side collaboration logic:
+
+- Connection to collab server
+- Authentication and session management
+- Room and project sharing
+- User presence
+
+### collab Crate
+
+**`crates/collab/`**
+
+Server implementation:
+
+- User and room management
+- Message routing between clients
+- Database persistence (PostgreSQL)
+- Authentication and authorization
+
+## Message Format
+
+### Envelope Structure
+
+All messages are wrapped in an `Envelope`:
+
+```protobuf
+message Envelope {
+  uint32 id = 1;                           // Unique message ID
+  optional uint32 responding_to = 2;       // For responses
+  optional PeerId original_sender_id = 3;  // For routing
+  optional uint32 ack_id = 266;            // Acknowledgment ID
+
+  oneof payload {
+    // Authentication
+    Hello hello = 4;
+    Ack ack = 5;
+    Error error = 6;
+    Ping ping = 7;
+
+    // Room management
+    CreateRoom create_room = 9;
+    JoinRoom join_room = 11;
+    LeaveRoom leave_room = 15;
+
+    // Project collaboration
+    ShareProject share_project = 23;
+    JoinProject join_project = 26;
+    LeaveProject leave_project = 28;
+
+    // Buffer synchronization
+    OpenBufferById open_buffer_by_id = 56;
+    OpenBufferByPath open_buffer_by_path = 57;
+    UpdateBuffer update_buffer = 60;
+    SaveBuffer save_buffer = 62;
+
+    // LSP operations
+    GetDefinition get_definition = 32;
+    GetReferences get_references = 36;
+
+    // Worktree operations
+    UpdateWorktree update_worktree = 45;
+    CreateProjectEntry create_project_entry = 46;
+
+    // ... many more message types
+  }
+}
+```
+
+### Message Types
+
+Messages fall into several categories:
+
+#### Request/Response
+
+```protobuf
+message GetDefinition {
+  uint64 buffer_id = 1;
+  Position position = 2;
+}
+
+message GetDefinitionResponse {
+  repeated LocationLink links = 1;
+}
+```
+
+Flow:
+
+1. Client sends `GetDefinition` with unique `id`
+2. Server/peer processes request
+3. Server/peer sends `GetDefinitionResponse` with `responding_to = id`
+
+#### Notifications
+
+One-way messages with no response:
+
+```protobuf
+message UpdateBuffer {
+  uint64 buffer_id = 1;
+  repeated Operation operations = 2;
+}
+```
+
+#### Streaming
+
+Multiple responses for one request:
+
+```protobuf
+message SearchProject {
+  string query = 1;
+}
+
+message SearchProjectResponse {
+  repeated SearchMatch matches = 1;
+}
+
+message EndStream {}
+```
+
+Flow:
+
+1. Client sends `SearchProject`
+2. Server sends multiple `SearchProjectResponse` messages
+3. Server sends `EndStream` to indicate completion
+
+## Connection Lifecycle
+
+### 1. Connection Establishment
+
+```
+Client                          Server
+  │                               │
+  ├──────── WebSocket Open ──────►│
+  │                               │
+  ├────────── Hello ─────────────►│
+  │   (credentials, version)      │
+  │                               │
+  │◄────────── Hello ─────────────┤
+  │   (peer_id, version)          │
+  │                               │
+```
+
+The `Hello` message includes:
+
+- Protocol version (must match)
+- User credentials or authentication token
+- Client capabilities
+
+### 2. Ping/Pong
+
+Keep-alive mechanism:
+
+```
+Client                          Server
+  │                               │
+  ├────────── Ping ──────────────►│
+  │                               │
+  │◄────────── Pong ──────────────┤
+  │                               │
+```
+
+Sent periodically to detect disconnections.
+
+### 3. Reconnection
+
+On disconnect, client attempts to reconnect:
+
+```rust
+// Automatic reconnection in client crate
+loop {
+    match connect_to_server().await {
+        Ok(conn) => {
+            // Rejoin rooms and projects
+            break;
+        }
+        Err(e) => {
+            // Exponential backoff
+            tokio::time::sleep(backoff_duration).await;
+        }
+    }
+}
+```
+
+## Entity Synchronization
+
+Collaboration requires synchronizing entities across clients.
+
+### Buffer Synchronization
+
+**Operational Transformation** (OT) for concurrent edits:
+
+```
+Upstream Client          Server          Downstream Client
+     │                     │                     │
+     ├─ InsertText(5,"x")─►│                     │
+     │                     ├─ InsertText(5,"x")─►│
+     │                     │                     │
+     │                     │◄─ DeleteText(3,2)───┤
+     │◄─ DeleteText(3,2)───┤                     │
+     │  (transformed)      │                     │
+```
+
+Each buffer operation is:
+
+1. Applied locally immediately (optimistic)
+2. Sent to server/peers
+3. Transformed against concurrent operations
+4. Applied to remote buffers
+
+Implemented in `crates/text/src/operation.rs`.
+
+### Project Synchronization
+
+**Upstream Client** (project owner):
+
+- Shares project with `ShareProject` message
+- Sends `UpdateProject` when worktrees change
+- Handles LSP requests from downstream clients
+
+**Downstream Client** (collaborator):
+
+- Joins with `JoinProject` message
+- Receives `UpdateProject` notifications
+- Creates read-only or collaborative buffers
+
+### Worktree Synchronization
+
+File tree is synchronized incrementally:
+
+```protobuf
+message UpdateWorktree {
+  uint64 project_id = 1;
+  uint64 worktree_id = 2;
+  repeated Entry updated_entries = 3;
+  repeated uint64 removed_entries = 4;
+  repeated RepositoryEntry updated_repositories = 5;
+  repeated uint64 removed_repositories = 6;
+}
+```
+
+Only changed entries are sent, not the entire tree.
+
+## Request/Response Pattern
+
+### Sending Requests
+
+```rust
+use rpc::proto;
+
+// Create request message
+let request = proto::GetDefinition {
+    project_id: project.id(),
+    buffer_id: buffer.id().into(),
+    position: Some(position.to_proto()),
+    ..Default::default()
+};
+
+// Send via peer
+let response = peer
+    .request(request)
+    .await?;
+
+// Handle response
+let locations = response
+    .links
+    .into_iter()
+    .map(|link| Location::from_proto(link))
+    .collect();
+```
+
+### Handling Requests
+
+```rust
+// Register handler
+peer.add_request_handler(handle_get_definition);
+
+// Handler function
+async fn handle_get_definition(
+    envelope: TypedEnvelope<proto::GetDefinition>,
+    peer: Arc<Peer>,
+    cx: AsyncApp,
+) -> Result<proto::GetDefinitionResponse> {
+    let project = get_project(envelope.payload.project_id, &cx)?;
+
+    let locations = project
+        .read_with(&cx, |project, cx| {
+            project.definition(&buffer, position, cx)
+        })??
+        .await?;
+
+    Ok(proto::GetDefinitionResponse {
+        links: locations.into_iter().map(|l| l.to_proto()).collect(),
+        ..Default::default()
+    })
+}
+```
+
+## Streaming Pattern
+
+### Sending Stream
+
+```rust
+let (tx, rx) = mpsc::unbounded();
+
+// Send initial request
+let request_id = peer.send(proto::SearchProject {
+    project_id: project.id(),
+    query: "TODO".to_string(),
+})?;
+
+// Handle responses
+cx.spawn(async move |cx| {
+    while let Some(response) = rx.next().await {
+        match response {
+            proto::SearchProjectResponse { matches } => {
+                // Process matches
+            }
+        }
+    }
+})
+```
+
+### Handling Stream
+
+```rust
+async fn handle_search_project(
+    envelope: TypedEnvelope<proto::SearchProject>,
+    peer: Arc<Peer>,
+    cx: AsyncApp,
+) -> Result<()> {
+    let project = get_project(envelope.payload.project_id, &cx)?;
+
+    let results = project.search(envelope.payload.query);
+
+    // Send multiple responses
+    for batch in results.chunks(100) {
+        peer.send(proto::SearchProjectResponse {
+            matches: batch.to_vec(),
+        })?;
+    }
+
+    // End stream
+    peer.send(proto::EndStream {})?;
+
+    Ok(())
+}
+```
+
+## Authentication
+
+### User Authentication
+
+Clients authenticate with the server using:
+
+1. **OAuth tokens** for GitHub/Google sign-in
+2. **Access tokens** stored locally after initial auth
+3. **Refresh tokens** for obtaining new access tokens
+
+Authentication flow in `crates/client/src/user.rs`.
+
+### Authorization
+
+Server checks permissions:
+
+- Can user join this room?
+- Can user access this project?
+- Can user read this channel?
+
+Enforced in collab server request handlers.
+
+## Security
+
+### Encryption
+
+- All connections use **TLS** (WebSocket over HTTPS)
+- Server never sees unencrypted buffer contents
+- End-to-end encryption for calls via **LiveKit**
+
+### Message Validation
+
+Server validates:
+
+- User has permission for operation
+- Entity IDs are valid and accessible
+- Message format is correct
+- Protocol version is compatible
+
+### Rate Limiting
+
+Server enforces rate limits:
+
+- Requests per second per user
+- Buffer operations per second
+- Search queries per minute
+
+## Debugging
+
+### Logging
+
+Enable RPC logging:
+
+```sh
+RUST_LOG=rpc=debug zed
+```
+
+Logs show:
+
+- Messages sent and received
+- Request/response matching
+- Connection state changes
+
+### Protocol Inspector
+
+In development mode, use the protocol inspector:
+
+1. Open command palette
+2. Run `zed: open protocol inspector`
+3. View live RPC traffic
+
+### Testing
+
+Test collaboration features:
+
+```rust
+#[gpui::test]
+async fn test_buffer_sync(cx: &mut TestAppContext) {
+    let server = TestServer::start().await;
+    let client_a = server.create_client("user_a").await;
+    let client_b = server.create_client("user_b").await;
+
+    // Share project from client A
+    let project_a = client_a.build_local_project("/path", cx).await;
+    let project_id = client_a.share_project(project_a.clone(), cx).await;
+
+    // Join from client B
+    let project_b = client_b.join_project(project_id, cx).await;
+
+    // Make concurrent edits
+    // ...
+
+    // Assert buffers converged
+    assert_eq!(
+        project_a.read(cx).buffer_text(),
+        project_b.read(cx).buffer_text(),
+    );
+}
+```
+
+## Protocol Versioning
+
+Protocol version in `crates/rpc/src/rpc.rs`:
+
+```rust
+pub const PROTOCOL_VERSION: u32 = 68;
+```
+
+Version compatibility:
+
+- **Exact match**: Full compatibility
+- **Mismatch**: Connection refused with error
+
+When changing protocol:
+
+1. Update protocol version
+2. Add backwards-compatible changes if possible
+3. Update server before clients
+4. Monitor for version mismatches
+
+## Performance Considerations
+
+### Message Size
+
+- Keep messages small
+- Use incremental updates (deltas) not full state
+- Compress large payloads (automatic via WebSocket)
+
+### Batching
+
+Batch related operations:
+
+```rust
+// Bad: Many small messages
+for entry in entries {
+    peer.send(proto::UpdateWorktree {
+        updated_entries: vec![entry],
+        ..Default::default()
+    })?;
+}
+
+// Good: Single batched message
+peer.send(proto::UpdateWorktree {
+    updated_entries: entries,
+    ..Default::default()
+})?;
+```
+
+### Caching
+
+Cache responses for expensive operations:
+
+- Symbol indexes
+- File search results
+- LSP responses
+
+Invalidate cache on relevant changes.
+
+## See Also
+
+- [Key Subsystems](./key-subsystems.mdx): RPC subsystem overview
+- [Crate Structure](./crate-structure.mdx): RPC-related crates
+- [Development Glossary](./glossary.mdx): Collaboration terms

@@ -1,0 +1,275 @@
+---
+title: Testing Strategy
+description: Testing strategy and running tests in Zed development
+---
+
+Zed uses a comprehensive testing strategy including unit tests, integration tests, end-to-end tests, and visual regression tests.
+
+## Running Tests
+
+### Basic Test Commands
+
+Run all tests in the workspace:
+
+```sh
+cargo test --workspace
+```
+
+For better performance and output, use `cargo-nextest`:
+
+```sh
+cargo install cargo-nextest --locked
+cargo nextest run --workspace --no-fail-fast
+```
+
+<Note>
+  On macOS, `cargo-nextest` resolves issues with `Too many open files (os error 24)` that can occur when running the full test suite.
+</Note>
+
+### Running Specific Tests
+
+Test a specific crate:
+
+```sh
+cargo test -p <crate-name>
+```
+
+Run a specific test by name:
+
+```sh
+cargo test -p <crate-name> <test-name>
+```
+
+Example from vim tests:
+
+```sh
+cargo test -p vim --features neovim test_visual_star_hash
+```
+
+### Filtering Tests
+
+Zed's CI uses nextest filtersets to run only tests affected by changes:
+
+```sh
+# Run tests for a package and its reverse dependencies
+cargo nextest run -E 'rdeps(<package-name>)'
+```
+
+## Test Types
+
+### Unit Tests
+
+Unit tests are located alongside the code they test, typically in a `tests` module at the bottom of each file or in dedicated test files.
+
+Example test structure:
+
+```rust
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_something() {
+        // Test implementation
+    }
+}
+```
+
+### GPUI Tests
+
+Tests that use GPUI (Zed's UI framework) require the `#[gpui::test]` attribute:
+
+```rust
+#[gpui::test]
+async fn test_echo(cx: &mut TestAppContext) {
+    // Test implementation using TestAppContext
+}
+```
+
+<Info>
+  GPUI tests use `TestAppContext` which provides a test environment for UI components and async operations.
+</Info>
+
+### Integration Tests
+
+Integration tests are located in `crates/*/tests/` directories. They test interactions between multiple components:
+
+- `crates/collab/tests/integration/` - Collaboration features
+- `crates/agent/src/tests/` - Agent and tool functionality
+- `crates/collab/tests/integration/db_tests/` - Database operations
+
+### End-to-End Tests
+
+Tests marked with `#[cfg_attr(not(feature = "e2e"), ignore)]` are end-to-end tests that require real external services.
+
+Run e2e tests:
+
+```sh
+cargo test --workspace --features e2e
+```
+
+### Visual Regression Tests
+
+<Warning>
+  Visual regression tests are currently only supported on macOS.
+</Warning>
+
+Visual tests capture screenshots of real Zed windows and compare them against baseline images.
+
+#### Prerequisites
+
+Grant Screen Recording permission to your terminal:
+
+1. Run the visual test runner once - macOS will prompt for permission
+2. Or manually: System Settings > Privacy & Security > Screen Recording
+3. Enable your terminal app (Terminal.app, iTerm2, Ghostty)
+4. Restart your terminal after granting permission
+
+#### Running Visual Tests
+
+```sh
+cargo run -p zed --bin zed_visual_test_runner --features visual-tests
+```
+
+#### Generating Baseline Images
+
+Baseline images are gitignored. Generate them locally from a known-good state:
+
+```sh
+git checkout origin/main
+UPDATE_BASELINE=1 cargo run -p zed --bin zed_visual_test_runner --features visual-tests
+git checkout -
+```
+
+#### Updating Baselines
+
+After intentional UI changes, update baseline images:
+
+```sh
+UPDATE_BASELINE=1 cargo run -p zed --bin zed_visual_test_runner --features visual-tests
+```
+
+## Test Timeouts
+
+GPUI tests support custom timeouts via the `GPUI_TEST_TIMEOUT` environment variable (in milliseconds):
+
+```sh
+GPUI_TEST_TIMEOUT=1500 cargo nextest run --workspace --features unit-eval
+```
+
+## Writing Tests
+
+### GPUI Test Setup
+
+Initialize test context properly:
+
+```rust
+fn init_test(cx: &mut TestAppContext) {
+    cx.update(|cx| {
+        let settings_store = SettingsStore::test(cx);
+        cx.set_global(settings_store);
+    });
+}
+
+#[gpui::test]
+async fn test_feature(cx: &mut TestAppContext) {
+    init_test(cx);
+    // Test implementation
+}
+```
+
+### Testing Async Operations
+
+Use `cx.run_until_parked()` to advance async operations in tests:
+
+```rust
+#[gpui::test]
+async fn test_async_operation(cx: &mut TestAppContext) {
+    let task = cx.spawn(|cx| async move {
+        // Async work
+    });
+    
+    cx.run_until_parked();
+    
+    // Assert results
+}
+```
+
+### Timer Usage in Tests
+
+<Warning>
+  In GPUI tests, always use GPUI executor timers instead of `smol::Timer::after`.
+</Warning>
+
+```rust
+// Good - tracked by GPUI scheduler
+cx.background_executor.timer(duration).await
+
+// Bad - not tracked, causes "nothing left to run" issues
+smol::Timer::after(duration).await
+```
+
+## CI Testing
+
+Zed's CI runs tests using GitHub Actions with several optimizations:
+
+### Selective Testing
+
+CI only runs tests for changed packages and their dependents:
+
+- Root `Cargo.toml` or `rust-toolchain.toml` changes trigger all tests
+- Changes to specific crates only test affected packages
+- Uses `cargo metadata` to map changed files to packages
+
+### Test Platforms
+
+- **Linux**: Ubuntu 22.04 with clang/clang++
+- **macOS**: Latest macOS runners
+- **Windows**: Windows 2022 runners
+
+### Build Profiles
+
+Tests run with the `dev` profile by default. For release testing:
+
+```sh
+cargo test --release
+```
+
+## Test Best Practices
+
+1. **Avoid unwrap()** - Use `?` to propagate errors or `.log_err()` for visibility
+2. **Use TestAppContext** - For all GPUI component tests
+3. **Clean up resources** - Ensure tests don't leak file handles or connections
+4. **Deterministic tests** - Avoid time-dependent assertions when possible
+5. **Test error paths** - Don't just test the happy path
+6. **Use pretty_assertions** - For better diff output in failures
+
+## Troubleshooting
+
+### Too Many Open Files
+
+On macOS, use `cargo-nextest` instead of `cargo test`:
+
+```sh
+cargo install cargo-nextest --locked
+cargo nextest run --workspace --no-fail-fast
+```
+
+### Cargo Errors About Unstable Features
+
+```sh
+cargo clean && cargo build
+```
+
+### Test Hangs
+
+Check for:
+- Missing `cx.run_until_parked()` calls
+- Use of `smol::Timer` instead of GPUI timers
+- Deadlocks in async code
+
+Enable logging for more visibility:
+
+```sh
+RUST_LOG=debug cargo test <test-name>
+```

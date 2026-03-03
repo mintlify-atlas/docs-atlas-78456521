@@ -1,0 +1,452 @@
+---
+title: 'Platform Services'
+description: 'Platform abstraction layer and system integration in GPUI'
+icon: 'window'
+---
+
+GPUI provides a comprehensive platform abstraction layer that enables your application to interact with the operating system while maintaining cross-platform compatibility. The platform services handle windowing, displays, clipboard, system prompts, thermal states, and more.
+
+## Platform Trait
+
+The `Platform` trait is the core abstraction for platform-specific functionality. It provides access to system services, executors, and window management.
+
+```rust
+use gpui::{App, Platform};
+
+// Access platform services through the App context
+fn example(cx: &App) {
+    // Get available displays
+    let displays = cx.displays();
+    let primary = cx.primary_display();
+    
+    // Read/write clipboard
+    let clipboard_item = cx.read_from_clipboard();
+    cx.write_to_clipboard(ClipboardItem::new("Hello"));
+    
+    // Check thermal state
+    let thermal = cx.thermal_state();
+}
+```
+
+## Display Management
+
+GPUI provides access to physical displays connected to the system through the `PlatformDisplay` trait.
+
+### Working with Displays
+
+```rust
+use gpui::{App, Bounds, Pixels};
+
+fn display_info(cx: &App) {
+    // Get all displays
+    for display in cx.displays() {
+        let id = display.id();
+        let bounds = display.bounds();
+        let visible_bounds = display.visible_bounds();
+        
+        println!("Display {:?}: {}x{}", 
+            id, 
+            bounds.size.width, 
+            bounds.size.height
+        );
+    }
+    
+    // Find specific display
+    if let Some(display) = cx.primary_display() {
+        let default_bounds = display.default_bounds();
+        // Use default_bounds for centering windows
+    }
+}
+```
+
+### Display Bounds
+
+```rust
+use gpui::{PlatformDisplay, Bounds, Point, Size, Pixels, px};
+
+// Get display bounds (full screen area)
+let bounds: Bounds<Pixels> = display.bounds();
+
+// Get visible bounds (excludes taskbar/dock)
+let visible: Bounds<Pixels> = display.visible_bounds();
+
+// Get default window placement bounds
+let default: Bounds<Pixels> = display.default_bounds();
+```
+
+The `visible_bounds()` method returns the usable screen area excluding system UI like taskbars and docks, making it ideal for window placement.
+
+## Window Management
+
+GPUI abstracts platform windows through the `PlatformWindow` trait and provides high-level window management APIs.
+
+### Creating Windows
+
+```rust
+use gpui::{App, WindowOptions, WindowBounds, Bounds, px, size};
+
+fn create_window(cx: &mut App) {
+    let bounds = Bounds::centered(None, size(px(800.), px(600.)), cx);
+    
+    cx.open_window(
+        WindowOptions {
+            window_bounds: Some(WindowBounds::Windowed(bounds)),
+            titlebar: Some(TitlebarOptions {
+                title: Some("My Window".into()),
+                appears_transparent: false,
+                traffic_light_position: None,
+            }),
+            focus: true,
+            show: true,
+            kind: WindowKind::Normal,
+            is_movable: true,
+            is_resizable: true,
+            is_minimizable: true,
+            display_id: None,
+            window_background: WindowBackgroundAppearance::Opaque,
+            app_id: Some("com.example.app".into()),
+            window_min_size: Some(size(px(400.), px(300.))),
+            window_decorations: None,
+            tabbing_identifier: None,
+        },
+        |window, cx| {
+            cx.new(|cx| MyView::new(cx))
+        },
+    ).unwrap();
+}
+```
+
+### Window Types
+
+```rust
+use gpui::WindowKind;
+
+// Normal application window
+let normal = WindowKind::Normal;
+
+// Popup window (appears above other windows)
+let popup = WindowKind::PopUp;
+
+// Floating window (stays on top of parent)
+let floating = WindowKind::Floating;
+
+// Modal dialog (blocks parent interaction)
+let dialog = WindowKind::Dialog;
+```
+
+### Window States
+
+```rust
+use gpui::{Window, WindowBounds, Bounds};
+
+fn window_states(window: &mut Window) {
+    // Minimize window
+    window.minimize();
+    
+    // Maximize/zoom window
+    window.zoom();
+    
+    // Toggle fullscreen
+    window.toggle_fullscreen();
+    
+    // Check window state
+    let is_fullscreen = window.is_fullscreen();
+    let is_maximized = window.is_maximized();
+}
+```
+
+## Clipboard Integration
+
+GPUI provides cross-platform clipboard access with support for text, images, and metadata.
+
+### Basic Clipboard Operations
+
+```rust
+use gpui::{App, ClipboardItem};
+
+fn clipboard_example(cx: &mut App) {
+    // Write text to clipboard
+    cx.write_to_clipboard(ClipboardItem::new("Hello, world!"));
+    
+    // Read from clipboard
+    if let Some(item) = cx.read_from_clipboard() {
+        if let Some(text) = item.text() {
+            println!("Clipboard: {}", text);
+        }
+    }
+}
+```
+
+### Clipboard with Metadata
+
+```rust
+use gpui::{App, ClipboardItem, ClipboardString};
+use serde_json::json;
+
+fn clipboard_with_metadata(cx: &mut App) {
+    let metadata = json!({
+        "source": "my-app",
+        "timestamp": 1234567890
+    });
+    
+    let clipboard_string = ClipboardString::new("Hello")
+        .with_metadata(metadata);
+    
+    cx.write_to_clipboard(ClipboardItem::from(clipboard_string));
+    
+    // Read metadata
+    if let Some(item) = cx.read_from_clipboard() {
+        if let Some(metadata) = item.metadata() {
+            println!("Metadata: {}", metadata);
+        }
+    }
+}
+```
+
+### Platform-Specific Clipboards
+
+```rust
+// Linux/FreeBSD: Primary selection
+#[cfg(any(target_os = "linux", target_os = "freebsd"))]
+fn primary_selection(cx: &mut App) {
+    cx.write_to_primary(ClipboardItem::new("Selected text"));
+    let selection = cx.read_from_primary();
+}
+
+// macOS: Find pasteboard
+#[cfg(target_os = "macos")]
+fn find_pasteboard(cx: &mut App) {
+    cx.write_to_find_pasteboard(ClipboardItem::new("search term"));
+    let find_text = cx.read_from_find_pasteboard();
+}
+```
+
+## System Prompts and Dialogs
+
+GPUI provides platform-native prompt dialogs for user interaction.
+
+### File Prompts
+
+```rust
+use gpui::{App, Window, PathPromptOptions};
+use futures::StreamExt;
+
+fn file_picker(window: &mut Window, cx: &mut App) {
+    let options = PathPromptOptions {
+        files: true,
+        directories: false,
+        multiple: false,
+        prompt: Some("Select a file".into()),
+    };
+    
+    cx.spawn(async move |cx| {
+        let receiver = cx.update(|cx| {
+            cx.prompt_for_paths(options)
+        }).ok()?;
+        
+        if let Ok(Some(paths)) = receiver.await {
+            println!("Selected: {:?}", paths);
+        }
+        Some(())
+    }).detach();
+}
+```
+
+### Alert Dialogs
+
+```rust
+use gpui::{Window, PromptLevel, PromptButton};
+use futures::StreamExt;
+
+fn show_alert(window: &mut Window) {
+    let rx = window.prompt(
+        PromptLevel::Warning,
+        "Are you sure?",
+        Some("This action cannot be undone."),
+        &[
+            PromptButton::ok("Continue"),
+            PromptButton::cancel("Cancel"),
+        ],
+    );
+    
+    if let Some(rx) = rx {
+        // Process response asynchronously
+        cx.spawn(async move |cx| {
+            if let Ok(answer) = rx.await {
+                if answer == 0 {
+                    // User clicked "Continue"
+                }
+            }
+        }).detach();
+    }
+}
+```
+
+## Thermal State Monitoring
+
+GPUI provides access to system thermal state for performance optimization.
+
+```rust
+use gpui::{App, ThermalState};
+
+fn thermal_monitoring(cx: &mut App) {
+    // Get current thermal state
+    let state = cx.thermal_state();
+    
+    match state {
+        ThermalState::Nominal => {
+            // Full performance available
+        }
+        ThermalState::Fair => {
+            // Slightly constrained, reduce discretionary work
+        }
+        ThermalState::Serious => {
+            // Moderately constrained, reduce CPU/GPU intensive work
+        }
+        ThermalState::Critical => {
+            // Critically constrained, minimize all resource usage
+        }
+    }
+    
+    // Subscribe to thermal state changes
+    let subscription = cx.on_thermal_state_change(|| {
+        println!("Thermal state changed!");
+    });
+}
+```
+
+### Thermal-Aware Rendering
+
+```rust
+use gpui::{App, Window, ThermalState};
+
+struct ThermalAwareApp {
+    high_quality_rendering: bool,
+}
+
+impl ThermalAwareApp {
+    fn adjust_for_thermal_state(&mut self, cx: &mut App) {
+        let thermal = cx.thermal_state();
+        
+        self.high_quality_rendering = matches!(
+            thermal,
+            ThermalState::Nominal | ThermalState::Fair
+        );
+        
+        if matches!(thermal, ThermalState::Serious | ThermalState::Critical) {
+            // Reduce frame rate, disable effects, etc.
+        }
+    }
+}
+```
+
+## URL Handling
+
+Open URLs in the default browser and register custom URL schemes.
+
+```rust
+use gpui::App;
+
+fn url_handling(cx: &mut App) {
+    // Open URL in default browser
+    cx.open_url("https://example.com");
+    
+    // Register custom URL scheme handler
+    cx.register_url_scheme("myapp").detach_and_log_err(cx);
+    
+    // Handle incoming URLs
+    cx.on_open_urls(|urls| {
+        for url in urls {
+            println!("Opened: {}", url);
+        }
+    });
+}
+```
+
+## Keyboard Layout
+
+Access information about the current keyboard layout.
+
+```rust
+use gpui::App;
+
+fn keyboard_info(cx: &App) {
+    let layout = cx.keyboard_layout();
+    println!("Layout ID: {}", layout.id());
+    println!("Layout name: {}", layout.name());
+    
+    // Subscribe to layout changes
+    cx.on_keyboard_layout_change(|| {
+        println!("Keyboard layout changed!");
+    });
+}
+```
+
+## Platform Detection
+
+```rust
+use gpui::App;
+
+// Check compositor on Linux
+#[cfg(any(target_os = "linux", target_os = "freebsd"))]
+fn check_compositor(cx: &App) {
+    let compositor = cx.compositor_name();
+    println!("Running on: {}", compositor); // "Wayland", "X11", or "Headless"
+}
+
+// Get application path
+fn app_info(cx: &App) -> anyhow::Result<()> {
+    let app_path = cx.app_path()?;
+    let aux_path = cx.path_for_auxiliary_executable("helper")?;
+    Ok(())
+}
+```
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Handle platform differences gracefully">
+    Use conditional compilation and feature detection to handle platform-specific code:
+    
+    ```rust
+    #[cfg(target_os = "macos")]
+    fn macos_specific(cx: &App) {
+        // macOS-specific code
+    }
+    
+    #[cfg(any(target_os = "linux", target_os = "freebsd"))]
+    fn linux_specific(cx: &App) {
+        // Linux-specific code
+    }
+    ```
+  </Accordion>
+  
+  <Accordion title="Subscribe to system events">
+    Many platform services support change notifications. Subscribe to them to keep your UI responsive:
+    
+    ```rust
+    // Thermal state changes
+    cx.on_thermal_state_change(|| { /* update UI */ });
+    
+    // Keyboard layout changes
+    cx.on_keyboard_layout_change(|| { /* update keybindings */ });
+    ```
+  </Accordion>
+  
+  <Accordion title="Use Tasks for async operations">
+    Platform operations like file pickers return futures. Use GPUI's Task system:
+    
+    ```rust
+    cx.spawn(async move |cx| {
+        let result = some_platform_operation().await;
+        // Handle result
+    }).detach();
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## See Also
+
+- [Testing](/gpui/testing) - Platform testing with TestPlatform
+- [Window Management](src/window.rs:149) - Window trait documentation
+- [Platform Trait](src/platform.rs:113) - Full platform API reference

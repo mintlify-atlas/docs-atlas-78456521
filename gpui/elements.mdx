@@ -1,0 +1,447 @@
+---
+title: 'Element System'
+description: 'Understanding elements, layout, and the rendering pipeline in GPUI'
+keywords: ['element', 'layout', 'paint', 'flexbox', 'taffy']
+---
+
+## Overview
+
+Elements are the workhorses of GPUI. They are responsible for laying out and painting all contents of a window. Elements form a tree and are laid out according to web layout standards as implemented by [Taffy](https://github.com/DioxusLabs/taffy).
+
+## Element Basics
+
+Elements are constructed by calling `Render::render()` on the root view of the window, which recursively constructs the element tree from the current state of the application.
+
+<Steps>
+  <Step title="Construction">
+    `Render::render()` is called on the root view to build the element tree
+  </Step>
+  <Step title="Layout">
+    Elements are laid out by Taffy using flexbox rules
+  </Step>
+  <Step title="Paint">
+    Elements paint to the screen via their `Element::paint()` implementation
+  </Step>
+  <Step title="Cleanup">
+    The entire element tree and callbacks are dropped before the next frame
+  </Step>
+</Steps>
+
+## The Element Trait
+
+The `Element` trait is the low-level, imperative API to GPUI.
+
+```rust Element trait (simplified)
+pub trait Element: 'static + IntoElement {
+    type RequestLayoutState: 'static;
+    type PrepaintState: 'static;
+
+    fn id(&self) -> Option<ElementId>;
+    
+    fn request_layout(
+        &mut self,
+        id: Option<&GlobalElementId>,
+        inspector_id: Option<&InspectorElementId>,
+        window: &mut Window,
+        cx: &mut App,
+    ) -> (LayoutId, Self::RequestLayoutState);
+
+    fn prepaint(
+        &mut self,
+        id: Option<&GlobalElementId>,
+        inspector_id: Option<&InspectorElementId>,
+        bounds: Bounds<Pixels>,
+        request_layout: &mut Self::RequestLayoutState,
+        window: &mut Window,
+        cx: &mut App,
+    ) -> Self::PrepaintState;
+
+    fn paint(
+        &mut self,
+        id: Option<&GlobalElementId>,
+        inspector_id: Option<&InspectorElementId>,
+        bounds: Bounds<Pixels>,
+        request_layout: &mut Self::RequestLayoutState,
+        prepaint: &mut Self::PrepaintState,
+        window: &mut Window,
+        cx: &mut App,
+    );
+}
+```
+
+## IntoElement Trait
+
+The `IntoElement` trait allows types to be automatically converted into elements.
+
+```rust IntoElement trait
+pub trait IntoElement: Sized {
+    type Element: Element;
+
+    fn into_element(self) -> Self::Element;
+    fn into_any_element(self) -> AnyElement {
+        self.into_element().into_any()
+    }
+}
+```
+
+<Info>
+Many types implement `IntoElement`, including `SharedString`, `String`, and types that derive `IntoElement`.
+</Info>
+
+## Common Elements
+
+GPUI provides several built-in element types.
+
+### Div Element
+
+The `div` element is an all-purpose container element.
+
+```rust Using div
+use gpui::{div, prelude::*, px, rgb};
+
+div()
+    .id("container")
+    .flex()
+    .flex_col()
+    .gap_4()
+    .p_4()
+    .bg(rgb(0xffffff))
+    .rounded_lg()
+    .border_1()
+    .border_color(rgb(0xe5e7eb))
+    .child("First child")
+    .child(div().child("Nested child"))
+```
+
+### Stateful Elements
+
+Stateful elements have IDs and can maintain state across frames.
+
+```rust Stateful div
+use gpui::{Stateful, Div, ElementId};
+
+let stateful_div: Stateful<Div> = div()
+    .id("my-element")
+    .bg(gpui::blue());
+```
+
+## Element State
+
+Elements can maintain state across frames using `RequestLayoutState` and `PrepaintState`.
+
+<Tabs>
+  <Tab title="RequestLayoutState">
+    State returned from `request_layout()`. Used for layout calculations.
+    
+    ```rust
+    type RequestLayoutState = MyLayoutState;
+    
+    struct MyLayoutState {
+        child_layout_id: LayoutId,
+    }
+    ```
+  </Tab>
+  <Tab title="PrepaintState">
+    State returned from `prepaint()`. Used for hit testing and painting.
+    
+    ```rust
+    type PrepaintState = MyPrepaintState;
+    
+    struct MyPrepaintState {
+        hovered: bool,
+        bounds: Bounds<Pixels>,
+    }
+    ```
+  </Tab>
+</Tabs>
+
+## Element IDs
+
+Elements can have unique identifiers for tracking across frames.
+
+```rust Element IDs
+use gpui::ElementId;
+
+// String-based ID
+div().id("my-element")
+
+// Integer-based ID
+div().id(42)
+
+// Custom ID type
+let custom_id = ElementId::Name("custom".into());
+div().id(custom_id)
+```
+
+<Info>
+The global ID is used to access state connected to an element with the same ID across frames. This ID must be unique among children of the first containing element with an ID.
+</Info>
+
+## Layout with Flexbox
+
+GPUI uses Taffy for flexbox layout, similar to CSS.
+
+<CodeGroup>
+
+```rust Flex container
+div()
+    .flex()
+    .flex_row()        // flex-direction: row
+    .justify_between() // justify-content: space-between
+    .items_center()    // align-items: center
+    .gap_4()           // gap: 1rem
+    .child(div().flex_1().child("Grows"))
+    .child(div().child("Fixed"))
+```
+
+```rust Flex column
+div()
+    .flex()
+    .flex_col()        // flex-direction: column
+    .justify_start()   // justify-content: flex-start
+    .items_stretch()   // align-items: stretch
+    .h_full()          // height: 100%
+    .child(div().h(px(100.)).child("Fixed height"))
+    .child(div().flex_1().child("Fills remaining"))
+```
+
+```rust Flex wrap
+div()
+    .flex()
+    .flex_wrap()       // flex-wrap: wrap
+    .gap_2()
+    .child(div().w(px(100.)).child("Item 1"))
+    .child(div().w(px(100.)).child("Item 2"))
+    .child(div().w(px(100.)).child("Item 3"))
+```
+
+</CodeGroup>
+
+## Sizing
+
+<Tabs>
+  <Tab title="Fixed sizes">
+    ```rust
+    use gpui::px;
+    
+    div()
+        .w(px(200.))    // width: 200px
+        .h(px(100.))    // height: 100px
+        .size(px(50.))  // width and height: 50px
+    ```
+  </Tab>
+  <Tab title="Relative sizes">
+    ```rust
+    div()
+        .w_full()       // width: 100%
+        .h_full()       // height: 100%
+        .size_full()    // width and height: 100%
+    ```
+  </Tab>
+  <Tab title="Min/Max sizes">
+    ```rust
+    div()
+        .min_w(px(100.))  // min-width: 100px
+        .max_w(px(500.))  // max-width: 500px
+        .min_h(px(50.))   // min-height: 50px
+        .max_h(px(300.))  // max-height: 300px
+    ```
+  </Tab>
+</Tabs>
+
+## Positioning
+
+```rust Absolute positioning
+div()
+    .relative()        // position: relative
+    .child(
+        div()
+            .absolute()   // position: absolute
+            .top(px(10.))
+            .left(px(20.))
+            .child("Absolutely positioned")
+    )
+```
+
+## Styling Properties
+
+<AccordionGroup>
+  <Accordion title="Spacing">
+    ```rust
+    div()
+        .p_4()          // padding: 1rem
+        .px_2()         // padding-left and right: 0.5rem
+        .py_3()         // padding-top and bottom: 0.75rem
+        .pt_1()         // padding-top: 0.25rem
+        .m_4()          // margin: 1rem
+        .gap_2()        // gap: 0.5rem
+    ```
+  </Accordion>
+  
+  <Accordion title="Borders">
+    ```rust
+    div()
+        .border_1()              // border-width: 1px
+        .border_2()              // border-width: 2px
+        .border_color(rgb(0x000000))
+        .border_dashed()
+        .rounded_md()            // border-radius: 0.375rem
+        .rounded_lg()            // border-radius: 0.5rem
+    ```
+  </Accordion>
+  
+  <Accordion title="Colors">
+    ```rust
+    use gpui::{rgb, rgba, white, black, red, blue};
+    
+    div()
+        .bg(rgb(0xffffff))       // background-color
+        .bg(rgba(0xffffff80))    // with alpha
+        .text_color(black())     // text color
+        .border_color(blue())    // border color
+    ```
+  </Accordion>
+  
+  <Accordion title="Typography">
+    ```rust
+    div()
+        .text_sm()               // font-size: 0.875rem
+        .text_base()             // font-size: 1rem
+        .text_xl()               // font-size: 1.25rem
+        .font_weight(FontWeight::BOLD)
+        .child("Styled text")
+    ```
+  </Accordion>
+  
+  <Accordion title="Effects">
+    ```rust
+    div()
+        .shadow_sm()             // box-shadow: small
+        .shadow_lg()             // box-shadow: large
+        .cursor_pointer()        // cursor: pointer
+        .opacity(0.5)            // opacity: 0.5
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Interactive States
+
+Elements can respond to hover, focus, and other states.
+
+<CodeGroup>
+
+```rust Hover state
+div()
+    .bg(gpui::white())
+    .hover(|style| {
+        style.bg(gpui::gray())
+    })
+    .child("Hover me")
+```
+
+```rust Focus state
+div()
+    .id("focusable")
+    .track_focus(&focus_handle)
+    .focus(|style| {
+        style.border_2().border_color(gpui::blue())
+    })
+    .child("Focusable element")
+```
+
+```rust Focus visible
+div()
+    .track_focus(&focus_handle)
+    .focus_visible(|style| {
+        style.border_2().border_color(gpui::green())
+    })
+    .child("Shows border only with keyboard focus")
+```
+
+</CodeGroup>
+
+## Custom Elements
+
+<Warning>
+Implement custom elements only when you need manual control of layout and painting, such as for custom layout algorithms or specialized rendering like code editors.
+</Warning>
+
+```rust Custom element example
+use gpui::*;
+
+struct CustomElement {
+    content: String,
+}
+
+impl Element for CustomElement {
+    type RequestLayoutState = ();
+    type PrepaintState = ();
+
+    fn id(&self) -> Option<ElementId> {
+        None
+    }
+    
+    fn source_location(&self) -> Option<&'static panic::Location<'static>> {
+        None
+    }
+
+    fn request_layout(
+        &mut self,
+        _id: Option<&GlobalElementId>,
+        _inspector_id: Option<&InspectorElementId>,
+        window: &mut Window,
+        cx: &mut App,
+    ) -> (LayoutId, Self::RequestLayoutState) {
+        let style = Style::default();
+        let layout_id = window.request_layout(style, None, cx);
+        (layout_id, ())
+    }
+
+    fn prepaint(
+        &mut self,
+        _id: Option<&GlobalElementId>,
+        _inspector_id: Option<&InspectorElementId>,
+        _bounds: Bounds<Pixels>,
+        _request_layout: &mut Self::RequestLayoutState,
+        _window: &mut Window,
+        _cx: &mut App,
+    ) -> Self::PrepaintState {
+        ()
+    }
+
+    fn paint(
+        &mut self,
+        _id: Option<&GlobalElementId>,
+        _inspector_id: Option<&InspectorElementId>,
+        bounds: Bounds<Pixels>,
+        _request_layout: &mut Self::RequestLayoutState,
+        _prepaint: &mut Self::PrepaintState,
+        window: &mut Window,
+        _cx: &mut App,
+    ) {
+        // Custom painting logic here
+    }
+}
+```
+
+## Content Masking
+
+Elements can ignore parent bounds and paint anywhere inside the window.
+
+```rust Content mask
+window.with_content_mask(content_mask, |window| {
+    // Elements here can paint outside normal bounds
+    // Useful for overlays and popups
+});
+```
+
+## Related Topics
+
+<CardGroup cols={2}>
+  <Card title="Views and Rendering" icon="palette" href="/gpui/views-rendering">
+    Learn about the Render trait and views
+  </Card>
+  <Card title="Context Types" icon="cube" href="/gpui/contexts">
+    Understand App, Window, and Context
+  </Card>
+</CardGroup>

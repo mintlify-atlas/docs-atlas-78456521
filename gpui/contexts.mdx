@@ -1,0 +1,471 @@
+---
+title: 'Context Types'
+description: 'Understanding App, Context, AsyncApp, and other context types in GPUI'
+keywords: ['context', 'app', 'async', 'window', 'test context']
+---
+
+## Overview
+
+GPUI uses _context parameters_ (typically named `cx`) to provide access to application state and services. These contexts are references passed to functions, enabling interaction with global state, windows, entities, and system services.
+
+## Context Hierarchy
+
+<Steps>
+  <Step title="App">
+    Root context with access to global state and entity management
+  </Step>
+  <Step title="Context<T>">
+    Entity-specific context that dereferences to App
+  </Step>
+  <Step title="AsyncApp / AsyncWindowContext">
+    Async contexts that can be held across await points
+  </Step>
+  <Step title="TestAppContext">
+    Test-specific context with additional testing utilities
+  </Step>
+</Steps>
+
+## App Context
+
+The root context type providing access to global state and entity operations.
+
+```rust App context
+use gpui::{App, Entity};
+
+struct MyModel {
+    value: i32,
+}
+
+application().run(|cx: &mut App| {
+    // Create entities
+    let model: Entity<MyModel> = cx.new(|_cx| MyModel { value: 0 });
+    
+    // Read entity state
+    let value = model.read(cx).value;
+    
+    // Global operations
+    cx.activate(true);
+});
+```
+
+### App Methods
+
+<AccordionGroup>
+  <Accordion title="Entity Management">
+    ```rust
+    // Create new entity
+    let entity = cx.new(|cx| MyModel { value: 0 });
+    
+    // Read entity state
+    let state = entity.read(cx);
+    
+    // Update entity state
+    entity.update(cx, |model, cx| {
+        model.value += 1;
+    });
+    ```
+  </Accordion>
+  
+  <Accordion title="Window Management">
+    ```rust
+    use gpui::{WindowOptions, Bounds, px, size};
+    
+    // Open a new window
+    cx.open_window(
+        WindowOptions::default(),
+        |window, cx| {
+            cx.new(|_| MyView::new())
+        },
+    )?;
+    ```
+  </Accordion>
+  
+  <Accordion title="Observation and Subscription">
+    ```rust
+    // Observe entity changes
+    cx.observe(&entity, |entity, cx| {
+        println!("Entity changed");
+    });
+    
+    // Subscribe to events
+    cx.subscribe(&entity, |entity, event, cx| {
+        println!("Event: {:?}", event);
+    });
+    ```
+  </Accordion>
+  
+  <Accordion title="Platform Services">
+    ```rust
+    // Quit the application
+    cx.quit();
+    
+    // Activate the application
+    cx.activate(true);
+    
+    // Open URL
+    cx.open_url("https://example.com");
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Context&lt;T&gt;
+
+Provided when updating an `Entity<T>`, with additional methods for that specific entity.
+
+```rust Context<T> usage
+use gpui::{Context, Entity};
+
+struct Counter {
+    count: usize,
+}
+
+let counter: Entity<Counter> = cx.new(|_| Counter { count: 0 });
+
+counter.update(cx, |counter: &mut Counter, cx: &mut Context<Counter>| {
+    counter.count += 1;
+    cx.notify(); // Notify observers
+});
+```
+
+<Info>
+`Context<T>` dereferences to `App`, so functions that accept `&App` can also accept `&Context<T>`.
+</Info>
+
+### Context Methods for Entity Types
+
+<Tabs>
+  <Tab title="Entity Access">
+    ```rust
+    counter.update(cx, |counter, cx| {
+        // Get entity ID
+        let id = cx.entity_id();
+        
+        // Get entity handle
+        let entity = cx.entity();
+        
+        // Get weak entity handle
+        let weak = cx.weak_entity();
+    });
+    ```
+  </Tab>
+  
+  <Tab title="Observation">
+    ```rust
+    counter.update(cx, |counter, cx| {
+        // Observe another entity
+        cx.observe(&other_entity, |this, observed, cx| {
+            // React to changes
+        });
+        
+        // Observe self
+        cx.observe_self(|this, cx| {
+            // React to own changes
+        });
+    });
+    ```
+  </Tab>
+  
+  <Tab title="Events">
+    ```rust
+    counter.update(cx, |counter, cx| {
+        // Subscribe to events from another entity
+        cx.subscribe(&other_entity, |this, entity, event, cx| {
+            // Handle event
+        });
+        
+        // Subscribe to own events
+        cx.subscribe_self(|this, event, cx| {
+            // Handle own event
+        });
+        
+        // Emit an event
+        cx.emit(MyEvent { data: 42 });
+    });
+    ```
+  </Tab>
+  
+  <Tab title="Lifecycle">
+    ```rust
+    counter.update(cx, |counter, cx| {
+        // Register release callback
+        cx.on_release(|counter, cx| {
+            println!("Counter released");
+        });
+        
+        // Notify observers
+        cx.notify();
+    });
+    ```
+  </Tab>
+</Tabs>
+
+## Window
+
+`Window` provides access to the state of an application window.
+
+```rust Window usage
+use gpui::Window;
+
+cx.open_window(
+    WindowOptions::default(),
+    |window: &mut Window, cx| {
+        // Focus management
+        let focus_handle = cx.focus_handle();
+        window.focus(&focus_handle, cx);
+        
+        // Focus navigation
+        window.focus_next(cx);
+        window.focus_prev(cx);
+        
+        // Create the root view
+        cx.new(|_| MyView::new())
+    },
+);
+```
+
+<Note>
+`Window` is passed as an argument named `window` and comes before `cx` when present.
+</Note>
+
+### Window Methods
+
+<CodeGroup>
+
+```rust Focus management
+// Set focus
+window.focus(&focus_handle, cx);
+
+// Navigate focus
+window.focus_next(cx);
+window.focus_prev(cx);
+
+// Blur focus
+window.blur(cx);
+```
+
+```rust Action dispatch
+use gpui::Action;
+
+// Dispatch action
+window.dispatch_action(MyAction.boxed_clone(), cx);
+
+// Dispatch via focus handle
+focus_handle.dispatch_action(&MyAction, window, cx);
+```
+
+```rust Rendering
+// Refresh the window
+window.refresh();
+
+// Get content mask
+let mask = window.content_mask();
+
+// Set view ID
+window.set_view_id(entity_id);
+```
+
+</CodeGroup>
+
+## AsyncApp
+
+Async contexts can be held across `await` points in async code.
+
+```rust AsyncApp usage
+use gpui::AsyncApp;
+
+counter.update(cx, |counter, cx| {
+    cx.spawn(|this, mut cx: AsyncApp| async move {
+        // Can hold cx across await
+        some_async_operation().await;
+        
+        // Update entity from async context
+        this.update(&mut cx, |counter, cx| {
+            counter.count += 1;
+            cx.notify();
+        })?;
+        
+        Ok(())
+    })
+    .detach();
+});
+```
+
+<Warning>
+When interacting with entities using async contexts, calls become fallible because the context may outlive the window or app.
+</Warning>
+
+### Spawning Tasks
+
+<Tabs>
+  <Tab title="Foreground spawn">
+    ```rust
+    // Spawn on foreground thread
+    cx.spawn(|cx| async move {
+        // Async work on main thread
+        // cx is &mut AsyncApp
+    })
+    ```
+  </Tab>
+  
+  <Tab title="Background spawn">
+    ```rust
+    // Spawn on background thread
+    cx.background_spawn(async move {
+        // Async work on background thread
+        // No cx parameter
+    })
+    ```
+  </Tab>
+  
+  <Tab title="Entity spawn">
+    ```rust
+    // When cx is Context<T>
+    cx.spawn(|this, cx| async move {
+        // this: WeakEntity<T>
+        // cx: &mut AsyncApp
+    })
+    ```
+  </Tab>
+</Tabs>
+
+### Task Management
+
+```rust Task handling
+use gpui::Task;
+
+let task: Task<i32> = cx.spawn(|cx| async move {
+    42
+});
+
+// Await the task
+let result = task.await;
+
+// Detach to run indefinitely
+task.detach();
+
+// Detach with error logging
+task.detach_and_log_err(cx);
+
+// Store task to cancel when dropped
+struct MyView {
+    background_task: Option<Task<()>>,
+}
+```
+
+<Info>
+If a `Task` is dropped without being awaited or detached, its work is cancelled.
+</Info>
+
+## AsyncWindowContext
+
+Async context with window access, obtained via `cx.spawn_in()`.
+
+```rust AsyncWindowContext
+view.update(cx, |view, cx| {
+    cx.spawn_in(window, |this, mut cx| async move {
+        // Has access to window
+        this.update(&mut cx, |view, window, cx| {
+            window.focus_next(cx);
+        })?;
+        
+        Ok(())
+    })
+    .detach();
+});
+```
+
+## TestAppContext
+
+Test-specific context with additional utilities.
+
+```rust Testing with GPUI
+use gpui::TestAppContext;
+
+#[gpui::test]
+async fn test_counter(cx: &mut TestAppContext) {
+    let counter = cx.new(|_| Counter { count: 0 });
+    
+    counter.update(cx, |counter, cx| {
+        counter.count += 1;
+        cx.notify();
+    });
+    
+    // Run until no more work
+    cx.run_until_parked();
+    
+    assert_eq!(counter.read(cx).count, 1);
+}
+```
+
+### Test Utilities
+
+<AccordionGroup>
+  <Accordion title="Running tasks">
+    ```rust
+    // Run until all foreground tasks complete
+    cx.run_until_parked();
+    
+    // Advance time
+    cx.background_executor.advance_clock(Duration::from_secs(1));
+    
+    // Use GPUI timers in tests
+    cx.background_executor.timer(Duration::from_millis(100)).await;
+    ```
+  </Accordion>
+  
+  <Accordion title="Simulating input">
+    ```rust
+    // Simulate keyboard input
+    cx.simulate_keystrokes("cmd-n");
+    
+    // Simulate mouse events
+    cx.simulate_click(position, button);
+    ```
+  </Accordion>
+</AccordionGroup>
+
+<Tip>
+In GPUI tests, prefer `cx.background_executor.timer()` over `smol::Timer::after()` to ensure work is tracked by GPUI's scheduler.
+</Tip>
+
+## Context Parameter Conventions
+
+Context types follow consistent patterns:
+
+<Steps>
+  <Step title="Naming">
+    Contexts are typically passed as the argument named `cx`
+  </Step>
+  <Step title="Ordering">
+    When `Window` is present, it comes before `cx` in parameters
+  </Step>
+  <Step title="Callbacks">
+    Callbacks come after the `cx` parameter
+  </Step>
+  <Step title="Inner contexts">
+    Always use the inner `cx` provided to closures to avoid borrow issues
+  </Step>
+</Steps>
+
+```rust Parameter ordering
+// Window comes before cx
+fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+    div()
+        // Callbacks after cx
+        .on_click(cx.listener(|this, event, window, cx| {
+            // Use inner cx, not outer cx
+            cx.notify();
+        }))
+}
+```
+
+## Related Topics
+
+<CardGroup cols={2}>
+  <Card title="Entity System" icon="database" href="/gpui/entities">
+    Learn about entities and handles
+  </Card>
+  <Card title="Actions" icon="bolt" href="/gpui/actions">
+    Keyboard-driven UI with actions
+  </Card>
+</CardGroup>

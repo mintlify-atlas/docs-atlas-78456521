@@ -1,0 +1,315 @@
+---
+title: Debugging Zed
+description: Guide to debugging Zed during development
+---
+
+Zed provides several debugging approaches for investigating issues during development.
+
+## Using Zed's Built-in Debugger
+
+While the Zed project is open, you can use Zed to debug itself:
+
+1. Open the **New Process Modal**
+2. Select the **Debug** tab
+3. Choose a debug configuration:
+   - **GDB** - For Linux and Intel Macs
+   - **LLDB** - For all platforms (required for Apple Silicon)
+4. Zed will build and launch the binary with the debugger attached
+
+<Note>
+  GDB is not supported on Apple Silicon Macs. Use LLDB instead.
+</Note>
+
+See [configuring Zed's debugger](/development/debugging) for user documentation on debugging other projects.
+
+## Debug Build Profile
+
+### Debug vs Release Builds
+
+Debug builds (default for `cargo run`):
+
+```sh
+cargo run
+```
+
+Release builds with optimizations:
+
+```sh
+cargo run --release
+```
+
+### Debug Symbols in Release Builds
+
+By default, release builds use limited debug info to reduce binary size. For full debugger support, override the debug level:
+
+```sh
+# One-time override
+cargo run --release --config 'profile.release.debug="full"'
+cargo build --release --config 'profile.release.debug="full"'
+```
+
+<Warning>
+  Do not commit changes to the `profile.release.debug` setting in `Cargo.toml`.
+</Warning>
+
+Alternatively, modify `Cargo.toml` temporarily:
+
+```toml
+[profile.release]
+debug = "full"  # Change from "limited"
+```
+
+Without full debug info:
+- Debuggers cannot resolve local variables
+- Value inspection is limited
+- Pretty-printers don't work
+
+## Using Shell Debuggers
+
+### Setup
+
+Rustup installs wrapper scripts for debugging Rust binaries:
+
+- `rust-gdb` - GDB with Rust pretty-printers
+- `rust-lldb` - LLDB with Rust type info
+
+Install the underlying debugger:
+
+```sh
+# Ubuntu/Debian
+sudo apt install gdb lldb
+
+# macOS
+xcode-select --install  # Includes lldb
+```
+
+<Info>
+  `rust-gdb` is not available on Windows. Use `rust-lldb` instead.
+</Info>
+
+### Debugging a Built Binary
+
+After building with `cargo build`:
+
+```sh
+rust-gdb target/debug/zed
+rust-lldb target/debug/zed
+```
+
+### Attaching to a Running Process
+
+Find the process ID:
+
+```sh
+# macOS/Linux
+ps aux | grep zed
+
+# Windows PowerShell
+Get-Process | Select-Object Id, ProcessName
+```
+
+Attach the debugger:
+
+```sh
+rust-gdb -p <pid>
+rust-lldb -p <pid>
+```
+
+Useful for debugging:
+- Processes started with `cargo run`
+- Issues that only reproduce in specific states
+- Performance problems (attach, pause, inspect state)
+
+## Debugging Panics and Crashes
+
+### Using Debuggers
+
+When a debugger is attached, it stops on panics and exceptions automatically:
+
+1. Run your code in the debugger
+2. When it panics, the debugger stops execution
+3. Use `backtrace` (lldb) or `bt` (gdb) to see the stack
+4. Walk up frames to find the root cause:
+   ```
+   (lldb) backtrace
+   (lldb) frame select <n>
+   ```
+
+The initial stop point is often in panic handling code. Use `backtrace` to find your code.
+
+<Info>
+  After a panic, you usually cannot continue execution, but you can inspect variables and stack frames.
+</Info>
+
+For more on crash investigation, see [Debugging Crashes](/development/debugging-crashes).
+
+### Setting Breakpoints
+
+In GDB:
+```
+(gdb) break function_name
+(gdb) break file.rs:123
+(gdb) run
+```
+
+In LLDB:
+```
+(lldb) breakpoint set --name function_name
+(lldb) breakpoint set --file file.rs --line 123
+(lldb) run
+```
+
+## Logging and Tracing
+
+### Runtime Logging
+
+Enable logging with the `RUST_LOG` environment variable:
+
+```sh
+# All debug logs
+RUST_LOG=debug cargo run
+
+# Specific crate
+RUST_LOG=editor=trace cargo run
+
+# Multiple crates
+RUST_LOG=editor=debug,project=info cargo run
+```
+
+### Adding Log Statements
+
+Zed uses the `log` crate:
+
+```rust
+use log::{debug, info, warn, error};
+
+debug!("Variable value: {:?}", value);
+info!("Operation completed");
+warn!("Deprecated feature used");
+error!("Failed to load file: {}", path);
+```
+
+### Error Logging
+
+Never silently discard errors:
+
+```rust
+// Bad - error is silently ignored
+let _ = operation().await?;
+
+// Good - error is logged
+operation().await.log_err();
+
+// Good - error is propagated
+operation().await?;
+
+// Good - custom error handling
+if let Err(e) = operation().await {
+    log::error!("Operation failed: {}", e);
+    // Handle error
+}
+```
+
+## Platform-Specific Debugging
+
+### macOS
+
+#### Metal Shader Errors
+
+If you see:
+```
+xcrun: error: unable to find utility "metal", not a developer tool or in PATH
+```
+
+Fix:
+```sh
+sudo xcode-select --switch /Applications/Xcode.app/Contents/Developer
+```
+
+On macOS 26:
+```sh
+xcodebuild -downloadComponent MetalToolchain
+```
+
+#### Avoiding Continual Rebuilds
+
+If Zed rebuilds repeatedly when developing Zed:
+
+- Don't open the Zed codebase in your development build
+- Instead, run against a different project:
+  ```sh
+  cargo run ~/path/to/other/project
+  ```
+
+Cause: `cargo run` exports environment variables that get picked up by rust-analyzer, invalidating build caches.
+
+#### Speeding Up Verification
+
+macOS may verify new builds repeatedly. To speed this up:
+
+1. Run `sudo spctl developer-mode enable-terminal`
+2. System Settings > Search "Developer Tools"
+3. Add your terminal to "Allow applications to use developer tools"
+4. Restart your terminal
+
+### Linux
+
+#### Linker Configuration
+
+Zed CI uses [Mold](https://github.com/rui314/mold), but [Wild](https://github.com/davidlattimore/wild) is recommended for local development (5-20% faster).
+
+Install:
+```sh
+script/install-wild
+```
+
+Configure in `~/.cargo/config.toml`:
+```toml
+[target.x86_64-unknown-linux-gnu]
+linker = "clang"
+rustflags = ["-C", "link-arg=--ld-path=wild"]
+
+[target.aarch64-unknown-linux-gnu]
+linker = "clang"
+rustflags = ["-C", "link-arg=--ld-path=wild"]
+```
+
+### Windows
+
+#### Build Tools Setup
+
+Ensure Visual Studio or Build Tools are properly configured. If builds fail with linker errors, verify required components are installed.
+
+See [Building Zed for Windows](/development/windows) for complete setup.
+
+## Interactive Development
+
+### Watch Mode
+
+Use `cargo-watch` for automatic rebuilds:
+
+```sh
+cargo install cargo-watch
+cargo watch -x run
+```
+
+### Incremental Compilation
+
+Zed disables incremental compilation in CI for cache consistency, but it's enabled by default locally for faster rebuilds.
+
+## Debugging Tips
+
+1. **Reproduce consistently** - Debuggers work best with reproducible issues
+2. **Minimize test cases** - Create the smallest test that reproduces the problem
+3. **Use debug builds** - Release builds optimize away useful information
+4. **Check assumptions** - Print/log values you think you know
+5. **Binary search** - Use breakpoints to narrow down where things go wrong
+6. **Read backtraces carefully** - The error location may not be the root cause
+7. **Test in isolation** - Unit tests are easier to debug than integration tests
+
+## Additional Resources
+
+- [GDB Documentation](https://www.gnu.org/software/gdb/)
+- [LLDB Documentation](https://lldb.llvm.org/)
+- [Debugging Crashes](/development/debugging-crashes)
+- [Performance Profiling](/development/performance-profiling)

@@ -1,0 +1,220 @@
+---
+title: 'Entity System'
+description: 'Understanding entities, handles, and state management in GPUI'
+keywords: ['entity', 'handle', 'state', 'entity management', 'weak entity']
+---
+
+## Overview
+
+In GPUI, all application state is owned by a single top-level `App` object. When you create models or views (collectively called _entities_), the application takes ownership of their state to enable participation in app services and interaction with other entities.
+
+## Entity Handles
+
+An `Entity<T>` is a handle to state of type `T`. It's similar to an `Rc` from the Rust standard library but only provides access to state when an `App` reference is available.
+
+<CodeGroup>
+
+```rust Creating an entity
+use gpui::{App, Context, Entity};
+
+struct Counter {
+    count: usize,
+}
+
+gpui_platform::application().run(|cx: &mut App| {
+    let counter: Entity<Counter> = cx.new(|_cx| Counter { count: 0 });
+});
+```
+
+```rust Accessing entity state
+let counter: Entity<Counter> = cx.new(|_cx| Counter { count: 0 });
+
+// Read immutably
+let current_count = counter.read(cx).count;
+
+// Update mutably
+counter.update(cx, |counter: &mut Counter, cx: &mut Context<Counter>| {
+    counter.count += 1;
+    cx.notify(); // Notify observers of the change
+});
+```
+
+</CodeGroup>
+
+## Entity Methods
+
+With `thing: Entity<T>`, you have access to:
+
+<Steps>
+  <Step title="Entity ID">
+    `thing.entity_id()` returns `EntityId` - a unique identifier for the entity
+  </Step>
+  <Step title="Weak references">
+    `thing.downgrade()` returns `WeakEntity<T>` - a weak handle that doesn't prevent entity cleanup
+  </Step>
+  <Step title="Reading state">
+    `thing.read(cx: &App)` returns `&T` - immutable reference to the entity's state
+  </Step>
+  <Step title="Reading with closure">
+    `thing.read_with(cx, |thing: &T, cx: &App| ...)` - read state and execute a closure
+  </Step>
+  <Step title="Updating state">
+    `thing.update(cx, |thing: &mut T, cx: &mut Context<T>| ...)` - mutate state with a `Context<T>`
+  </Step>
+  <Step title="Updating with window">
+    `thing.update_in(cx, |thing: &mut T, window: &mut Window, cx: &mut Context<T>| ...)` - update with `Window` access
+  </Step>
+</Steps>
+
+## Weak Entity Handles
+
+`WeakEntity<T>` is a weak handle that avoids memory leaks when entities have mutually recursive handles.
+
+```rust Weak entities
+use gpui::WeakEntity;
+
+let counter: Entity<Counter> = cx.new(|_cx| Counter { count: 0 });
+let weak: WeakEntity<Counter> = counter.downgrade();
+
+// Weak handles return Results that can fail if the entity no longer exists
+weak.update(cx, |counter, cx| {
+    counter.count += 1;
+    cx.notify();
+})?; // Returns anyhow::Result
+```
+
+<Warning>
+When `read_with`, `update`, or `update_in` are used with an async context, the closure's return value is wrapped in an `anyhow::Result`.
+</Warning>
+
+## Observing Entity Changes
+
+Entities can observe other entities and react to state changes using `cx.observe()`.
+
+```rust Observer pattern
+let first_counter: Entity<Counter> = cx.new(|_cx| Counter { count: 0 });
+
+let second_counter = cx.new(|cx: &mut Context<Counter>| {
+    // Set up the observation before the Counter is even created
+    cx.observe(
+        &first_counter,
+        |second: &mut Counter, first: Entity<Counter>, cx| {
+            second.count = first.read(cx).count * 2;
+        },
+    )
+    .detach(); // Detach to keep the subscription active
+
+    Counter { count: 0 }
+});
+
+first_counter.update(cx, |counter, cx| {
+    counter.count += 1;
+    cx.notify(); // Triggers the observer callback
+});
+
+assert_eq!(second_counter.read(cx).count, 2);
+```
+
+<Info>
+The `observe` callback returns a `Subscription`, which should be either:
+- Stored to keep it active while needed
+- Detached with `.detach()` to keep it active indefinitely
+- Dropped to cancel the observation
+</Info>
+
+## Entity Events
+
+Entities can emit typed events using `cx.emit()`. The emitting entity must implement `EventEmitter<EventType>`.
+
+<CodeGroup>
+
+```rust Defining events
+use gpui::EventEmitter;
+
+struct Counter {
+    count: usize,
+}
+
+struct CounterChangeEvent {
+    increment: usize,
+}
+
+impl EventEmitter<CounterChangeEvent> for Counter {}
+```
+
+```rust Subscribing to events
+let first_counter: Entity<Counter> = cx.new(|_cx| Counter { count: 0 });
+
+let second_counter = cx.new(|cx: &mut Context<Counter>| {
+    cx.subscribe(
+        &first_counter,
+        |second: &mut Counter, _first: Entity<Counter>, event, _cx| {
+            second.count += event.increment * 2;
+        },
+    )
+    .detach();
+
+    Counter { count: 0 }
+});
+
+first_counter.update(cx, |first, cx| {
+    first.count += 2;
+    cx.emit(CounterChangeEvent { increment: 2 });
+    cx.notify();
+});
+
+assert_eq!(second_counter.read(cx).count, 4);
+```
+
+</CodeGroup>
+
+## Important Constraints
+
+<Warning>
+Trying to update an entity while it's already being updated will cause a panic. Always use the inner `cx` provided to closures instead of the outer `cx` to avoid multiple borrow issues.
+</Warning>
+
+```rust Avoiding double borrows
+counter.update(cx, |counter, inner_cx| {
+    // Use inner_cx, not cx, within this closure
+    counter.count += 1;
+    inner_cx.notify();
+});
+```
+
+## Entity Lifecycle
+
+<Steps>
+  <Step title="Creation">
+    Entities are created with `cx.new()` and owned by the `App`
+  </Step>
+  <Step title="Access">
+    Entity state is accessed through handles using `read()`, `update()`, or their variants
+  </Step>
+  <Step title="Observation">
+    Other entities can observe changes via `cx.observe()` and `cx.subscribe()`
+  </Step>
+  <Step title="Cleanup">
+    Entities are dropped when all strong handles are dropped, triggering release callbacks
+  </Step>
+</Steps>
+
+```rust Release callbacks
+counter_entity.update(cx, |counter, cx| {
+    cx.on_release(|counter: &mut Counter, cx: &mut App| {
+        // Cleanup logic when entity is released
+        println!("Counter released with count: {}", counter.count);
+    });
+});
+```
+
+## Related Topics
+
+<CardGroup cols={2}>
+  <Card title="Context Types" icon="cube" href="/gpui/contexts">
+    Learn about App, Context, and AsyncApp
+  </Card>
+  <Card title="Views and Rendering" icon="palette" href="/gpui/views-rendering">
+    Understand views and the Render trait
+  </Card>
+</CardGroup>

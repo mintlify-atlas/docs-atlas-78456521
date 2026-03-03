@@ -1,0 +1,434 @@
+---
+title: Text Rendering
+description: Render and style text in GPUI applications
+---
+
+GPUI provides powerful text rendering capabilities with support for custom fonts, rich text styling, and advanced typography features.
+
+## Basic Text Rendering
+
+The simplest way to render text is to pass a string as a child to an element:
+
+```rust
+use gpui::*;
+
+div()
+    .child("Hello, World!")
+```
+
+Strings automatically implement `IntoElement`, so they can be used directly as children.
+
+## SharedString
+
+For efficient string handling, use `SharedString` to avoid copying:
+
+```rust
+use gpui::*;
+
+struct TextComponent {
+    message: SharedString,
+}
+
+impl Render for TextComponent {
+    fn render(&mut self, _window: &mut Window, _cx: &mut Context<Self>) -> impl IntoElement {
+        div().child(self.message.clone())
+    }
+}
+
+// Create from static string (no allocation)
+let static_text = SharedString::new_static("Static text");
+
+// Create from owned string
+let owned_text: SharedString = "Owned text".into();
+```
+
+## Text Styling
+
+### Font Size
+
+Control text size using Tailwind-like utilities:
+
+```rust
+div().text_xs()    // 0.75rem
+div().text_sm()    // 0.875rem
+div().text_base()  // 1rem (default)
+div().text_lg()    // 1.125rem
+div().text_xl()    // 1.25rem
+div().text_2xl()   // 1.5rem
+div().text_3xl()   // 1.875rem
+```
+
+Or use a custom size:
+
+```rust
+div().text_size(px(24.0))
+```
+
+### Font Weight
+
+```rust
+use gpui::*;
+
+div()
+    .font_weight(FontWeight::THIN)       // 100
+    .font_weight(FontWeight::EXTRA_LIGHT) // 200
+    .font_weight(FontWeight::LIGHT)      // 300
+    .font_weight(FontWeight::NORMAL)     // 400 (default)
+    .font_weight(FontWeight::MEDIUM)     // 500
+    .font_weight(FontWeight::SEMIBOLD)   // 600
+    .font_weight(FontWeight::BOLD)       // 700
+    .font_weight(FontWeight::EXTRA_BOLD) // 800
+    .font_weight(FontWeight::BLACK)      // 900
+```
+
+### Font Style
+
+```rust
+div().italic()      // Italic text
+div().not_italic()  // Normal text
+```
+
+### Text Color
+
+```rust
+div()
+    .text_color(rgb(0x000000))  // Black
+    .text_color(rgb(0xff0000))  // Red
+    .text_color(hsla(0.5, 0.8, 0.5, 1.0))  // Using HSLA
+```
+
+### Text Background
+
+Highlight text with a background color:
+
+```rust
+div()
+    .text_bg(rgb(0xffff00))  // Yellow background
+    .child("Highlighted text")
+```
+
+## Font Families
+
+```rust
+use gpui::*;
+
+div()
+    .font_family("Helvetica")
+    .child("Text in Helvetica")
+
+// Using a Font struct
+let custom_font = Font {
+    family: "Monaco".into(),
+    features: FontFeatures::default(),
+    fallbacks: None,
+    weight: FontWeight::NORMAL,
+    style: FontStyle::Normal,
+};
+
+div()
+    .font(custom_font)
+    .child("Text in Monaco")
+```
+
+## Text Alignment
+
+```rust
+div().text_left()    // Left aligned (default)
+div().text_center()  // Center aligned
+div().text_right()   // Right aligned
+```
+
+## Line Height
+
+Control spacing between lines:
+
+```rust
+use gpui::*;
+
+div()
+    .line_height(relative(1.5))  // 1.5x font size
+    .child("Multi-line\ntext\nwith\ncustom\nline height")
+```
+
+## Text Decoration
+
+### Underline
+
+```rust
+div()
+    .underline()
+    .text_decoration_color(rgb(0xff0000))  // Red underline
+    .text_decoration_wavy()  // Wavy underline
+    .text_decoration_2()  // 2px thick
+    .child("Underlined text")
+```
+
+### Strikethrough
+
+```rust
+div()
+    .line_through()
+    .child("Strikethrough text")
+```
+
+### Remove Decoration
+
+```rust
+div()
+    .text_decoration_none()
+    .child("No decoration")
+```
+
+## Text Overflow
+
+### Truncation
+
+```rust
+// Truncate with ellipsis at the end
+div()
+    .w(px(200.))
+    .truncate()  // Equivalent to: overflow_hidden + whitespace_nowrap + text_ellipsis
+    .child("This is a very long text that will be truncated")
+
+// Ellipsis at the start (useful for file paths)
+div()
+    .w(px(200.))
+    .text_ellipsis_start()
+    .overflow_hidden()
+    .whitespace_nowrap()
+    .child("/very/long/file/path/to/document.txt")
+```
+
+### Line Clamping
+
+Limit text to a specific number of lines:
+
+```rust
+div()
+    .w(px(300.))
+    .line_clamp(3)  // Show only 3 lines
+    .child("This is a long paragraph that will be clamped to three lines. Additional text will be hidden with an ellipsis.")
+```
+
+### Whitespace Handling
+
+```rust
+div().whitespace_normal()  // Wrap text normally
+div().whitespace_nowrap()  // Prevent text wrapping
+```
+
+## Advanced Typography
+
+### Font Features
+
+Enable OpenType font features:
+
+```rust
+use gpui::*;
+
+let features = FontFeatures::default()
+    .with_feature("liga", 1)  // Enable ligatures
+    .with_feature("kern", 1); // Enable kerning
+
+div()
+    .font_features(features)
+    .child("Text with ligatures: -> => != ==")
+```
+
+### Text Style Object
+
+For more control, create a `TextStyle` object:
+
+```rust
+use gpui::*;
+
+let text_style = TextStyle {
+    color: rgb(0x1f2937),
+    font_family: "Inter".into(),
+    font_features: FontFeatures::default(),
+    font_fallbacks: None,
+    font_size: rems(1.0).into(),
+    line_height: relative(1.5),
+    font_weight: FontWeight::NORMAL,
+    font_style: FontStyle::Normal,
+    background_color: None,
+    underline: None,
+    strikethrough: None,
+    white_space: WhiteSpace::Normal,
+    text_overflow: None,
+    text_align: TextAlign::Left,
+    line_clamp: None,
+};
+```
+
+## Measuring Text
+
+GPUI provides methods to measure text dimensions:
+
+```rust
+// Get the bounding box for text
+let font_id = text_system.resolve_font(&font);
+let bounding_box = text_system.bounding_box(font_id, px(16.));
+
+// Get advance width for a character
+let advance = text_system.advance(font_id, px(16.), 'A').unwrap();
+```
+
+## Rich Text Example
+
+```rust
+use gpui::*;
+
+struct RichTextExample;
+
+impl Render for RichTextExample {
+    fn render(&mut self, _window: &mut Window, _cx: &mut Context<Self>) -> impl IntoElement {
+        div()
+            .flex()
+            .flex_col()
+            .gap_4()
+            .p_6()
+            .max_w(px(600.))
+            .child(
+                div()
+                    .text_3xl()
+                    .font_weight(FontWeight::BOLD)
+                    .text_color(rgb(0x1f2937))
+                    .child("Rich Text Heading")
+            )
+            .child(
+                div()
+                    .text_base()
+                    .line_height(relative(1.6))
+                    .text_color(rgb(0x4b5563))
+                    .child("This is a paragraph with normal text. ")
+                    .child(
+                        div()
+                            .font_weight(FontWeight::BOLD)
+                            .child("Bold text ")
+                    )
+                    .child("and ")
+                    .child(
+                        div()
+                            .italic()
+                            .child("italic text")
+                    )
+                    .child(".")
+            )
+            .child(
+                div()
+                    .text_sm()
+                    .text_color(rgb(0x6b7280))
+                    .underline()
+                    .text_decoration_color(rgb(0x3b82f6))
+                    .child("Underlined link")
+            )
+            .child(
+                div()
+                    .font_family("monospace")
+                    .text_sm()
+                    .bg(rgb(0xf3f4f6))
+                    .p_2()
+                    .rounded_md()
+                    .child("Code block with monospace font")
+            )
+    }
+}
+```
+
+## Multi-line Text Input Example
+
+```rust
+use gpui::*;
+
+struct TextEditor {
+    lines: Vec<SharedString>,
+}
+
+impl Render for TextEditor {
+    fn render(&mut self, _window: &mut Window, _cx: &mut Context<Self>) -> impl IntoElement {
+        div()
+            .flex()
+            .flex_col()
+            .font_family("monospace")
+            .text_sm()
+            .line_height(relative(1.4))
+            .children(
+                self.lines.iter().enumerate().map(|(i, line)| {
+                    div()
+                        .flex()
+                        .gap_2()
+                        .child(
+                            div()
+                                .text_color(rgb(0x9ca3af))
+                                .w(px(40.))
+                                .text_right()
+                                .child(format!("{}", i + 1))
+                        )
+                        .child(line.clone())
+                })
+            )
+    }
+}
+```
+
+## Text with Icons
+
+Combine text with other elements:
+
+```rust
+use gpui::*;
+
+div()
+    .flex()
+    .items_center()
+    .gap_2()
+    .child(
+        // Icon (could be an SVG or image)
+        div()
+            .size(px(20.))
+            .bg(rgb(0x3b82f6))
+            .rounded_full()
+    )
+    .child("Text with icon")
+```
+
+## Loading Custom Fonts
+
+Add custom fonts to your application:
+
+```rust
+use gpui::*;
+
+// In your app initialization
+let font_data = include_bytes!("../assets/CustomFont.ttf");
+cx.text_system()
+    .add_fonts(vec![Cow::Borrowed(font_data.as_slice())])
+    .unwrap();
+
+// Use the font
+div()
+    .font_family("CustomFont")
+    .child("Text in custom font")
+```
+
+## Best Practices
+
+<Tip>
+Use `SharedString` instead of `String` for text that doesn't change to avoid unnecessary allocations.
+</Tip>
+
+<Note>
+Text styling properties cascade to child elements, so you can set them on a parent container.
+</Note>
+
+<Warning>
+When using custom fonts, ensure they're loaded before rendering text with them.
+</Warning>
+
+## Performance Considerations
+
+- Text layout and rendering are cached by GPUI
+- Avoid creating new `TextStyle` objects on every render
+- Use `SharedString` for static or long-lived text
+- Line clamping and truncation are performant even with long text

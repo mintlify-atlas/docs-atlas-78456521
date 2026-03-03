@@ -1,97 +1,140 @@
 ---
-title: "Introduction"
-description: "Welcome to the new home for your documentation"
+title: Zed - High-Performance Code Editor
+description: Zed is a high-performance, multiplayer code editor from the creators of Atom and Tree-sitter. Built with Rust and GPU-accelerated rendering.
 ---
 
-## Setting up
+# Welcome to Zed
 
-Get your documentation site up and running in minutes.
+Zed is a **high-performance, multiplayer code editor** from the creators of [Atom](https://github.com/atom/atom) and [Tree-sitter](https://github.com/tree-sitter/tree-sitter). Built with Rust and GPU-accelerated rendering, Zed delivers native performance with a modern editing experience.
 
-<Card
-  title="Start here"
-  icon="rocket"
-  href="/quickstart"
-  horizontal
->
-  Follow our three step quickstart guide.
-</Card>
-
-## Make it yours
-
-Design a docs site that looks great and empowers your users.
-
-<Columns cols={2}>
-  <Card
-    title="Edit locally"
-    icon="pen-to-square"
-    href="/development"
-  >
-    Edit your docs locally and preview them in real time.
+<CardGroup cols={2}>
+  <Card title="Installation" icon="download" href="/installation">
+    Install Zed on macOS, Linux, or Windows
   </Card>
-  <Card
-    title="Customize your site"
-    icon="palette"
-    href="/essentials/settings"
-  >
-    Customize the design and colors of your site to match your brand.
+  <Card title="Quick Start" icon="rocket" href="/quickstart">
+    Get productive with Zed in minutes
   </Card>
-    <Card
-    title="Set up navigation"
-    icon="map"
-    href="/essentials/navigation"
-  >
-    Organize your docs to help users find what they need and succeed with your product.
+  <Card title="Configuration" icon="sliders" href="/configuration">
+    Customize your editor settings
   </Card>
-  <Card
-    title="API documentation"
-    icon="terminal"
-    href="/api-reference/introduction"
-  >
-    Auto-generate API documentation from OpenAPI specifications.
+  <Card title="Language Support" icon="code" href="https://zed.dev/docs/languages">
+    Hundreds of languages and extensions
   </Card>
-</Columns>
+</CardGroup>
 
-## Create beautiful pages
+## Why Zed?
 
-Everything you need to create world-class documentation.
+### Lightning Fast
 
-<Columns cols={2}>
-  <Card
-    title="Write with MDX"
-    icon="pen-fancy"
-    href="/essentials/markdown"
-  >
-    Use MDX to style your docs pages.
-  </Card>
-  <Card
-    title="Code samples"
-    icon="code"
-    href="/essentials/code"
-  >
-    Add sample code to demonstrate how to use your product.
-  </Card>
-  <Card
-    title="Images"
-    icon="image"
-    href="/essentials/images"
-  >
-    Display images and other media.
-  </Card>
-  <Card
-    title="Reusable snippets"
-    icon="recycle"
-    href="/essentials/reusable-snippets"
-  >
-    Write once and reuse across your docs.
-  </Card>
-</Columns>
+Zed uses Metal (macOS), Vulkan (Linux), and DirectX 11 (Windows) for GPU-accelerated rendering. Written in Rust, it starts instantly and handles large codebases with ease.
 
-## Need inspiration?
+### Built-in AI
 
-<Card
-  title="See complete examples"
-  icon="stars"
-  href="https://mintlify.com/customers"
->
-  Browse our showcase of exceptional documentation sites.
-</Card>
+Zed includes native AI features:
+
+- **Agentic editing** - AI agents that read, write, and refactor code
+- **Edit prediction** - AI code completions on every keystroke
+- **Inline assistant** - Transform code selections with AI
+- **Multi-model support** - Use Anthropic, OpenAI, Google, Ollama, and more
+
+See the [AI Overview](https://zed.dev/docs/ai/overview) to learn more.
+
+### Real-Time Collaboration
+
+Multiple developers can work in the same project simultaneously, seeing each other's cursors and edits as they happen. Voice chat is built-in.
+
+- **Channels** - Persistent project rooms for teams
+- **Private calls** - Ad-hoc collaboration with contacts
+- **Shared projects** - Everyone edits the same codebase in real-time
+
+Learn more about [Collaboration](https://zed.dev/docs/collaboration/overview).
+
+### Powerful Terminal
+
+Zed's integrated terminal supports:
+
+- Multiple terminal instances and tabs
+- Custom shells and environment configuration
+- Deep editor integration
+- Split panes
+
+Read the [Terminal documentation](https://zed.dev/docs/terminal).
+
+### Extensive Language Support
+
+Zed supports hundreds of programming languages. Many are built-in, while others are available through extensions:
+
+**Built-in languages include:**
+- Rust (Zed is written in Rust)
+- JavaScript, TypeScript, JSX, TSX
+- Python, Go, C, C++
+- JSON, YAML, Markdown, HTML, CSS
+- And many more
+
+**Extension-based languages include:**
+- Java, Kotlin, Scala
+- Ruby, Elixir, PHP
+- Haskell, OCaml, Elm
+- Swift, Dart, Zig
+- And 100+ community extensions
+
+Browse all [supported languages](https://zed.dev/docs/languages).
+
+## Key Features
+
+<CardGroup cols={2}>
+  <Card title="Vim Mode" icon="keyboard">
+    Full Vim keybindings and modal editing support
+  </Card>
+  <Card title="Git Integration" icon="code-branch">
+    Inline blame, diff view, and Git panel
+  </Card>
+  <Card title="Extensions" icon="puzzle-piece">
+    Extend Zed with community extensions
+  </Card>
+  <Card title="Remote Development" icon="server">
+    SSH and dev containers support
+  </Card>
+  <Card title="Tasks & Testing" icon="play">
+    Run tests and tasks with built-in runners
+  </Card>
+  <Card title="REPL" icon="terminal">
+    Interactive coding with inline evaluation
+  </Card>
+</CardGroup>
+
+## Open Source
+
+Zed is fully open source and developed by Zed Industries, Inc. The entire codebase is available on [GitHub](https://github.com/zed-industries/zed).
+
+- **License**: AGPL, Apache, and GPL (triple-licensed)
+- **Community**: Active Discord and GitHub Discussions
+- **Contributing**: We welcome contributions
+
+## Get Started
+
+<CardGroup cols={3}>
+  <Card title="Install Zed" icon="download" href="/installation">
+    Download for your platform
+  </Card>
+  <Card title="Quick Start Guide" icon="book-open" href="/quickstart">
+    Essential commands and setup
+  </Card>
+  <Card title="Configure" icon="gear" href="/configuration">
+    Customize your settings
+  </Card>
+</CardGroup>
+
+## Community & Support
+
+<CardGroup cols={3}>
+  <Card title="Discord" icon="discord" href="https://discord.com/invite/zedindustries">
+    Join the community chat
+  </Card>
+  <Card title="GitHub" icon="github" href="https://github.com/zed-industries/zed">
+    Star the repo and contribute
+  </Card>
+  <Card title="Discussions" icon="comments" href="https://github.com/zed-industries/zed/discussions">
+    Ask questions and share ideas
+  </Card>
+</CardGroup>

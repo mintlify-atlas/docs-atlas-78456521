@@ -1,0 +1,411 @@
+---
+title: Layout System and Flexbox
+description: Master GPUI's flexbox-based layout system for building responsive UIs
+---
+
+GPUI uses a flexbox-based layout system powered by [Taffy](https://github.com/DioxusLabs/taffy), providing familiar and powerful layout capabilities.
+
+## Flexbox Basics
+
+Flexbox is the primary layout mode in GPUI. Elements are laid out along a main axis (row or column) with powerful alignment options.
+
+```rust
+use gpui::*;
+
+div()
+    .flex()  // Enable flexbox layout
+    .flex_row()  // Horizontal layout (default)
+    .items_center()  // Center items on cross axis
+    .justify_between()  // Space items evenly on main axis
+    .child("Item 1")
+    .child("Item 2")
+    .child("Item 3")
+```
+
+## Flex Direction
+
+Control the main axis direction:
+
+<CodeGroup>
+```rust Row (Horizontal)
+div()
+    .flex()
+    .flex_row()  // Left to right (default)
+    .child("A")
+    .child("B")
+    .child("C")
+// Layout: A B C
+```
+
+```rust Row Reverse
+div()
+    .flex()
+    .flex_row_reverse()  // Right to left
+    .child("A")
+    .child("B")
+    .child("C")
+// Layout: C B A
+```
+
+```rust Column (Vertical)
+div()
+    .flex()
+    .flex_col()  // Top to bottom
+    .child("A")
+    .child("B")
+    .child("C")
+// Layout:
+// A
+// B
+// C
+```
+
+```rust Column Reverse
+div()
+    .flex()
+    .flex_col_reverse()  // Bottom to top
+    .child("A")
+    .child("B")
+    .child("C")
+// Layout:
+// C
+// B
+// A
+```
+</CodeGroup>
+
+## Flex Properties
+
+### Flex Grow and Shrink
+
+```rust
+// Allow item to grow to fill available space
+div().flex_1()  // flex-grow: 1, flex-shrink: 1, flex-basis: 0
+
+// Allow item to grow and shrink based on content
+div().flex_auto()  // flex-grow: 1, flex-shrink: 1, flex-basis: auto
+
+// Allow shrinking but not growing
+div().flex_initial()  // flex-grow: 0, flex-shrink: 1, flex-basis: auto
+
+// Prevent growing or shrinking
+div().flex_none()  // flex-grow: 0, flex-shrink: 0
+```
+
+Individual control:
+
+```rust
+div()
+    .flex_grow()  // Allow growing
+    .flex_shrink()  // Allow shrinking
+    .flex_shrink_0()  // Prevent shrinking
+    .flex_basis(px(200.))  // Set base size
+```
+
+### Flex Wrap
+
+```rust
+// Allow items to wrap to new lines
+div()
+    .flex()
+    .flex_wrap()  // Wrap normally
+
+// Wrap in reverse
+div()
+    .flex()
+    .flex_wrap_reverse()
+
+// Prevent wrapping (default)
+div()
+    .flex()
+    .flex_nowrap()
+```
+
+## Alignment
+
+### Align Items (Cross Axis)
+
+Control how items align on the cross axis:
+
+```rust
+div().flex().items_start()      // Align to start
+div().flex().items_end()        // Align to end
+div().flex().items_center()     // Center items
+div().flex().items_baseline()   // Align baselines
+div().flex().items_stretch()    // Stretch to fill
+```
+
+### Justify Content (Main Axis)
+
+Control spacing and alignment on the main axis:
+
+```rust
+div().flex().justify_start()    // Pack to start
+div().flex().justify_end()      // Pack to end
+div().flex().justify_center()   // Center items
+div().flex().justify_between()  // Space between
+div().flex().justify_around()   // Space around
+div().flex().justify_evenly()   // Space evenly
+```
+
+### Align Content (Multi-line)
+
+Control spacing between lines when wrapping:
+
+```rust
+div().flex().flex_wrap().content_start()    // Pack lines to start
+div().flex().flex_wrap().content_end()      // Pack lines to end
+div().flex().flex_wrap().content_center()   // Center lines
+div().flex().flex_wrap().content_between()  // Space between lines
+div().flex().flex_wrap().content_around()   // Space around lines
+div().flex().flex_wrap().content_evenly()   // Space evenly
+div().flex().flex_wrap().content_stretch()  // Stretch lines
+```
+
+## Gap
+
+Add spacing between flex items:
+
+```rust
+// Gap between all children
+div()
+    .flex()
+    .gap(px(16.))
+
+// Horizontal and vertical gap separately
+div()
+    .flex()
+    .gap_x(px(16.))  // Horizontal gap
+    .gap_y(px(8.))   // Vertical gap
+
+// Shorthand utilities
+div().flex().gap_2()  // 0.5rem
+div().flex().gap_4()  // 1rem
+div().flex().gap_8()  // 2rem
+```
+
+## Grid Layout
+
+GPUI also supports CSS Grid for more complex layouts:
+
+```rust
+div()
+    .grid()
+    .grid_cols(3)  // 3 columns
+    .grid_rows(2)  // 2 rows
+    .gap_4()
+    .child("Cell 1")
+    .child("Cell 2")
+    .child("Cell 3")
+    .child("Cell 4")
+    .child("Cell 5")
+    .child("Cell 6")
+```
+
+### Grid Item Placement
+
+```rust
+// Column placement
+div()
+    .col_start(1)
+    .col_end(3)  // Spans from column 1 to 3
+    .col_span(2)  // Spans 2 columns
+    .col_span_full()  // Spans all columns
+
+// Row placement
+div()
+    .row_start(1)
+    .row_end(3)
+    .row_span(2)
+    .row_span_full()
+```
+
+## Responsive Layout Example
+
+```rust
+use gpui::*;
+
+struct ResponsiveLayout;
+
+impl Render for ResponsiveLayout {
+    fn render(&mut self, _window: &mut Window, _cx: &mut Context<Self>) -> impl IntoElement {
+        div()
+            .flex()
+            .flex_col()
+            .w_full()
+            .h_full()
+            .gap_4()
+            // Header
+            .child(
+                div()
+                    .flex()
+                    .items_center()
+                    .justify_between()
+                    .p_4()
+                    .bg(rgb(0x1f2937))
+                    .text_color(white())
+                    .child("Header")
+            )
+            // Main content area
+            .child(
+                div()
+                    .flex()
+                    .flex_1()
+                    .gap_4()
+                    .p_4()
+                    // Sidebar
+                    .child(
+                        div()
+                            .w(px(250.))
+                            .bg(rgb(0xf3f4f6))
+                            .p_4()
+                            .child("Sidebar")
+                    )
+                    // Content
+                    .child(
+                        div()
+                            .flex_1()
+                            .bg(white())
+                            .p_4()
+                            .child("Main Content")
+                    )
+            )
+            // Footer
+            .child(
+                div()
+                    .flex()
+                    .items_center()
+                    .justify_center()
+                    .p_4()
+                    .bg(rgb(0x1f2937))
+                    .text_color(white())
+                    .child("Footer")
+            )
+    }
+}
+```
+
+## Centering Content
+
+<CodeGroup>
+```rust Center Horizontally and Vertically
+div()
+    .flex()
+    .items_center()
+    .justify_center()
+    .size_full()
+    .child("Centered")
+```
+
+```rust Center Horizontally Only
+div()
+    .flex()
+    .justify_center()
+    .w_full()
+    .child("Horizontally Centered")
+```
+
+```rust Center Vertically Only
+div()
+    .flex()
+    .flex_col()
+    .items_center()
+    .h_full()
+    .child("Vertically Centered")
+```
+</CodeGroup>
+
+## Common Layout Patterns
+
+### Card Layout
+
+```rust
+div()
+    .flex()
+    .flex_col()
+    .gap_4()
+    .p_6()
+    .bg(white())
+    .rounded_lg()
+    .shadow_md()
+    .child(
+        div()
+            .text_xl()
+            .font_weight(FontWeight::BOLD)
+            .child("Card Title")
+    )
+    .child(
+        div()
+            .text_base()
+            .text_color(rgb(0x6b7280))
+            .child("Card content goes here")
+    )
+```
+
+### Horizontal Stack with Equal Items
+
+```rust
+div()
+    .flex()
+    .gap_4()
+    .child(div().flex_1().child("Item 1"))
+    .child(div().flex_1().child("Item 2"))
+    .child(div().flex_1().child("Item 3"))
+```
+
+### Split Pane
+
+```rust
+div()
+    .flex()
+    .h_full()
+    .child(
+        div()
+            .flex_1()  // Takes up 50% (or grow as needed)
+            .bg(rgb(0xf3f4f6))
+            .child("Left Pane")
+    )
+    .child(
+        div()
+            .flex_1()  // Takes up 50% (or grow as needed)
+            .bg(white())
+            .child("Right Pane")
+    )
+```
+
+## Size Constraints
+
+Control how elements size themselves:
+
+```rust
+div()
+    .min_w(px(200.))  // Minimum width
+    .max_w(px(800.))  // Maximum width
+    .min_h(px(100.))  // Minimum height
+    .max_h(px(600.))  // Maximum height
+```
+
+## Aspect Ratio
+
+Maintain a specific aspect ratio:
+
+```rust
+div()
+    .w_full()
+    .aspect_ratio(16.0 / 9.0)  // 16:9 aspect ratio
+    .bg(rgb(0xe5e7eb))
+```
+
+## Best Practices
+
+<Note>
+Use `flex_1()` to make elements grow and fill available space, and `flex_none()` to prevent sizing changes.
+</Note>
+
+<Tip>
+Combine `gap()` with flexbox instead of margins for cleaner, more maintainable spacing.
+</Tip>
+
+<Warning>
+When using absolute positioning, remember the element is removed from the normal document flow.
+</Warning>

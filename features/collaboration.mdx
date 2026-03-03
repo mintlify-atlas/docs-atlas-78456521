@@ -1,0 +1,382 @@
+---
+title: Multiplayer Collaboration - Zed
+description: Real-time collaboration in Zed with shared projects, live cursors, voice chat, and channels for team coordination.
+---
+
+# Multiplayer Collaboration
+
+Zed supports real-time multiplayer editing, allowing multiple people to work in the same project simultaneously. See each other's cursors, edits, and selections as they happen, with optional voice chat built in.
+
+<Note>
+Collaboration requires signing in to Zed. See [Authentication](https://zed.dev/docs/authentication) to get started.
+</Note>
+
+## Collaboration Panel
+
+The Collaboration Panel is your hub for working with others.
+
+**Open:** `Cmd+Shift+C` (macOS) or `Ctrl+Shift+C` (Linux/Windows)
+
+The panel has two main sections:
+
+1. **Channels** - Persistent project rooms for team collaboration
+2. **Contacts** - Your contacts list for ad-hoc private sessions
+
+## Channels
+
+Channels are persistent spaces where teams can collaborate on projects with integrated voice chat.
+
+### Creating a Channel
+
+1. Open the Collaboration Panel
+2. Click the "+" button next to "Channels"
+3. Enter a channel name
+4. Choose visibility:
+   - **Public** - Anyone can discover and join
+   - **Private** - Only invited members can access
+
+### Joining a Channel
+
+- Click on a channel in your list to join
+- Search for public channels using the search bar
+- Accept channel invitations from the Notifications Panel
+
+### Channel Features
+
+<CardGroup cols={2}>
+  <Card title="Shared Projects" icon="folder-open">
+    Share a project with everyone in the channel. Members can browse files, make edits, and see live changes.
+  </Card>
+  
+  <Card title="Voice Chat" icon="microphone">
+    Built-in voice communication with push-to-talk or always-on modes. Mute/deafen controls available.
+  </Card>
+  
+  <Card title="Channel Notes" icon="note-sticky">
+    Persistent notes for meeting agendas, documentation, or announcements. Editable by all members.
+  </Card>
+  
+  <Card title="Sub-Channels" icon="sitemap">
+    Organize channels hierarchically with nested sub-channels for different projects or topics.
+  </Card>
+</CardGroup>
+
+### Managing Channels
+
+**Channel Settings** (right-click a channel):
+
+- **Rename** - Change the channel name
+- **Delete** - Remove the channel (owner only)
+- **Invite** - Add members to private channels
+- **Manage Members** - View and remove members
+- **Move** - Reorganize channel hierarchy
+
+### Channel Notes
+
+Every channel has notes that persist between sessions.
+
+**Open channel notes:** Right-click channel → "Open Notes"
+
+Notes support:
+- Markdown formatting
+- Real-time collaborative editing
+- Persistent storage (auto-saved)
+
+Use notes for:
+- Meeting agendas
+- Project documentation
+- Team announcements
+- Shared to-do lists
+
+## Contacts and Private Calls
+
+Contacts allow quick one-on-one or small group collaboration without setting up a channel.
+
+### Adding Contacts
+
+1. Open the Collaboration Panel
+2. Click the "+" button in the Contacts section
+3. Enter their username or email
+4. Send a contact request
+
+Once accepted, the contact appears in your list.
+
+### Starting a Private Call
+
+1. Click a contact's name
+2. Select "Call"
+3. Wait for them to accept
+
+Private calls support:
+- Voice chat
+- Project sharing
+- Screen sharing
+- Multiple participants
+
+## Sharing Projects
+
+Share your local project with collaborators so they can edit files alongside you.
+
+### Share in a Channel
+
+1. Join a channel
+2. Click "Share Project" in the Collaboration Panel
+3. Select which project to share
+
+All channel members can now access the project.
+
+### Share in a Call
+
+1. Start or join a call
+2. Click the "Share Project" icon
+3. Select the project
+
+Call participants can access the shared project.
+
+### Unshare a Project
+
+Click the "Unshare" button in the Collaboration Panel or channel header.
+
+<Warning>
+Sharing a project gives collaborators access to your local file system within that project. Only collaborate with people you trust. See [Data and Privacy FAQs](https://zed.dev/faq#data-and-privacy) for details.
+</Warning>
+
+## Joining Shared Projects
+
+When someone shares a project:
+
+1. You'll see it in the channel or call panel
+2. Click the project name to open it
+3. Start editing
+
+You can browse files in the Project Panel just like a local project.
+
+### Following Collaborators
+
+Follow another user's cursor to see what they're working on:
+
+1. Click their avatar in the collaboration panel
+2. Select "Follow"
+
+Your editor will scroll to show what they're viewing. You can still edit independently.
+
+**Stop following:** Press `Escape` or click "Unfollow"
+
+## Live Collaboration Features
+
+### Real-Time Cursors and Selections
+
+See where everyone is working:
+
+- **Colored cursors** - Each collaborator has a unique color
+- **Selections** - See what they're selecting in real-time
+- **Active file indicator** - See which file each person is editing
+
+### Collaborative Editing
+
+All edits sync in real-time:
+
+- Type and see changes immediately
+- Undo/redo works independently for each user
+- Conflicts are automatically resolved
+- Unsaved changes sync between collaborators
+
+### Shared Terminal
+
+Run terminal commands visible to all collaborators:
+
+1. Open the terminal panel
+2. Start a new terminal
+3. Collaborators can see output in real-time
+
+<Note>
+Terminal input is local only. Collaborators can see output but cannot type commands.
+</Note>
+
+## Voice Chat
+
+Built-in voice communication for channels and calls.
+
+### Controls
+
+- **Mute:** `Cmd+Shift+M` (macOS) or `Ctrl+Shift+M` (Linux/Windows)
+- **Deafen:** Mute and stop hearing others
+- **Leave Call:** Click "Leave" in the collaboration panel
+
+### Audio Settings
+
+Configure your microphone and speakers:
+
+1. Open Settings (`Cmd+,`)
+2. Navigate to **Collaboration** → **Experimental**
+3. Select **Input Audio Device** and **Output Audio Device**
+
+```json
+{
+  "audio": {
+    "experimental.output_audio_device": "Device Name (device-id)",
+    "experimental.input_audio_device": "Device Name (device-id)"
+  }
+}
+```
+
+**Test audio:** Settings → Collaboration → Experimental → Test Audio
+
+### Push-to-Talk
+
+Enable push-to-talk to mute by default:
+
+```json
+{
+  "audio": {
+    "push_to_talk": true
+  }
+}
+```
+
+Hold a key to speak (configure in keybindings).
+
+## Screen Sharing
+
+Share your screen during a call:
+
+1. Join or start a call
+2. Click the screen share icon
+3. Select which screen or window to share
+
+**Stop sharing:** Click the screen share icon again
+
+Collaborators see your screen in a separate view within Zed.
+
+## Notifications
+
+Stay informed about collaboration activity:
+
+- **Contact requests** - When someone wants to connect
+- **Call invitations** - When someone calls you
+- **Project shares** - When a project is shared in a channel
+- **Mentions** - When someone @mentions you in channel notes
+
+Notifications appear in the Notifications Panel (bell icon in status bar).
+
+## Collaboration Settings
+
+### Panel Position
+
+Move the Collaboration Panel to a different dock:
+
+```json
+{
+  "collaboration_panel": {
+    "dock": "right"
+  }
+}
+```
+
+Options: `"left"` (default), `"right"`, `"bottom"`
+
+### Show Collaborator Cursors
+
+Toggle visibility of other users' cursors:
+
+```json
+{
+  "show_collaborator_cursors": true
+}
+```
+
+### Collaboration Panel Button
+
+Hide the collaboration button in the status bar:
+
+```json
+{
+  "collaboration_panel": {
+    "button": false
+  }
+}
+```
+
+## AI Features in Collaboration
+
+Zed's AI features work in collaborative sessions:
+
+- **Agent Panel** - Run agents while collaborating (results visible to all)
+- **Inline Assistant** - Use AI suggestions in shared files
+- **Chat** - AI chat is local only (not shared)
+
+See [AI Features](https://zed.dev/docs/ai/overview) for details.
+
+## Privacy and Security
+
+### What Gets Shared
+
+When you share a project, collaborators can:
+
+- View and edit files in the project
+- See your file structure
+- Access terminal output (read-only)
+- See your unsaved changes
+
+### What Doesn't Get Shared
+
+- Files outside the shared project
+- Your terminal input
+- Your local settings
+- Your keyboard shortcuts
+- Other open projects
+
+### Ending Collaboration
+
+Stop sharing at any time:
+
+- **Unshare project** - Click "Unshare" in the panel
+- **Leave channel** - Click "Leave" next to the channel name
+- **End call** - Click "Leave Call"
+
+<Warning>
+Always verify who you're sharing with before sharing sensitive projects. Review the [Data and Privacy FAQs](https://zed.dev/faq#data-and-privacy) for detailed information.
+</Warning>
+
+## Room ID Sharing
+
+Share your current room/call ID for debugging or support:
+
+**Command:** Command Palette → "Copy Room ID"
+
+This copies a LiveKit room ID to your clipboard.
+
+## Troubleshooting
+
+### Connection Issues
+
+If you can't connect to a call or channel:
+
+1. Check your internet connection
+2. Verify you're signed in to Zed
+3. Try leaving and rejoining the channel
+4. Check the #collaboration-feedback channel in [Zed Discord](https://zed.dev/community-links)
+
+### Audio Problems
+
+If voice chat isn't working:
+
+1. Check your audio device settings
+2. Test audio in Settings → Collaboration → Test Audio
+3. Verify microphone permissions (System Settings on macOS)
+4. Try a different audio device
+
+### Sync Issues
+
+If edits aren't syncing:
+
+1. Check the connection indicator in the status bar
+2. Try reopening the project
+3. Ensure all participants have stable internet
+
+## See Also
+
+- [Authentication](https://zed.dev/docs/authentication) - Sign in to use collaboration
+- [Channels Documentation](https://zed.dev/docs/collaboration/channels) - Detailed channel features
+- [Privacy FAQs](https://zed.dev/faq#data-and-privacy) - What data is shared
+- [Zed Community](https://zed.dev/community-links) - Get help and feedback

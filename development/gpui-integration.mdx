@@ -1,0 +1,716 @@
+---
+title: GPUI Integration
+description: How Zed integrates with the GPUI UI framework
+---
+
+GPUI is Zed's custom GPU-accelerated UI framework that provides state
+management, rendering, and event handling. Understanding GPUI is essential for
+Zed development.
+
+## Overview
+
+GPUI is a declarative UI framework with:
+
+- **Entity system**: Type-safe state containers managed by the framework
+- **Element trees**: Declarative UI built with flexbox layout
+- **Actions**: Type-safe keyboard command system
+- **Async runtime**: Foreground and background task execution
+- **Platform abstraction**: Cross-platform windowing and input
+
+All Zed UI is built using GPUI primitives.
+
+## State Management
+
+### Context Types
+
+GPUI provides several context types for different scenarios:
+
+#### App Context
+
+**`App`** - Root context with access to all application state
+
+```rust
+fn do_something(cx: &mut App) {
+    // Access to entities, globals, windows
+}
+```
+
+- Not `Send` - must run on main thread
+- Provides entity read/update methods
+- Manages window creation and destruction
+- Stores global state
+
+#### Entity Context
+
+**`Context<T>`** - Specialized context when updating an `Entity<T>`
+
+```rust
+impl MyView {
+    fn update(&mut self, cx: &mut Context<Self>) {
+        cx.notify(); // Notify observers of this entity
+        cx.emit(MyEvent); // Emit event
+    }
+}
+```
+
+- Dereferences to `&mut App`
+- Provides `self`-aware methods: `notify()`, `emit()`, `spawn()`
+- Used in update callbacks and `Render` trait
+
+#### Async Contexts
+
+**`AsyncApp`** - Owned context for async operations
+
+```rust
+cx.spawn(async move |mut cx| {
+    let result = async_operation().await;
+    cx.update(|cx| {
+        // Update app state
+    })?;
+    Ok(())
+})
+```
+
+**`AsyncWindowContext`** - Async context with window access
+
+- Used when spawning from `Window`-aware code
+- Provides window operations in async contexts
+
+### Entities
+
+**`Entity<T>`** - Strong reference to managed state
+
+Entities are GPUI's primary state management primitive:
+
+```rust
+// Create entity
+let entity = cx.new(|cx| MyState::new(cx));
+
+// Read entity
+entity.read(cx).some_field;
+entity.read_with(cx, |state, cx| {
+    state.compute_value(cx)
+});
+
+// Update entity
+entity.update(cx, |state, cx| {
+    state.some_field = new_value;
+    cx.notify();
+});
+```
+
+Key methods:
+
+- `read(cx: &App) -> &T`: Borrow state immutably
+- `update(cx: &mut App, f: impl FnOnce(&mut T, &mut Context<T>)) -> R`: Mutate
+  state
+- `entity_id() -> EntityId`: Get unique identifier
+- `downgrade() -> WeakEntity<T>`: Get weak reference
+
+#### Weak References
+
+**`WeakEntity<T>`** - Weak reference that may become invalid
+
+```rust
+let weak = entity.downgrade();
+
+// Later, may fail if entity was dropped
+weak.update(cx, |state, cx| {
+    // ...
+})?; // Returns Result
+```
+
+Useful for:
+
+- Avoiding reference cycles
+- Storing references in long-lived structures
+- Async tasks that outlive entities
+
+### Globals
+
+**Global State** - Singleton values stored in `App`
+
+```rust
+// Define global
+struct AppSettings {
+    theme: Theme,
+}
+
+impl Global for AppSettings {}
+
+// Set global
+cx.set_global(AppSettings { theme });
+
+// Read global
+let settings = cx.global::<AppSettings>();
+
+// Update global
+cx.update_global::<AppSettings, _>(|settings, cx| {
+    settings.theme = new_theme;
+});
+```
+
+Globals are used for:
+
+- Settings
+- Language registry
+- Theme registry
+- Feature flags
+
+### Observation and Subscription
+
+#### Observing Entities
+
+```rust
+// Get notified when entity changes
+let subscription = cx.observe(&entity, |this, entity, cx| {
+    // Called when entity.update() calls cx.notify()
+    this.handle_change(entity, cx);
+});
+```
+
+Store `subscription` to keep callback alive. Drop to unsubscribe.
+
+#### Subscribing to Events
+
+```rust
+// Define event
+struct MyEvent(String);
+impl EventEmitter<MyEvent> for MyEntity {}
+
+// Subscribe
+let subscription = cx.subscribe(&entity, |this, entity, event: &MyEvent, cx| {
+    println!("Event: {}", event.0);
+});
+
+// Emit event (from entity update)
+entity.update(cx, |state, cx| {
+    cx.emit(MyEvent("hello".to_string()));
+});
+```
+
+#### Observing Globals
+
+```rust
+cx.observe_global::<SettingsStore>(move |cx| {
+    // Called when settings change
+    cx.notify();
+});
+```
+
+## Rendering
+
+### The Render Trait
+
+**`Render`** - Trait for entities that produce UI
+
+```rust
+struct MyView {
+    count: usize,
+}
+
+impl Render for MyView {
+    fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        div()
+            .flex()
+            .gap_2()
+            .child(format!("Count: {}", self.count))
+            .child(
+                Button::new("increment")
+                    .on_click(cx.listener(|this, _event, window, cx| {
+                        this.count += 1;
+                        cx.notify();
+                    }))
+            )
+    }
+}
+```
+
+The `render` method:
+
+- Called when entity needs to be displayed
+- Receives `&mut Window` for window operations
+- Receives `&mut Context<Self>` for entity-specific operations
+- Returns an element tree
+
+### Elements
+
+Elements are the building blocks of UI:
+
+#### Container Elements
+
+```rust
+// Div - flexbox container
+div()
+    .flex()
+    .flex_col()
+    .gap_2()
+    .p_4()
+    .child(/* ... */)
+
+// Conditional children
+div()
+    .when(condition, |this| this.child(/* ... */))
+    .when_some(option, |this, value| this.child(value))
+```
+
+#### Text Elements
+
+```rust
+// String literals and SharedString implement IntoElement
+"Hello, world!"
+
+// Or explicitly
+Label::new("Some text")
+```
+
+#### Component Elements
+
+Zed provides reusable components in `crates/ui/`:
+
+```rust
+Button::new("my-button")
+    .label("Click me")
+    .on_click(|event, window, cx| { /* ... */ })
+
+Checkbox::new("my-checkbox")
+    .checked(self.is_checked)
+    .on_click(cx.listener(|this, _event, window, cx| {
+        this.is_checked = !this.is_checked;
+    }))
+```
+
+### Styling
+
+GPUI uses Tailwind-inspired styling:
+
+```rust
+div()
+    // Layout
+    .flex()
+    .flex_col()
+    .justify_center()
+    .items_center()
+    .gap_4()
+    // Sizing
+    .w_full()
+    .h(px(200.))
+    // Spacing
+    .p_4()
+    .m_2()
+    // Colors
+    .bg(theme.surface)
+    .text_color(theme.text)
+    // Borders
+    .border_1()
+    .border_color(theme.border)
+    .rounded_md()
+```
+
+Styling methods return `Self` for chaining.
+
+### RenderOnce
+
+For components that don't need entity state:
+
+```rust
+#[derive(IntoElement)]
+struct MyComponent {
+    label: SharedString,
+}
+
+impl RenderOnce for MyComponent {
+    fn render(self, window: &mut Window, cx: &mut App) -> impl IntoElement {
+        div().child(self.label)
+    }
+}
+
+// Use in element tree
+div().child(MyComponent { label: "Hello".into() })
+```
+
+## Event Handling
+
+### Input Events
+
+Handle mouse and keyboard events on elements:
+
+```rust
+div()
+    .on_click(|event, window, cx| {
+        println!("Clicked at {:?}", event.position);
+    })
+    .on_mouse_down(MouseButton::Left, |event, window, cx| {
+        // Handle mouse down
+    })
+    .on_mouse_move(|event, window, cx| {
+        // Handle mouse move
+    })
+```
+
+### Actions
+
+Actions are type-safe keyboard commands:
+
+#### Defining Actions
+
+```rust
+// No-data actions
+actions!(editor, [Undo, Redo, SelectAll]);
+
+// Actions with data
+#[derive(Clone, Debug, PartialEq, Deserialize)]
+pub struct MoveRight {
+    pub(crate) select: bool,
+}
+
+impl_actions!(editor, [MoveRight]);
+```
+
+#### Handling Actions
+
+```rust
+impl MyView {
+    fn register_actions(cx: &mut Context<Self>) {
+        cx.on_action(|this, action: &Undo, window, cx| {
+            this.undo(window, cx);
+        });
+    }
+}
+
+// In element tree
+div().on_action(cx.listener(|this, action: &MyAction, window, cx| {
+    this.handle_action(action, window, cx);
+}))
+```
+
+#### Dispatching Actions
+
+```rust
+// Dispatch to focused element
+window.dispatch_action(MyAction.boxed_clone(), cx);
+
+// Dispatch to specific focus handle
+focus_handle.dispatch_action(&MyAction, window, cx);
+```
+
+### Focus
+
+Focus determines where keyboard input is handled:
+
+```rust
+// Create focus handle
+let focus_handle = cx.focus_handle();
+
+// Make element focusable
+div()
+    .track_focus(&focus_handle)
+    .on_action(cx.listener(|this, action: &MyAction, window, cx| {
+        // Only called when this element is focused
+    }))
+
+// Focus element
+focus_handle.focus(window);
+
+// Check focus
+if focus_handle.is_focused(cx) {
+    // ...
+}
+```
+
+## Async Operations
+
+### Spawning Tasks
+
+GPUI provides foreground and background executors:
+
+#### Foreground Tasks
+
+```rust
+// From &mut App
+let task = cx.spawn(async move |mut cx| {
+    let result = fetch_data().await;
+    cx.update(|cx| {
+        // Update app state on main thread
+    })?;
+    Ok(result)
+});
+
+// From &mut Context<T>
+let task = cx.spawn(async move |this, mut cx| {
+    let result = fetch_data().await;
+    this.update(&mut cx, |this, cx| {
+        this.data = result;
+        cx.notify();
+    })?;
+    Ok(())
+});
+```
+
+#### Background Tasks
+
+```rust
+let task = cx.background_executor().spawn(async move {
+    // CPU-intensive work on background thread
+    expensive_computation()
+});
+
+// Await in foreground task
+cx.spawn(async move |mut cx| {
+    let result = task.await;
+    cx.update(|cx| {
+        // Use result
+    })?;
+})
+```
+
+### Task Lifecycle
+
+**`Task<R>`** - A future that starts immediately
+
+```rust
+// Task starts when created (unlike futures)
+let task = cx.spawn(async { /* ... */ });
+
+// Await to get result
+let result = task.await;
+
+// Detach to run without awaiting
+task.detach();
+
+// Or log errors
+task.detach_and_log_err(cx);
+
+// Store task to cancel on drop
+struct MyView {
+    task: Option<Task<()>>,
+}
+```
+
+If a task is dropped before completion, it is cancelled.
+
+### Testing with Executors
+
+In tests, control executor timing:
+
+```rust
+#[gpui::test]
+fn test_async(cx: &mut TestAppContext) {
+    // Run until no more work scheduled
+    cx.run_until_parked();
+
+    // Advance fake clock
+    cx.background_executor.advance_clock(Duration::from_secs(1));
+
+    // Run for specific duration
+    cx.executor().run_until_parked();
+}
+```
+
+## Window Management
+
+### Creating Windows
+
+```rust
+let window = cx.open_window(
+    WindowOptions::default(),
+    |window, cx| {
+        cx.new(|cx| MyView::new(cx))
+    },
+);
+```
+
+### Window Operations
+
+From `&mut Window`:
+
+```rust
+// Activate/minimize
+window.activate();
+window.minimize();
+
+// Bounds and position
+window.bounds();
+window.set_bounds(bounds);
+
+// Title
+window.set_title("My Window");
+
+// Close
+window.remove();
+```
+
+### Window Context
+
+Some operations require both `Window` and `App`:
+
+```rust
+fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+    // Use window for window-specific operations
+    let bounds = window.bounds();
+
+    // Use cx for entity operations
+    cx.notify();
+
+    div()
+}
+```
+
+## Platform Abstraction
+
+GPUI abstracts platform differences:
+
+### Platform Crates
+
+- **gpui_platform**: Platform trait definitions
+- **gpui_macos**: macOS implementation
+- **gpui_linux**: Linux (Wayland/X11) implementation
+- **gpui_windows**: Windows implementation
+- **gpui_web**: WebAssembly implementation
+
+### Platform-Specific Code
+
+```rust
+#[cfg(target_os = "macos")]
+fn setup_platform(cx: &mut App) {
+    // macOS-specific setup
+}
+
+#[cfg(target_os = "linux")]
+fn setup_platform(cx: &mut App) {
+    // Linux-specific setup
+}
+```
+
+### WGPU Rendering
+
+**gpui_wgpu** provides GPU rendering:
+
+- Cross-platform GPU access via `wgpu`
+- Shader compilation for text and UI
+- Texture atlasing for efficient rendering
+- Metal backend on macOS
+- DirectX 12 on Windows
+- Vulkan on Linux
+
+## Performance Considerations
+
+### Minimize Entity Updates
+
+Only call `cx.notify()` when visual state changes:
+
+```rust
+entity.update(cx, |state, cx| {
+    if state.value != new_value {
+        state.value = new_value;
+        cx.notify(); // Only notify if changed
+    }
+});
+```
+
+### Batch Updates
+
+Combine multiple updates into one:
+
+```rust
+// Bad: Multiple updates
+for item in items {
+    entity.update(cx, |state, cx| {
+        state.add_item(item);
+        cx.notify();
+    });
+}
+
+// Good: Single update
+entity.update(cx, |state, cx| {
+    for item in items {
+        state.add_item(item);
+    }
+    cx.notify();
+});
+```
+
+### Use Background Executor
+
+Move expensive work off main thread:
+
+```rust
+cx.spawn(async move |mut cx| {
+    // Background work
+    let result = cx.background_executor().spawn(async move {
+        expensive_computation()
+    }).await;
+
+    // Update UI on main thread
+    cx.update(|cx| {
+        // Use result
+    })?;
+})
+```
+
+### Avoid Nested Entity Updates
+
+Do not update entity A while updating entity B:
+
+```rust
+// Bad: Nested update panics
+entity_a.update(cx, |a, cx| {
+    entity_a.update(cx, |a, cx| { // PANIC!
+        // ...
+    });
+});
+
+// Good: Update separately
+entity_a.update(cx, |a, cx| {
+    // ...
+});
+entity_a.update(cx, |a, cx| {
+    // ...
+});
+```
+
+## Testing
+
+### Test Contexts
+
+GPUI provides test contexts:
+
+```rust
+#[gpui::test]
+fn test_my_view(cx: &mut TestAppContext) {
+    let view = cx.update(|cx| {
+        cx.new(|cx| MyView::new(cx))
+    });
+
+    view.update(cx, |view, cx| {
+        view.do_something(cx);
+    });
+
+    cx.run_until_parked();
+
+    view.read(cx).assert_state();
+}
+```
+
+### Visual Tests
+
+For UI testing:
+
+```rust
+#[gpui::test]
+fn test_ui(cx: &mut TestAppContext) {
+    let window = cx.open_window(WindowOptions::default(), |window, cx| {
+        cx.new(|cx| MyView::new(cx))
+    });
+
+    window.root(cx).update(cx, |view, cx| {
+        view.render(window, cx);
+    });
+}
+```
+
+## See Also
+
+- [Key Subsystems](./key-subsystems.mdx): How subsystems use GPUI
+- [Development Glossary](./glossary.mdx): GPUI term definitions
+- [GPUI Documentation](https://gpui.rs): Official GPUI docs

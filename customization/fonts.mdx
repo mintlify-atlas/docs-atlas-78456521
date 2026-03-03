@@ -1,0 +1,293 @@
+---
+title: Font Configuration
+description: Configure fonts, sizes, weights, and ligatures for the editor, UI, and terminal in Zed.
+---
+
+Zed provides comprehensive font customization options for different contexts in the editor. You can configure fonts for the code editor, user interface, terminal, and AI agent panel independently.
+
+## Font Settings Overview
+
+Zed uses three primary font settings for different contexts:
+
+| Setting | Used for | Default |
+| --- | --- | --- |
+| `buffer_font_family` | Editor text | `.ZedMono` (Lilex) |
+| `ui_font_family` | Interface elements | `.ZedSans` (IBM Plex Sans) |
+| `terminal.font_family` | Terminal | Inherits from buffer font |
+
+## Buffer Font (Editor)
+
+The buffer font is used for all code editing areas in Zed.
+
+<CodeGroup>
+
+```json Settings
+{
+  "buffer_font_family": "JetBrains Mono",
+  "buffer_font_size": 15,
+  "buffer_font_weight": 400,
+  "buffer_line_height": "comfortable"
+}
+```
+
+</CodeGroup>
+
+### Buffer Font Options
+
+- **buffer_font_family** - Font name for editor buffers. Use `.ZedMono` for the bundled default monospace font (currently Lilex).
+- **buffer_font_size** - Font size for editor buffers (default: 15)
+- **buffer_font_weight** - Font weight in CSS units from 100 to 900 (default: 400)
+- **buffer_font_fallbacks** - Set the buffer text's font fallbacks, merged with platform defaults
+- **buffer_line_height** - Line spacing for editor text
+
+### Line Height Options
+
+The `buffer_line_height` setting controls vertical spacing between lines:
+
+- `"comfortable"` — 1.618 ratio (default, golden ratio)
+- `"standard"` — 1.3 ratio
+- `{ "custom": 1.5 }` — Custom ratio value
+
+<CodeGroup>
+
+```json Settings
+{
+  "buffer_line_height": "comfortable"
+}
+```
+
+```json Custom Line Height
+{
+  "buffer_line_height": {
+    "custom": 1.5
+  }
+}
+```
+
+</CodeGroup>
+
+## UI Font (Interface)
+
+The UI font is used for all interface elements including panels, menus, and dialogs.
+
+<CodeGroup>
+
+```json Settings
+{
+  "ui_font_family": ".SystemUIFont",
+  "ui_font_size": 16,
+  "ui_font_weight": 400
+}
+```
+
+</CodeGroup>
+
+### UI Font Options
+
+- **ui_font_family** - Font name for UI elements. Use `.SystemUIFont` for the system default (SF Pro on macOS), or `.ZedSans` for the bundled default (IBM Plex Sans).
+- **ui_font_size** - Font size for UI elements (default: 16)
+- **ui_font_weight** - Font weight in CSS units from 100 to 900 (default: 400)
+- **ui_font_fallbacks** - Set the UI's font fallbacks, merged with platform defaults
+
+## Terminal Font
+
+The terminal uses its own font configuration, which allows you to use a different font than your editor if desired.
+
+<CodeGroup>
+
+```json Settings
+{
+  "terminal": {
+    "font_family": "Fira Code",
+    "font_size": 15,
+    "font_weight": 400,
+    "line_height": "standard"
+  }
+}
+```
+
+</CodeGroup>
+
+### Terminal Font Options
+
+- **terminal.font_family** - Font name for terminal (empty string inherits from buffer font)
+- **terminal.font_size** - Font size for terminal text (default: 15)
+- **terminal.font_weight** - Font weight in CSS units from 100 to 900
+- **terminal.line_height** - Line spacing: `"comfortable"` (1.618), `"standard"` (1.3), or `{ "custom": 2 }`
+
+## Agent Panel Font
+
+Customize font sizes for the AI agent panel independently from other UI elements.
+
+<CodeGroup>
+
+```json Settings
+{
+  "agent_ui_font_size": 15,
+  "agent_buffer_font_size": 12
+}
+```
+
+</CodeGroup>
+
+- **agent_ui_font_size** - Font size for agent responses (falls back to UI font size if not specified)
+- **agent_buffer_font_size** - Font size for the agent panel's message editor and code snippets (default: 12)
+
+## Font Ligatures
+
+By default, Zed enables font ligatures which visually combine certain adjacent characters. For example, `=>` will be displayed as a single arrow glyph and `!=` will appear as a not-equal symbol.
+
+<Info>
+This is purely cosmetic - the individual characters remain unchanged in the file.
+</Info>
+
+### Disabling Ligatures
+
+To disable ligatures for the buffer font:
+
+<CodeGroup>
+
+```json Settings
+{
+  "buffer_font_features": {
+    "calt": false
+  }
+}
+```
+
+</CodeGroup>
+
+To disable ligatures for the UI font:
+
+<CodeGroup>
+
+```json Settings
+{
+  "ui_font_features": {
+    "calt": false
+  }
+}
+```
+
+</CodeGroup>
+
+## Font Features
+
+Both `buffer_font_features` and `ui_font_features` support OpenType font features. These are advanced typography options that depend on the specific font you're using.
+
+Common OpenType features include:
+
+- `calt` - Contextual alternates (ligatures)
+- `liga` - Standard ligatures
+- `dlig` - Discretionary ligatures
+- `ss01`, `ss02`, etc. - Stylistic sets
+- `zero` - Slashed zero
+
+<CodeGroup>
+
+```json Settings
+{
+  "buffer_font_features": {
+    "calt": false,
+    "ss01": true,
+    "zero": true
+  }
+}
+```
+
+</CodeGroup>
+
+<Note>
+Check your font's documentation to see which OpenType features are supported.
+</Note>
+
+## Example Font Configurations
+
+### Developer-Friendly Setup
+
+<CodeGroup>
+
+```json Settings
+{
+  "buffer_font_family": "JetBrains Mono",
+  "buffer_font_size": 14,
+  "buffer_line_height": "comfortable",
+  "ui_font_family": "Inter",
+  "ui_font_size": 16,
+  "terminal": {
+    "font_family": "JetBrains Mono",
+    "font_size": 14,
+    "line_height": "standard"
+  }
+}
+```
+
+</CodeGroup>
+
+### Compact Setup
+
+<CodeGroup>
+
+```json Settings
+{
+  "buffer_font_family": "Fira Code",
+  "buffer_font_size": 13,
+  "buffer_line_height": "standard",
+  "ui_font_family": ".SystemUIFont",
+  "ui_font_size": 14,
+  "terminal": {
+    "font_family": "Fira Code",
+    "font_size": 13,
+    "line_height": "standard"
+  }
+}
+```
+
+</CodeGroup>
+
+### System Font Setup
+
+<CodeGroup>
+
+```json Settings
+{
+  "buffer_font_family": ".ZedMono",
+  "buffer_font_size": 15,
+  "ui_font_family": ".SystemUIFont",
+  "ui_font_size": 16,
+  "terminal": {
+    "font_family": "",
+    "font_size": 15
+  }
+}
+```
+
+</CodeGroup>
+
+## Finding Installed Fonts
+
+To see which fonts are available on your system:
+
+- **macOS**: Open Font Book application
+- **Windows**: Settings > Personalization > Fonts
+- **Linux**: Use `fc-list` command in terminal
+
+When specifying a font family in Zed, use the exact font name as it appears in your system.
+
+## Best Practices
+
+<Tip>
+**Use monospace fonts for code** - The buffer and terminal should use monospace fonts to ensure proper alignment of code.
+</Tip>
+
+<Tip>
+**Match terminal to editor** - Using the same font and size for both the editor and terminal creates a consistent experience.
+</Tip>
+
+<Tip>
+**Test ligatures** - Some developers prefer ligatures for readability, while others find them distracting. Try both settings to see what works best for you.
+</Tip>
+
+<Tip>
+**Adjust for screen density** - If you have a high-DPI display, you might want to increase font sizes. If you have a lower resolution display, smaller sizes may be more comfortable.
+</Tip>

@@ -1,0 +1,404 @@
+---
+title: Configuring Languages
+description: Configure language support in Zed with Tree-sitter for syntax highlighting and LSP for diagnostics, completion, and formatting
+---
+
+# Configuring Supported Languages
+
+Zed's language support is built on two technologies:
+
+1. **Tree-sitter** handles syntax highlighting and structure-based features like the outline panel
+2. **Language Server Protocol (LSP)** provides semantic features: code completion, diagnostics, go-to-definition, and refactoring
+
+This page covers language-specific settings, file associations, language server configuration, formatting, linting, and syntax highlighting.
+
+## Language-Specific Settings
+
+Zed allows you to override global settings for individual languages. These custom configurations are defined in your `settings.json` file under the `languages` key.
+
+<CodeGroup>
+```json settings.json
+{
+  "languages": {
+    "Python": {
+      "tab_size": 4,
+      "formatter": "language_server",
+      "format_on_save": "on"
+    },
+    "JavaScript": {
+      "tab_size": 2,
+      "formatter": {
+        "external": {
+          "command": "prettier",
+          "arguments": ["--stdin-filepath", "{buffer_path}"]
+        }
+      }
+    }
+  }
+}
+```
+</CodeGroup>
+
+You can customize a wide range of settings for each language:
+
+- `tab_size` - The number of spaces for each indentation level
+- `formatter` - The tool used for code formatting
+- `format_on_save` - Whether to automatically format code when saving
+- `enable_language_server` - Toggle language server support
+- `hard_tabs` - Use tabs instead of spaces for indentation
+- `preferred_line_length` - The recommended maximum line length
+- `soft_wrap` - How to wrap long lines of code
+- `show_completions_on_input` - Whether to show completions as you type
+- `show_completion_documentation` - Whether to display inline and alongside documentation for items in the completions menu
+- `colorize_brackets` - Whether to use tree-sitter bracket queries to detect and colorize brackets (rainbow brackets)
+
+## File Associations
+
+Zed automatically detects file types based on their extensions, but you can customize these associations to fit your workflow.
+
+To set up custom file associations, use the `file_types` setting in your `settings.json`:
+
+<CodeGroup>
+```json settings.json
+{
+  "file_types": {
+    "C++": ["c"],
+    "TOML": ["MyLockFile"],
+    "Dockerfile": ["Dockerfile*"]
+  }
+}
+```
+</CodeGroup>
+
+This configuration tells Zed to:
+
+- Treat `.c` files as C++ instead of C
+- Recognize files named "MyLockFile" as TOML
+- Apply Dockerfile syntax to any file starting with "Dockerfile"
+
+You can use glob patterns for more flexible matching, allowing you to handle complex naming conventions in your projects.
+
+## Working with Language Servers
+
+Language servers are a crucial part of Zed's intelligent coding features, providing capabilities like auto-completion, go-to-definition, and real-time error checking.
+
+### What are Language Servers?
+
+Language servers implement the Language Server Protocol (LSP), which standardizes communication between the editor and language-specific tools. This allows Zed to support advanced features for multiple programming languages without implementing each feature separately.
+
+Some key features provided by language servers include:
+
+- Code completion
+- Error checking and diagnostics
+- Code navigation (go to definition, find references)
+- Code actions (rename, extract method)
+- Hover information
+- Workspace symbol search
+
+### Managing Language Servers
+
+Zed simplifies language server management for users:
+
+<Steps>
+  <Step title="Automatic Download">
+    When you open a file with a matching file type, Zed automatically downloads the appropriate language server. Zed may prompt you to install an extension for known file types.
+  </Step>
+  
+  <Step title="Storage Location">
+    Language servers are stored in:
+    - **macOS**: `~/Library/Application Support/Zed/languages`
+    - **Linux**: `$XDG_DATA_HOME/zed/languages`, `$FLATPAK_XDG_DATA_HOME/zed/languages`, or `$HOME/.local/share/zed/languages`
+  </Step>
+  
+  <Step title="Automatic Updates">
+    Zed keeps your language servers up-to-date, ensuring you always have the latest features and improvements.
+  </Step>
+</Steps>
+
+### Choosing Language Servers
+
+Some languages in Zed offer multiple language server options. You might have multiple extensions installed that bundle language servers targeting the same language, potentially leading to overlapping capabilities.
+
+You can specify your preference using the `language_servers` setting:
+
+<CodeGroup>
+```json settings.json
+{
+  "languages": {
+    "PHP": {
+      "language_servers": ["intelephense", "!phpactor", "!phptools", "..."]
+    }
+  }
+}
+```
+</CodeGroup>
+
+In this example:
+
+- `intelephense` is set as the primary language server
+- `phpactor` is disabled (note the `!` prefix)
+- `...` expands to the rest of the language servers registered for PHP
+
+### Configuring Language Servers
+
+<Warning>
+Changed in Preview (v0.225). See [release notes](https://zed.dev/releases#0.225).
+</Warning>
+
+When configuring language servers in your `settings.json`, autocomplete suggestions include all available LSP adapters recognized by Zed, not only those currently active for loaded languages.
+
+Many language servers accept custom configuration options. You can set these in the `lsp` section of your `settings.json`:
+
+<CodeGroup>
+```json settings.json
+{
+  "lsp": {
+    "rust-analyzer": {
+      "initialization_options": {
+        "check": {
+          "command": "clippy"
+        }
+      }
+    }
+  }
+}
+```
+</CodeGroup>
+
+This example configures Rust Analyzer to use Clippy for additional linting when saving files.
+
+#### Nested Objects
+
+When configuring language server options in Zed, use nested objects rather than dot-delimited strings. Here's an example using the TypeScript language server:
+
+<CodeGroup>
+```json settings.json
+{
+  "lsp": {
+    "typescript-language-server": {
+      "initialization_options": {
+        "preferences": {
+          "strictNullChecks": true,
+          "target": "ES2020"
+        }
+      }
+    }
+  }
+}
+```
+</CodeGroup>
+
+<Note>
+Do not use VSCode's dotted style like `"preferences.strictNullChecks"`. Use nested objects instead.
+</Note>
+
+#### Configuration Options
+
+Depending on how a language server is implemented, it may depend on different configuration options:
+
+**initializationOptions** - Sent once during language server startup, requires server restart to reapply changes. For example, rust-analyzer and clangd rely on this configuration method:
+
+<CodeGroup>
+```json settings.json
+{
+  "lsp": {
+    "rust-analyzer": {
+      "initialization_options": {
+        "checkOnSave": false
+      }
+    }
+  }
+}
+```
+</CodeGroup>
+
+**Configuration Request** - May be queried by the server multiple times. Most servers rely on this configuration method:
+
+<CodeGroup>
+```json settings.json
+{
+  "lsp": {
+    "tailwindcss-language-server": {
+      "settings": {
+        "tailwindCSS": {
+          "emmetCompletions": true
+        }
+      }
+    }
+  }
+}
+```
+</CodeGroup>
+
+**Binary Configuration** - Configure how the language server binary is launched:
+
+<CodeGroup>
+```json settings.json
+{
+  "lsp": {
+    "rust-analyzer": {
+      "binary": {
+        "ignore_system_version": false,
+        "path": "/path/to/langserver/bin",
+        "arguments": ["--option", "value"],
+        "env": {
+          "FOO": "BAR"
+        }
+      }
+    }
+  }
+}
+```
+</CodeGroup>
+
+### Enabling or Disabling Language Servers
+
+You can toggle language server support globally or per-language:
+
+<CodeGroup>
+```json settings.json
+{
+  "languages": {
+    "Markdown": {
+      "enable_language_server": false
+    }
+  }
+}
+```
+</CodeGroup>
+
+This disables the language server for Markdown files, which can be useful for performance in large documentation projects.
+
+## Formatting and Linting
+
+Zed provides support for code formatting and linting to maintain consistent code style and catch potential issues early.
+
+### Configuring Formatters
+
+Zed supports both built-in and external formatters. You can configure formatters globally or per-language in your `settings.json`:
+
+<CodeGroup>
+```json settings.json
+{
+  "languages": {
+    "JavaScript": {
+      "formatter": {
+        "external": {
+          "command": "prettier",
+          "arguments": ["--stdin-filepath", "{buffer_path}"]
+        }
+      },
+      "format_on_save": "on"
+    },
+    "Rust": {
+      "formatter": "language_server",
+      "format_on_save": "on"
+    }
+  }
+}
+```
+</CodeGroup>
+
+This example uses Prettier for JavaScript and the language server's formatter for Rust, both set to format on save.
+
+To disable formatting for a specific language:
+
+<CodeGroup>
+```json settings.json
+{
+  "languages": {
+    "Markdown": {
+      "format_on_save": "off"
+    }
+  }
+}
+```
+</CodeGroup>
+
+### Setting Up Linters
+
+Linting in Zed is typically handled by language servers. Many language servers allow you to configure linting rules:
+
+<CodeGroup>
+```json settings.json
+{
+  "lsp": {
+    "eslint": {
+      "settings": {
+        "codeActionOnSave": {
+          "rules": ["import/order"]
+        }
+      }
+    }
+  }
+}
+```
+</CodeGroup>
+
+To run linter fixes automatically on save:
+
+<CodeGroup>
+```json settings.json
+{
+  "languages": {
+    "JavaScript": {
+      "formatter": {
+        "code_action": "source.fixAll.eslint"
+      }
+    }
+  }
+}
+```
+</CodeGroup>
+
+### Integrating Formatting and Linting
+
+Zed allows you to run both formatting and linting on save:
+
+<CodeGroup>
+```json settings.json
+{
+  "languages": {
+    "JavaScript": {
+      "formatter": [
+        {
+          "code_action": "source.fixAll.eslint"
+        },
+        {
+          "external": {
+            "command": "prettier",
+            "arguments": ["--stdin-filepath", "{buffer_path}"]
+          }
+        }
+      ],
+      "format_on_save": "on"
+    }
+  }
+}
+```
+</CodeGroup>
+
+### Troubleshooting
+
+If you encounter issues with formatting or linting:
+
+1. Check Zed's log file for error messages (Command Palette: `zed: open log`)
+2. Ensure external tools (formatters, linters) are correctly installed and in your PATH
+3. Verify configurations in both Zed settings and language-specific config files (e.g., `.eslintrc`, `.prettierrc`)
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Toolchains" icon="wrench" href="/languages/toolchains">
+    Learn about toolchain management for languages like Python
+  </Card>
+  <Card title="Rust Configuration" icon="rust" href="/languages/rust">
+    Detailed Rust-specific configuration options
+  </Card>
+  <Card title="TypeScript Setup" icon="code" href="/languages/typescript">
+    TypeScript and JavaScript configuration guide
+  </Card>
+  <Card title="Python Setup" icon="python" href="/languages/python">
+    Complete Python configuration and setup
+  </Card>
+</CardGroup>

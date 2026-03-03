@@ -1,0 +1,505 @@
+---
+title: Text Threads
+description: Persistent AI conversations and context management in Zed
+---
+
+Text Threads are persistent conversations with AI models that can be saved, resumed, and shared. They provide a way to build context over multiple turns and maintain conversation history.
+
+## Overview
+
+A text thread is:
+
+- **Persistent**: Automatically saved to disk
+- **Resumable**: Can be closed and reopened
+- **Contextual**: Maintains full conversation history
+- **Shareable**: Can be exported and imported
+
+## Creating Text Threads
+
+### New Text Thread
+
+Create a new thread:
+
+```
+Cmd/Ctrl + Shift + A (open Agent Panel)
+Click "New Thread" → "Text Thread"
+```
+
+Or via command palette:
+
+```
+Cmd/Ctrl + Shift + P
+Type: "New Text Thread"
+```
+
+### Thread Types
+
+Zed supports different thread types:
+
+#### Native Agent Thread
+
+- Full tool access (files, terminal, etc.)
+- Deep project integration
+- Can spawn subagents
+
+#### Simple Text Thread
+
+- Pure conversation, no tools
+- Faster responses
+- Lower cost
+- Good for brainstorming and questions
+
+#### External Agent Thread
+
+- Connects to external agents via ACP
+- Supports Claude Code and custom agents
+- Provider-specific features
+
+[Learn more about external agents →](/ai/external-agents)
+
+## Thread Structure
+
+### Messages
+
+A thread consists of messages:
+
+```typescript
+interface Message {
+  id: MessageId;
+  role: "user" | "assistant";
+  content: Content[];
+  metadata: MessageMetadata;
+  status: MessageStatus;
+}
+```
+
+### Content Types
+
+Messages can contain multiple content types:
+
+- **Text**: Plain text content
+- **Code**: Code blocks with syntax highlighting
+- **Images**: Visual content (for vision models)
+- **Tool calls**: Function calls and results
+- **Thinking**: Model reasoning process
+
+### Message Status
+
+<ParamField path="pending" type="status">
+  Message is being composed or sent
+</ParamField>
+
+<ParamField path="streaming" type="status">
+  Response is being streamed from the model
+</ParamField>
+
+<ParamField path="completed" type="status">
+  Message is complete
+</ParamField>
+
+<ParamField path="error" type="status">
+  Message encountered an error
+</ParamField>
+
+## Thread Editor
+
+The thread editor provides:
+
+### Message Area
+
+Displays the conversation with:
+
+- User messages
+- Assistant responses
+- Tool calls and results
+- Thinking process (if enabled)
+- Inline images and attachments
+
+### Input Editor
+
+Compose messages with:
+
+- **Multi-line editing**: Shift+Enter for new lines
+- **Syntax highlighting**: Code blocks
+- **Mentions**: Reference files, symbols, URLs
+- **Slash commands**: Quick actions
+- **Image attachments**: Drag and drop
+
+### Header
+
+Thread controls:
+
+- Thread title
+- Model selector
+- Options menu
+- Share/export buttons
+
+## Adding Context
+
+### File Mentions
+
+Reference files in your message:
+
+```
+@src/main.rs
+@README.md
+@package.json
+```
+
+The file content is included in the context.
+
+### Symbol Mentions
+
+Reference specific symbols:
+
+```
+@MyComponent
+@handleClick function
+@User struct
+```
+
+### URL Mentions
+
+Include web content:
+
+```
+@https://docs.rs/tokio/latest/tokio/
+@https://github.com/user/repo/blob/main/src/file.rs
+```
+
+Zed fetches and includes the content.
+
+### Git Diff Mentions
+
+Reference git changes:
+
+```
+@git:diff:main
+@git:diff:HEAD~1
+@git:diff:feature-branch
+```
+
+Includes the diff in the context.
+
+### Slash Commands
+
+Use commands to add context:
+
+```
+/file src/main.rs
+/default
+```
+
+If you have MCP servers configured:
+
+```
+/weather San Francisco
+/database query SELECT * FROM users
+```
+
+[Learn more about MCP →](/ai/mcp)
+
+## Thread Management
+
+### Saving Threads
+
+Threads are automatically saved to:
+
+```
+~/.config/zed/agent_threads/{thread_id}.json
+```
+
+Includes:
+- Full message history
+- Tool call results
+- Metadata and timestamps
+- Model configuration
+
+### Thread History
+
+Access previous threads:
+
+1. Open Agent Panel
+2. Click thread selector
+3. Select "Show History"
+4. Browse and select a thread
+
+Threads are sorted by:
+- Recently updated
+- Creation date
+- Thread title
+
+### Exporting Threads
+
+Export a thread to share:
+
+**Copy to Clipboard**:
+```
+Options menu → Copy Thread to Clipboard
+```
+
+Formats:
+- Markdown (default)
+- JSON (full thread data)
+
+**Save to File**:
+```
+Options menu → Export Thread
+```
+
+### Importing Threads
+
+Import a thread:
+
+```
+Options menu → Load Thread from Clipboard
+```
+
+Supports:
+- Zed thread format (JSON)
+- Markdown conversations
+
+## Thread Features
+
+### Thinking Process
+
+For models that support extended thinking:
+
+```
+🧠 Thinking... (collapsed)
+```
+
+Click to expand and see the model's reasoning.
+
+Enable thinking:
+
+```json
+{
+  "agent": {
+    "default_model": {
+      "provider": "anthropic",
+      "model": "claude-3-5-sonnet-20241022",
+      "enable_thinking": true,
+      "effort": "medium"
+    }
+  }
+}
+```
+
+### Token Usage
+
+Track token consumption:
+
+- Input tokens (your messages + context)
+- Output tokens (model responses)
+- Cached tokens (if using prompt caching)
+- Total cost estimate
+
+View in thread footer or options menu.
+
+### Message Editing
+
+Edit previous messages:
+
+1. Click the edit icon on a message
+2. Modify the content
+3. Press Enter to regenerate from that point
+
+This creates a branch in the conversation.
+
+### Retry and Regenerate
+
+Regenerate the last response:
+
+```
+Click the retry button
+```
+
+Options:
+- Retry with same prompt
+- Retry with different model
+- Retry with different temperature
+
+### Split Thread
+
+Split a thread at any point:
+
+1. Place cursor in message editor
+2. Use the Split action
+3. Creates a new thread from that point forward
+
+Useful for exploring different directions.
+
+## Advanced Features
+
+### Thread Summarization
+
+As threads grow long, Zed can summarize:
+
+- Automatic summarization of old messages
+- Keeps recent messages in full
+- Uses a fast model for summaries
+
+Configure:
+
+```json
+{
+  "agent": {
+    "thread_summary_model": {
+      "provider": "anthropic",
+      "model": "claude-3-haiku-20240307"
+    }
+  }
+}
+```
+
+### Cache Status
+
+When using prompt caching:
+
+```
+[Cache: 75% hit rate]
+```
+
+Indicates how much context is being reused.
+
+### Slash Command Output
+
+Slash commands produce structured output:
+
+```
+📦 /file src/main.rs
+└─ src/main.rs (150 lines)
+
+<code content>
+```
+
+Can be collapsed/expanded.
+
+### Invoked Commands
+
+Track which commands were run:
+
+```
+✅ /file README.md (completed)
+⌛ /weather London (pending)
+❌ /database query (failed)
+```
+
+## Thread Search
+
+Search within a thread:
+
+```
+Cmd/Ctrl + F
+```
+
+Search features:
+- Case sensitive/insensitive
+- Regex support
+- Navigate results
+- Highlight all matches
+
+## Keyboard Shortcuts
+
+| Action | Shortcut (macOS) | Shortcut (Linux/Windows) |
+|--------|------------------|-------------------------|
+| Send message | `cmd-enter` | `ctrl-enter` |
+| New line | `shift-enter` | `shift-enter` |
+| Split thread | `cmd-shift-s` | `ctrl-shift-s` |
+| Edit message | `cmd-e` | `ctrl-e` |
+| Retry | `cmd-r` | `ctrl-r` |
+| Search | `cmd-f` | `ctrl-f` |
+| Toggle thinking | `cmd-t` | `ctrl-t` |
+
+## Best Practices
+
+### Build Context Incrementally
+
+Start broad, then narrow:
+
+1. **First**: "I'm building a REST API"
+2. **Then**: "Here's the schema" + mention files
+3. **Finally**: "Implement the user endpoint"
+
+### Use Mentions Effectively
+
+Don't include everything:
+
+❌ **Too much**: Mention every file in the project
+
+✅ **Just right**: Mention relevant files for the current task
+
+### Organize by Topic
+
+Create separate threads for:
+
+- Different features
+- Bug investigations
+- Learning and exploration
+- Code reviews
+
+### Clean Up Old Threads
+
+Periodically:
+
+- Export important threads
+- Delete completed threads
+- Archive reference threads
+
+### Review Before Sending
+
+Double-check your message:
+
+- Are mentions correct?
+- Is the question clear?
+- Have you provided enough context?
+
+## Troubleshooting
+
+### Thread Not Saving
+
+- Check disk space
+- Verify permissions on `~/.config/zed/`
+- Review logs for errors
+
+### Context Too Large
+
+- Start a new thread
+- Remove unnecessary mentions
+- Use summarization
+- Choose a model with larger context
+
+### Mentions Not Working
+
+- Ensure file exists in project
+- Check file is not ignored
+- Verify URL is accessible
+- Confirm git ref is valid
+
+### Slow Responses
+
+- Check internet connection
+- Verify API limits
+- Reduce context size
+- Use a faster model
+
+<Note>
+Text threads require an active AI provider configuration. See [Configuration](/ai/configuration) for setup details.
+</Note>
+
+## Implementation Details
+
+Text threads are implemented in:
+
+- **Core**: `assistant_text_thread/src/`
+- **Editor**: `agent_ui/src/text_thread_editor.rs`
+- **History**: `agent_ui/src/text_thread_history.rs`
+- **Storage**: `agent/src/db.rs` and `agent/src/thread_store.rs`
+
+Key types:
+
+- `TextThread`: Main thread state
+- `Message`: Individual message
+- `Content`: Message content types
+- `TextThreadEditor`: Editor UI component

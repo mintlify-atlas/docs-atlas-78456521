@@ -1,0 +1,251 @@
+---
+title: Extension Capabilities
+description: Security and capability restrictions for Zed extensions
+---
+
+## Overview
+
+Zed extensions run in a sandboxed WebAssembly environment with restricted capabilities. The capability system ensures extensions can only perform operations explicitly granted by users.
+
+## Capability Types
+
+Extensions require capabilities to:
+
+- **Execute processes** - Run external commands and language servers
+- **Download files** - Fetch resources from the internet
+- **Install packages** - Install npm packages for language servers
+
+## Default Capabilities
+
+By default, Zed grants extensions broad capabilities:
+
+```json
+{
+  "granted_extension_capabilities": [
+    { "kind": "process:exec", "command": "*", "args": ["**"] },
+    { "kind": "download_file", "host": "*", "path": ["**"] },
+    { "kind": "npm:install", "package": "*" }
+  ]
+}
+```
+
+This allows extensions to operate without manual approval for common operations.
+
+## Restricting Capabilities
+
+### Limiting File Downloads
+
+Restrict downloads to specific hosts:
+
+```json
+{
+  "granted_extension_capabilities": [
+    { "kind": "process:exec", "command": "*", "args": ["**"] },
+    { "kind": "download_file", "host": "github.com", "path": ["**"] },
+    { "kind": "npm:install", "package": "*" }
+  ]
+}
+```
+
+Restrict to specific repositories:
+
+```json
+{
+  "granted_extension_capabilities": [
+    {
+      "kind": "download_file",
+      "host": "github.com",
+      "path": ["zed-industries", "zed", "**"]
+    }
+  ]
+}
+```
+
+### Limiting Process Execution
+
+Allow specific commands only:
+
+```json
+{
+  "granted_extension_capabilities": [
+    { "kind": "process:exec", "command": "node", "args": ["**"] },
+    { "kind": "process:exec", "command": "python", "args": ["**"] }
+  ]
+}
+```
+
+### Limiting Package Installation
+
+Allow specific npm packages:
+
+```json
+{
+  "granted_extension_capabilities": [
+    { "kind": "npm:install", "package": "typescript" },
+    { "kind": "npm:install", "package": "typescript-language-server" }
+  ]
+}
+```
+
+## Disabling All Capabilities
+
+For maximum security, disable all extension capabilities:
+
+```json
+{
+  "granted_extension_capabilities": []
+}
+```
+
+<Warning>
+Disabling all capabilities will break most extensions. Language servers, debuggers, and other features that require external processes will not function.
+</Warning>
+
+## Capability Reference
+
+### process:exec
+
+Grants extensions the ability to execute commands using [`Command`](https://docs.rs/zed_extension_api/latest/zed_extension_api/process/struct.Command.html).
+
+**Fields:**
+
+- `kind` - Must be `"process:exec"`
+- `command` - Command name or `"*"` for all commands
+- `args` - Array of argument patterns
+
+**Examples:**
+
+<CodeGroup>
+```json Allow all commands
+{ "kind": "process:exec", "command": "*", "args": ["**"] }
+```
+
+```json Allow specific command
+{ "kind": "process:exec", "command": "gem", "args": ["**"] }
+```
+
+```json Restrict command arguments
+{
+  "kind": "process:exec",
+  "command": "cargo",
+  "args": ["build", "--release"]
+}
+```
+</CodeGroup>
+
+### download_file
+
+Grants extensions the ability to download files using [`download_file`](https://docs.rs/zed_extension_api/latest/zed_extension_api/fn.download_file.html).
+
+**Fields:**
+
+- `kind` - Must be `"download_file"`
+- `host` - Hostname or `"*"` for all hosts
+- `path` - Array of path segments
+
+**Examples:**
+
+<CodeGroup>
+```json Allow all downloads
+{ "kind": "download_file", "host": "*", "path": ["**"] }
+```
+
+```json Allow specific host
+{ "kind": "download_file", "host": "github.com", "path": ["**"] }
+```
+
+```json Restrict to repository
+{
+  "kind": "download_file",
+  "host": "github.com",
+  "path": ["zed-industries", "zed", "**"]
+}
+```
+
+```json Restrict to release assets
+{
+  "kind": "download_file",
+  "host": "github.com",
+  "path": ["user", "repo", "releases", "download", "**"]
+}
+```
+</CodeGroup>
+
+### npm:install
+
+Grants extensions the ability to install npm packages using [`npm_install_package`](https://docs.rs/zed_extension_api/latest/zed_extension_api/fn.npm_install_package.html).
+
+**Fields:**
+
+- `kind` - Must be `"npm:install"`
+- `package` - Package name or `"*"` for all packages
+
+**Examples:**
+
+<CodeGroup>
+```json Allow all packages
+{ "kind": "npm:install", "package": "*" }
+```
+
+```json Allow specific package
+{ "kind": "npm:install", "package": "typescript" }
+```
+</CodeGroup>
+
+## Capability Errors
+
+When an extension attempts an operation without sufficient capabilities, Zed returns an error. The extension may:
+
+- Display an error message to the user
+- Degrade functionality gracefully
+- Fail to initialize
+
+Check Zed's log (use the action `zed::OpenLog`) for capability-related errors.
+
+## Security Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Review Extensions" icon="shield">
+    Review extension source code before installation, especially for extensions with broad capabilities.
+  </Card>
+  
+  <Card title="Restrict Downloads" icon="download">
+    Limit `download_file` to trusted hosts like `github.com` or official package registries.
+  </Card>
+  
+  <Card title="Minimize Process Execution" icon="terminal">
+    Grant `process:exec` only for required commands, not wildcards.
+  </Card>
+  
+  <Card title="Monitor Extension Behavior" icon="eye">
+    Check logs regularly for unexpected capability usage.
+  </Card>
+</CardGroup>
+
+## Pattern Matching
+
+Capability patterns support:
+
+- `*` - Matches a single path segment or value
+- `**` - Matches multiple path segments (only valid in `path` and `args` arrays)
+
+**Examples:**
+
+- `["releases", "*", "asset.tar.gz"]` - Matches any version in the path
+- `["**", "*.tar.gz"]` - Matches any tarball at any depth
+- `["--flag", "**"]` - Matches `--flag` followed by any arguments
+
+## Extension Development
+
+When developing extensions, consider:
+
+1. **Document required capabilities** in your extension's README
+2. **Request minimal capabilities** needed for functionality
+3. **Handle capability errors gracefully** with user-friendly messages
+4. **Provide alternatives** when capabilities are restricted (e.g., manual installation instructions)
+
+## See Also
+
+- [Extension API Documentation](https://docs.rs/zed_extension_api) - Complete API reference
+- [Developing Extensions](/extensions/developing) - Create and publish extensions
+- [Extension Security](https://zed.dev/docs/extensions/developing-extensions#extension-license-requirements) - License and publishing requirements

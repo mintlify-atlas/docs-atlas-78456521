@@ -1,0 +1,424 @@
+---
+title: Key Subsystems
+description: Deep dive into Zed's core subsystems and their interactions
+---
+
+Zed is built on several key subsystems that work together to provide a fast,
+collaborative code editor. This guide explores the architecture of these
+subsystems and how they interact.
+
+## Editor Subsystem
+
+The editor subsystem handles all text editing functionality.
+
+### Core Components
+
+**Editor Entity** (`crates/editor/src/editor.rs`)
+
+- Main entity implementing `Render` trait
+- Manages cursor positions, selections, and scrolling
+- Handles keyboard and mouse input
+- Coordinates with `Buffer` and display layers
+
+**Buffer** (`crates/text/`)
+
+- In-memory representation of file content
+- Uses `Rope` data structure for efficient editing
+- Tracks git status and diagnostics
+- Maintains syntax trees via Tree-sitter
+
+**MultiBuffer** (`crates/multi_buffer/`)
+
+- Aggregates multiple buffers for features like search results
+- Used by project-wide search and go-to-definition
+- Each excerpt maintains connection to source buffer
+
+### Display Layers
+
+The editor uses multiple display layers:
+
+1. **Text Layer**: Raw buffer content
+2. **Fold Layer**: Code folding (collapsed regions)
+3. **Tab Layer**: Tab expansion and indentation
+4. **Wrap Layer**: Soft wrapping of long lines
+5. **Block Layer**: Inline elements (diagnostics, git blame)
+6. **Display Layer**: Final rendered view
+
+Each layer transforms coordinates and content from the previous layer.
+
+### Key Features
+
+<CardGroup cols={2}>
+  <Card title="Vim Mode" icon="keyboard">
+    Full vim emulation via `vim` crate
+  </Card>
+  <Card title="Snippets" icon="code">
+    Snippet expansion and tab stops via `snippet` crate
+  </Card>
+  <Card title="Breadcrumbs" icon="map-signs">
+    Symbol breadcrumbs via `breadcrumbs` crate
+  </Card>
+  <Card title="Diagnostics" icon="circle-exclamation">
+    Inline error display
+  </Card>
+</CardGroup>
+
+## Project Subsystem
+
+The project subsystem manages project-level state and operations.
+
+### Project Entity
+
+**crates/project/src/project.rs**
+
+The `Project` entity coordinates:
+
+- One or more `Worktree` instances (file trees)
+- Language servers (LSP clients)
+- Buffers (open files)
+- Tasks and terminal instances
+- Diagnostics and symbol indexes
+
+### Worktree
+
+**crates/worktree/**
+
+- Represents a directory tree (local or remote)
+- Watches for file system changes
+- Maintains snapshot of directory state
+- Handles git status per file
+
+Types:
+
+- **Local Worktree**: Direct file system access
+- **Remote Worktree**: Synchronized via RPC from remote server
+
+### Language Server Integration
+
+**crates/lsp/**
+
+The LSP client:
+
+- Launches and manages language server processes
+- Translates between Zed's types and LSP protocol
+- Handles capabilities negotiation
+- Manages request/response lifecycle
+- Provides async API for LSP requests
+
+### Symbol Index
+
+The project maintains a symbol index for:
+
+- Project-wide symbol search (`Cmd+T` for symbols)
+- Fuzzy matching of symbol names
+- Background indexing as files change
+
+## Workspace Subsystem
+
+The workspace is the root UI container for a Zed window.
+
+### Workspace Structure
+
+**crates/workspace/src/workspace.rs**
+
+```
+┌─────────────────────────────────────┐
+│           Title Bar                 │
+├──────┬────────────────────┬─────────┤
+│      │                    │         │
+│ Left │      Center        │  Right  │
+│ Dock │      (Panes)       │  Dock   │
+│      │                    │         │
+├──────┴────────────────────┴─────────┤
+│         Bottom Dock                 │
+└─────────────────────────────────────┘
+```
+
+### Components
+
+**Center** (`Workspace::center` field)
+
+- Contains one or more `Pane` instances
+- Supports split layouts (horizontal/vertical)
+- Each pane can contain multiple items (editors, terminals, etc.)
+
+**Pane** (`crates/workspace/src/pane.rs`)
+
+- Tab-based container for items
+- Manages active item and tab bar
+- Handles item lifecycle (open, close, save)
+- Supports drag-and-drop of tabs
+
+**Dock** (left, right, bottom)
+
+- Container for `Panel` implementations
+- Can be shown/hidden
+- Each dock can contain multiple panels
+- Examples: Project Panel, Terminal Panel, Diagnostics Panel
+
+**Panel Trait**
+
+```rust
+pub trait Panel: Entity + Render {
+    fn persistent_name() -> &'static str;
+    fn position(&self, cx: &App) -> DockPosition;
+    fn position_is_valid(&self, position: DockPosition) -> bool;
+    // ...
+}
+```
+
+Common panels:
+
+- `project_panel`: File tree
+- `terminal_view`: Integrated terminal
+- `diagnostics`: Error and warning list
+- `outline_panel`: Symbol outline
+- `agent_ui`: AI agent panel
+
+## RPC Subsystem
+
+The RPC subsystem enables collaboration and remote development.
+
+### Architecture
+
+**crates/rpc/**
+
+- Protocol-agnostic peer-to-peer communication
+- Built on WebSockets with message framing
+- Supports request-response and streaming
+- Type-safe message handling via `proto` crate
+
+**crates/proto/**
+
+- Protocol Buffer definitions in `proto/*.proto`
+- Generated Rust types via `prost`
+- Message envelope with routing information
+- Current protocol version: defined in `rpc/src/rpc.rs`
+
+### Message Flow
+
+```
+Client A ──> [Envelope] ──> Server ──> [Envelope] ──> Client B
+```
+
+Each envelope contains:
+
+- Unique message ID
+- Optional response ID (for replies)
+- Optional sender ID (for routing)
+- Typed payload (protobuf message)
+
+### Connection Types
+
+**Client ↔ Server** (`collab` crate)
+
+- Authentication and user management
+- Room creation and joining
+- Project sharing coordination
+
+**Client ↔ Client** (peer-to-peer)
+
+- Direct buffer synchronization
+- Cursor and selection sharing
+- File system operations on shared projects
+
+### Entity Synchronization
+
+For collaboration, entities are synchronized:
+
+1. **Upstream client** shares entity (e.g., Buffer)
+2. Server coordinates connection
+3. **Downstream client** creates remote entity
+4. Updates flow bidirectionally through server
+
+See [RPC Protocol](./rpc-protocol.mdx) for details.
+
+## Language Subsystem
+
+**crates/language/**
+
+Manages programming language support:
+
+### Language Definition
+
+```rust
+pub struct Language {
+    pub name: Arc<str>,
+    grammar: Option<Arc<Grammar>>,
+    config: LanguageConfig,
+    // ...
+}
+```
+
+Each language defines:
+
+- Tree-sitter grammar for syntax highlighting
+- LSP server configuration
+- Formatting rules (via Prettier or LSP)
+- Indentation and bracket matching rules
+- Comment syntax
+
+### Syntax Highlighting
+
+Using Tree-sitter:
+
+1. Parse buffer content into syntax tree
+2. Query tree for highlight captures
+3. Map captures to theme colors
+4. Incremental re-parsing on edits
+
+### Language Registry
+
+`LanguageRegistry` manages:
+
+- Available languages
+- File extension → language mapping
+- Lazy loading of grammars and configs
+- Extension-provided languages
+
+## GPUI Integration
+
+All UI in Zed is built on GPUI. See [GPUI Integration](./gpui-integration.mdx)
+for details on:
+
+- Entity system and state management
+- Rendering and element trees
+- Event handling and actions
+- Async tasks and background work
+
+## Settings Subsystem
+
+**crates/settings/**
+
+Settings are managed via:
+
+### Settings Types
+
+```rust
+pub trait Settings: 'static {
+    const KEY: Option<&'static str>;
+    type FileContent;
+
+    fn load(
+        defaults: &Self::FileContent,
+        user_values: &[&Self::FileContent],
+        cx: &mut App,
+    ) -> Result<Self>;
+}
+```
+
+### Settings Files
+
+- **Default settings**: Built into application
+- **User settings**: `~/.config/zed/settings.json`
+- **Project settings**: `.zed/settings.json`
+
+Settings are merged with project overriding user overriding defaults.
+
+### Settings Access
+
+```rust
+// Read current settings
+let settings = EditorSettings::get_global(cx);
+
+// Observe changes
+cx.observe_global::<SettingsStore>(|cx| {
+    // React to settings changes
+});
+```
+
+## Extension Subsystem
+
+**crates/extension/**
+
+Extensions run in WebAssembly sandboxes:
+
+### Extension Host
+
+**crates/extension_host/**
+
+- Manages extension lifecycle
+- Provides Wasmtime runtime
+- Exposes extension API via WASI
+- Handles extension installation and updates
+
+### Extension Capabilities
+
+Extensions can provide:
+
+- Language definitions and grammars
+- Language servers (downloaded at runtime)
+- Themes
+- Slash commands for AI agent
+- Debug adapters (DAP)
+
+### Security
+
+- Sandboxed execution via WebAssembly
+- Limited file system access
+- Network requests controlled by host
+- Extensions signed and verified
+
+## Terminal Subsystem
+
+**crates/terminal/**
+
+Integrated terminal emulator:
+
+### Terminal Entity
+
+- Full VT100/xterm emulation via `alacritty_terminal`
+- PTY (pseudo-terminal) for process I/O
+- ANSI color and formatting support
+- Scrollback buffer
+
+### Terminal View
+
+**crates/terminal_view/**
+
+- Renders terminal as GPUI element
+- Handles keyboard input
+- Mouse support (selection, clicks)
+- Integration with workspace panels
+
+## Search Subsystem
+
+**crates/search/**
+
+Project-wide search:
+
+### Search Types
+
+- **Text search**: Regex-based content search
+- **File search**: Fuzzy filename search
+- **Symbol search**: Fuzzy symbol name search
+
+### Search Implementation
+
+1. Scan worktree files in parallel
+2. Apply filters (gitignore, file patterns)
+3. Search file contents via `ripgrep`
+4. Collect matches into `MultiBuffer`
+5. Display in editor with jump-to-location
+
+## Debugger Subsystem
+
+**crates/dap/** and **crates/debugger_ui/**
+
+Debugger support via Debug Adapter Protocol:
+
+### Components
+
+- **DapStore**: Manages debug sessions
+- **debugger::Session**: DAP client for single session
+- **BreakpointStore**: Breakpoint state management
+- **RunningState**: Active debug session UI state
+
+See [Glossary](./glossary.mdx#debugger) for more debugger terms.
+
+## See Also
+
+- [Crate Structure](./crate-structure.mdx): Crate organization
+- [GPUI Integration](./gpui-integration.mdx): UI framework details
+- [RPC Protocol](./rpc-protocol.mdx): Collaboration protocol
+- [Development Glossary](./glossary.mdx): Term reference

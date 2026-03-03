@@ -1,0 +1,319 @@
+---
+title: Debugging Crashes
+description: Guide to debugging crashes and panics in Zed with Sentry integration
+---
+
+When Zed panics or crashes, it generates crash reports that can be analyzed locally or uploaded to Sentry for team investigation.
+
+## Crash Report Generation
+
+### Minidump Creation
+
+When Zed crashes, it sends a message to a sidecar process that:
+
+1. Inspects the editor's memory
+2. Creates a [minidump](https://chromium.googlesource.com/breakpad/breakpad/+/master/docs/getting_started_with_breakpad.md#the-minidump-file-format)
+3. Saves it to the logs directory:
+   - **macOS**: `~/Library/Logs/Zed`
+   - **Linux**: `$XDG_DATA_HOME/zed/logs`
+   - **Windows**: `%APPDATA%\Zed\logs`
+
+### Crash Report Files
+
+Two files are generated for each crash:
+
+- `<uuid>.dmp.zst` - Compressed minidump (stack traces for all threads)
+- `<uuid>.json` - Metadata including:
+  - Panic message
+  - Span information
+  - System specifications
+  - Zed version and commit
+
+## Sentry Integration
+
+<Info>
+  Sentry crash reports are only accessible to Zed staff.
+</Info>
+
+### Automatic Upload
+
+If telemetry is enabled, Zed uploads crash reports when you restart the app:
+
+- Reports appear in [Slack](https://zed-industries.slack.com/archives/C0977J9MA1Y)
+- Viewable in [Sentry](https://zed-dev.sentry.io/issues)
+
+### Fetching Crash Reports
+
+Zed staff can fetch crash reports using the `script/sentry-fetch` tool:
+
+```sh
+# Using short ID
+script/sentry-fetch ZED-4VS
+
+# Using numeric ID
+script/sentry-fetch 7243282041
+```
+
+#### Authentication Setup
+
+The script checks for Sentry authentication in order:
+
+1. `SENTRY_AUTH_TOKEN` environment variable
+2. Token from `~/.sentryclirc` (written by `sentry-cli login`)
+
+If neither is found:
+
+```sh
+# Install sentry-cli and authenticate
+curl -sL https://sentry.io/get-cli/ | bash
+sentry-cli login
+```
+
+Or set the token manually:
+
+```sh
+export SENTRY_AUTH_TOKEN="your-token-here"
+```
+
+Get a token at https://sentry.io/settings/auth-tokens/
+
+#### Output Format
+
+The script outputs formatted markdown with:
+
+- Issue metadata (ID, first/last seen, event count)
+- System tags (OS, Zed version, etc.)
+- Exception details with stacktraces
+- Thread information (crashed and current threads)
+
+## Local Crash Analysis
+
+### Analyzing Minidumps
+
+You can analyze crash reports locally without Sentry access:
+
+1. **Decompress the minidump**:
+   ```sh
+   zstd -d ~/.local/share/zed/<uuid>.dmp.zst -o minidump.dmp
+   ```
+
+2. **Generate stacktraces**:
+   ```sh
+   minidump-stackwalk minidump.dmp
+   ```
+
+### Symbol Resolution
+
+Crash reports are hard to read without symbol information. To get useful stacktraces:
+
+1. **Download or build the exact Zed version**:
+   - Find the commit from the crash report metadata
+   - Either download an unstripped binary for that release
+   - Or build from source with debug symbols
+
+2. **Build with full symbols**:
+   ```sh
+   git checkout <commit-from-crash>
+   cargo build --release --config 'profile.release.debug="full"'
+   ```
+
+3. **Analyze with symbols**:
+   ```sh
+   minidump-stackwalk minidump.dmp <path-to-binary-with-symbols>
+   ```
+
+### Inspecting Crash Metadata
+
+The `<uuid>.json` file contains valuable context:
+
+```sh
+cat ~/.local/share/zed/<uuid>.json | jq
+```
+
+Look for:
+- Panic message and location
+- Span information (code context)
+- Environment details
+- Zed configuration state
+
+## Using a Debugger
+
+If you can reproduce the crash consistently, use a debugger to inspect program state at the crash point.
+
+### Debugging with LLDB/GDB
+
+1. **Build Zed with debug symbols**:
+   ```sh
+   cargo build --config 'profile.release.debug="full"'
+   ```
+
+2. **Run in the debugger**:
+   ```sh
+   rust-lldb target/release/zed
+   # or
+   rust-gdb target/release/zed
+   ```
+
+3. **When it crashes**:
+   - The debugger stops at the panic/crash point
+   - Use `backtrace` to see the full call stack
+   - Use `frame select <n>` to navigate frames
+   - Inspect variables with `print` or `p`
+
+See [Using a debugger](/development/debugging) for detailed setup.
+
+### Common Crash Patterns
+
+#### Panic in Rust Code
+
+Backtrace typically shows:
+```
+rust_begin_unwind
+panic_fmt
+<your_function>
+```
+
+Walk up the stack to find your code:
+```
+(lldb) backtrace
+(lldb) frame select 5  # Select your frame
+(lldb) print variable_name
+```
+
+#### Segmentation Fault
+
+Common causes:
+- Null pointer dereference
+- Use after free
+- Stack overflow
+- Invalid memory access
+
+The debugger shows the exact instruction that faulted.
+
+#### Assertion Failure
+
+Backtrace includes the assertion condition and location. Check:
+- Why the assertion failed
+- What state led to the failure
+- Whether the assertion is correct
+
+## Investigating Crashes from Sentry
+
+### Reading Sentry Stack Traces
+
+Sentry shows frames from outermost caller to innermost. The crash location is at the bottom:
+
+```
+Thread 0 (CRASHED):
+  outer_function
+  middle_function
+  inner_function  <-- Crash here
+```
+
+Look for:
+- **In app** frames - Your code (most relevant)
+- **Not in app** frames - System/library code
+
+### Tags for Filtering
+
+Sentry tags help identify patterns:
+
+- `os` - Operating system
+- `os.version` - OS version
+- `zed.app_version` - Zed version
+- `zed.release_channel` - Stable/preview/dev
+- `environment` - Production/development
+
+### Event Timeline
+
+- **First Seen** - When the issue was first reported
+- **Last Seen** - Most recent occurrence
+- **Event Count** - How many times it's happened
+
+Use this to assess:
+- Is it a regression (recent first seen)?
+- Is it frequent or rare?
+- Is it version-specific?
+
+## Crash Investigation Workflow
+
+For Zed staff investigating crashes:
+
+1. **Fetch the crash report**:
+   ```sh
+   script/sentry-fetch <issue-id>
+   ```
+
+2. **Review the output**:
+   - Note the panic message and location
+   - Check which thread crashed
+   - Look for patterns in tags
+
+3. **Reproduce locally**:
+   - Checkout the commit from the crash
+   - Try to reproduce with the same environment
+   - Use the debugger to understand state
+
+4. **Generate investigation prompt**:
+   ```sh
+   script/crash-to-prompt <issue-id>
+   ```
+   This creates a prompt for AI-assisted investigation.
+
+5. **Fix and verify**:
+   - Implement the fix
+   - Add tests to prevent regression
+   - Verify with the original steps
+
+### Automation Scripts
+
+Zed provides helper scripts for crash investigation:
+
+- `script/sentry-fetch` - Fetch and format crash reports
+- `script/crash-to-prompt` - Generate investigation prompts
+- `script/select-sentry-crash-candidates` - Find crash candidates
+
+See `.factory/prompts/crash/` for investigation and fix prompts.
+
+## Testing Crash Handling
+
+To test crash reporting:
+
+```rust
+#[test]
+fn trigger_test_crash() {
+    panic!("Test crash for validation");
+}
+```
+
+Run in development:
+```sh
+cargo test trigger_test_crash
+```
+
+The crash should:
+1. Generate minidump files
+2. Create metadata JSON
+3. (If telemetry enabled) Upload to Sentry
+
+## Privacy and Data Collection
+
+Crash reports may include:
+
+- Stack traces (code paths, not user data)
+- System information (OS, hardware)
+- Zed version and configuration
+- File paths (may reveal project structure)
+
+<Warning>
+  Crash reports do not include file contents, but may include file paths and code structure.
+</Warning>
+
+Users can disable crash reporting by disabling telemetry in settings.
+
+## Additional Resources
+
+- [Using a debugger](/development/debugging)
+- [Debugging Zed](/development/debugging)
+- [Sentry Documentation](https://docs.sentry.io/)
+- [Breakpad Minidump Format](https://chromium.googlesource.com/breakpad/breakpad/+/master/docs/getting_started_with_breakpad.md)

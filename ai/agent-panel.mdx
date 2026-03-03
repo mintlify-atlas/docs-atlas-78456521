@@ -1,0 +1,374 @@
+---
+title: Agent Panel
+description: Interactive AI agent chat interface in Zed
+---
+
+The Agent Panel is Zed's primary interface for interacting with AI agents. It provides a chat-based environment where you can have conversations with AI models, request code changes, ask questions, and collaborate on development tasks.
+
+## Opening the Agent Panel
+
+There are several ways to open the Agent Panel:
+
+- **Keyboard shortcut**: `cmd-shift-a` (macOS) or `ctrl-shift-a` (Linux/Windows)
+- **Command palette**: Search for "Toggle Agent Panel"
+- **View menu**: Select View → Agent Panel
+
+## Panel Layout
+
+The Agent Panel consists of several key areas:
+
+### Header
+
+- **Thread selector**: Switch between active threads
+- **Model selector**: Choose which AI model to use
+- **Options menu**: Access settings and configuration
+- **New thread button**: Start a fresh conversation
+
+### Message Area
+
+The main area displays the conversation thread with:
+
+- User messages in one style
+- Agent responses in another
+- Tool calls and their results
+- Thinking process (for models that support it)
+
+### Input Editor
+
+At the bottom is the message editor where you can:
+
+- Type your messages
+- Use slash commands
+- Mention files, symbols, and other context
+- Attach images (for vision-capable models)
+
+## Creating Threads
+
+### New Native Agent Thread
+
+Start a new conversation with Zed's built-in agent:
+
+```
+Cmd/Ctrl + Shift + A (to open panel)
+Click "New Thread" button
+```
+
+The agent has access to:
+- Your project files
+- Terminal execution
+- File system operations
+- Web search (if configured)
+- Context servers (if configured)
+
+### New Text Thread
+
+Create a simple text-based conversation without tool access:
+
+- Useful for brainstorming and discussion
+- No file access or code execution
+- Faster responses for general questions
+
+### External Agent Threads
+
+Connect to external agents via ACP (Agent Client Protocol):
+
+- Claude Code (Anthropic's agent)
+- Custom agent implementations
+- Third-party agent services
+
+## Using Slash Commands
+
+Slash commands provide quick access to common operations:
+
+### Built-in Commands
+
+<ParamField path="/file" type="command">
+  Insert file contents into the conversation
+  
+  ```
+  /file src/main.rs
+  ```
+</ParamField>
+
+<ParamField path="/default" type="command">
+  Access default prompts and templates
+  
+  ```
+  /default
+  ```
+</ParamField>
+
+### MCP Commands
+
+If you have context servers configured, their prompts appear as slash commands:
+
+```
+/weather New York
+/database query SELECT * FROM users
+```
+
+[Learn more about MCP →](/ai/mcp)
+
+## Mentions and Context
+
+You can mention various elements to provide context:
+
+### File Mentions
+
+```
+@README.md
+@src/components/Button.tsx
+```
+
+### Symbol Mentions
+
+```
+@MyComponent
+@handleClick
+```
+
+### URL Mentions
+
+```
+@https://docs.rs/tokio
+```
+
+### Git Diff Mentions
+
+```
+@git:diff:main
+@git:diff:HEAD~1
+```
+
+## Agent Responses
+
+### Text Responses
+
+Simple text explanations and guidance.
+
+### Tool Calls
+
+When the agent needs to interact with your project, it uses tools:
+
+- **Read file**: View file contents
+- **Edit file**: Modify existing files
+- **Create directory**: Make new folders
+- **Terminal**: Run shell commands
+- **Web search**: Find information online
+
+Tool calls are shown inline with their results.
+
+### Thinking Process
+
+Models that support extended thinking (like Claude with thinking enabled) show their reasoning:
+
+```
+🧠 Thinking...
+
+First, I need to understand the current structure...
+Then, I should consider edge cases...
+```
+
+## Tool Permissions
+
+When an agent attempts to use a tool, Zed may ask for permission:
+
+<Frame>
+  <img src="/images/tool-permission.png" alt="Tool permission dialog" />
+</Frame>
+
+### Permission Modes
+
+- **Always Allow**: Automatically approve this operation
+- **Allow Once**: Approve just this time
+- **Deny**: Reject this operation
+- **Always Deny**: Never allow this operation
+
+Configure default permissions in settings:
+
+```json
+{
+  "agent": {
+    "tool_permissions": {
+      "default": "confirm",
+      "tools": {
+        "read_file": {
+          "default": "allow"
+        },
+        "terminal": {
+          "default": "confirm"
+        }
+      }
+    }
+  }
+}
+```
+
+[Learn more about tool permissions →](/ai/tools#permissions)
+
+## Thread Management
+
+### Saving Threads
+
+Threads are automatically saved to:
+
+```
+~/.config/zed/agent_threads/
+```
+
+### Thread History
+
+Access previous conversations:
+
+1. Click the thread selector in the header
+2. Select "Show History"
+3. Browse and resume past threads
+
+### Copying Threads
+
+Share conversations:
+
+- **Copy to Clipboard**: Exports thread as markdown
+- **Load from Clipboard**: Import a thread from clipboard
+
+## Agent Configuration
+
+Access the configuration panel:
+
+1. Click the options menu (⚙️)
+2. Select "Settings"
+
+### Model Selection
+
+Choose which model powers the agent:
+
+- Different models for different tasks
+- Cost vs. capability tradeoffs
+- Local vs. cloud models
+
+### Thinking Settings
+
+For models that support extended thinking:
+
+- **Enable thinking**: Toggle reasoning visibility
+- **Effort level**: Control how much the model thinks
+
+### Context Servers
+
+Add MCP servers for additional capabilities:
+
+1. Click "Add Context Server"
+2. Configure server settings
+3. Grant tool permissions
+
+## Keyboard Shortcuts
+
+| Action | Shortcut (macOS) | Shortcut (Linux/Windows) |
+|--------|------------------|-------------------------|
+| Toggle panel | `cmd-shift-a` | `ctrl-shift-a` |
+| New thread | `cmd-n` | `ctrl-n` |
+| Send message | `cmd-enter` | `ctrl-enter` |
+| New line | `shift-enter` | `shift-enter` |
+| Show history | `cmd-h` | `ctrl-h` |
+| Toggle navigation | `cmd-b` | `ctrl-b` |
+| Model selector | `cmd-m` | `ctrl-m` |
+
+## Best Practices
+
+### Provide Context
+
+Help the agent understand your needs:
+
+- Mention relevant files
+- Explain your goals clearly
+- Provide error messages in full
+- Show examples when possible
+
+### Iterate Incrementally
+
+Break complex tasks into steps:
+
+1. Start with a high-level request
+2. Review the agent's approach
+3. Provide feedback and refinements
+4. Build on previous changes
+
+### Review Changes Carefully
+
+Always review code changes before accepting:
+
+- Check for correctness
+- Verify edge cases
+- Test the changes
+- Ensure code style consistency
+
+### Use Appropriate Models
+
+- **Complex tasks**: Use more capable models (Claude Sonnet, GPT-4)
+- **Simple questions**: Use faster models (Claude Haiku, GPT-3.5)
+- **Code generation**: Use models trained on code
+
+## Advanced Features
+
+### Subagents
+
+Agents can spawn subagents for parallel work:
+
+```
+Agent: I'll create two subagents to handle this:
+  1. Research the API
+  2. Implement the client
+```
+
+Each subagent runs independently and reports back.
+
+### Retry with Different Approach
+
+If an agent gets stuck:
+
+1. Click the retry button
+2. The agent will attempt a different strategy
+3. Previous attempts inform the new approach
+
+### Agent Diff View
+
+Review all changes from an agent session:
+
+- View all modified files
+- See unified diffs
+- Accept or reject changes
+- Generate commit messages
+
+## Troubleshooting
+
+### Agent Not Responding
+
+- Check your internet connection
+- Verify API key is valid
+- Check rate limits with your provider
+- Review logs in Zed's log panel
+
+### Tool Permission Denied
+
+- Review permission settings
+- Check file permissions on disk
+- Verify paths are within project bounds
+
+### Context Too Large
+
+- Start a new thread
+- Remove unnecessary context
+- Use a model with larger context window
+
+<Note>
+The Agent Panel requires an active AI provider configuration. See [Configuration](/ai/configuration) for setup details.
+</Note>
+
+## Implementation Details
+
+The Agent Panel is implemented in `agent_ui/src/agent_panel.rs` and uses:
+
+- **NativeAgent**: Built-in agent with tool access (`agent/src/agent.rs`)
+- **Thread**: Conversation management (`agent/src/thread.rs`)
+- **AcpThread**: Protocol handling (`acp_thread/src/acp_thread.rs`)
+- **Tools**: File operations, terminal, search (`agent/src/tools/`)

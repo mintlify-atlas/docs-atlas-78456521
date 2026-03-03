@@ -1,0 +1,348 @@
+---
+title: Code Editing Features - Zed
+description: Powerful code editing with multiple cursors, selections, intelligent transformations, code actions, and language server integration.
+---
+
+# Code Editing
+
+Zed provides sophisticated code editing features designed for speed and productivity. This page covers the core editing capabilities that help you write and transform code efficiently.
+
+## Multiple Cursors
+
+Multiple cursors let you edit in multiple places simultaneously. This is one of Zed's most powerful editing features.
+
+### Creating Multiple Cursors
+
+<CardGroup cols={2}>
+  <Card title="Add cursor above" icon="arrow-up">
+    Place a cursor on the line above the current position.
+    
+    **Keybinding:** `Cmd+Alt+Up` (macOS) or `Ctrl+Alt+Up` (Linux/Windows)
+  </Card>
+  
+  <Card title="Add cursor below" icon="arrow-down">
+    Place a cursor on the line below the current position.
+    
+    **Keybinding:** `Cmd+Alt+Down` (macOS) or `Ctrl+Alt+Down` (Linux/Windows)
+  </Card>
+  
+  <Card title="Select next occurrence" icon="plus">
+    Find and select the next occurrence of the current selection.
+    
+    **Keybinding:** `Cmd+D` (macOS) or `Ctrl+D` (Linux/Windows)
+  </Card>
+  
+  <Card title="Select all occurrences" icon="list">
+    Select all occurrences of the current selection at once.
+    
+    **Keybinding:** `Cmd+Shift+L` (macOS) or `Ctrl+Shift+L` (Linux/Windows)
+  </Card>
+</CardGroup>
+
+### Mouse Modifier for Multiple Cursors
+
+Click with a modifier key to add cursors. By default, this is `Cmd+Click` on macOS or `Ctrl+Click` on Linux/Windows.
+
+You can change the modifier key in your settings:
+
+```json
+{
+  "multi_cursor_modifier": "alt"
+}
+```
+
+Options: `"alt"` or `"cmd"`/`"ctrl"`
+
+### Split Selection Into Lines
+
+Convert a multi-line selection into individual cursors on each line with `Cmd+Shift+L` (macOS) or `Ctrl+Shift+L` (Linux/Windows).
+
+## Selections and Transformations
+
+### Smart Selection Expansion
+
+Expand your selection to progressively larger syntactic units:
+
+- **Expand selection:** `Cmd+Up` (macOS) or `Alt+Up` (Linux/Windows)
+- **Shrink selection:** `Cmd+Down` (macOS) or `Alt+Down` (Linux/Windows)
+
+This respects your code's structure, expanding from a word to an expression, statement, block, and beyond.
+
+### Line Operations
+
+<AccordionGroup>
+  <Accordion title="Move lines up or down">
+    Move selected lines up or down while maintaining indentation:
+    
+    - **Move up:** `Cmd+Ctrl+Up` (macOS) or `Ctrl+Shift+Up` (Linux/Windows)
+    - **Move down:** `Cmd+Ctrl+Down` (macOS) or `Ctrl+Shift+Down` (Linux/Windows)
+  </Accordion>
+  
+  <Accordion title="Duplicate lines">
+    Duplicate the current line or selection:
+    
+    - **Keybinding:** `Cmd+Shift+D` (macOS) or `Ctrl+Shift+D` (Linux/Windows)
+  </Accordion>
+  
+  <Accordion title="Delete lines">
+    Delete entire lines without selecting them first:
+    
+    - **Keybinding:** `Cmd+Shift+K` (macOS) or `Ctrl+Shift+K` (Linux/Windows)
+  </Accordion>
+  
+  <Accordion title="Join lines">
+    Join the next line to the current line:
+    
+    - **Keybinding:** `Cmd+J` (macOS) or `Ctrl+J` (Linux/Windows)
+  </Accordion>
+</AccordionGroup>
+
+### Text Transformations
+
+Transform selected text quickly:
+
+- **Convert to uppercase:** Command Palette → "Convert to Uppercase"
+- **Convert to lowercase:** Command Palette → "Convert to Lowercase"
+- **Convert to title case:** Command Palette → "Convert to Title Case"
+- **Convert to snake_case:** Command Palette → "Convert to Snake Case"
+- **Convert to camelCase:** Command Palette → "Convert to Camel Case"
+
+## Code Actions and Refactoring
+
+Code actions are context-aware transformations provided by your language server. They include quick fixes, refactorings, and code improvements.
+
+### Accessing Code Actions
+
+- **Keybinding:** `Cmd+.` (macOS) or `Ctrl+.` (Linux/Windows)
+- **Gutter indicator:** Click the lightbulb icon that appears next to lines with available actions
+
+Common code actions include:
+
+- Extract variable/function/method
+- Inline variable/function
+- Add missing imports
+- Implement interface/trait
+- Generate getters/setters
+- Quick fixes for diagnostics
+
+### Inline Code Actions
+
+Zed can display code action indicators inline in your code:
+
+```json
+{
+  "inline_code_actions": true
+}
+```
+
+When enabled, actionable suggestions appear directly in the editor toolbar.
+
+## Comment Toggling
+
+Toggle line or block comments for the selected code:
+
+- **Line comment:** `Cmd+/` (macOS) or `Ctrl+/` (Linux/Windows)
+- **Block comment:** `Cmd+Shift+/` (macOS) or `Ctrl+Shift+/` (Linux/Windows)
+
+Zed automatically uses the correct comment syntax for the current language.
+
+## Auto-Formatting and Indentation
+
+### Format Document
+
+Format the entire file or selection using your configured formatter:
+
+- **Format file:** `Cmd+Shift+I` (macOS) or `Ctrl+Shift+I` (Linux/Windows)
+- **Format on save:** Enabled by default for most languages
+
+Configure formatting behavior per language in your settings:
+
+```json
+{
+  "languages": {
+    "JavaScript": {
+      "format_on_save": "on",
+      "formatter": "prettier"
+    }
+  }
+}
+```
+
+### Auto-Indent
+
+Zed automatically indents code as you type, respecting the language's syntax and your indentation settings.
+
+Manually fix indentation:
+
+- **Auto-indent selection:** Command Palette → "Auto Indent"
+
+### Indent Guides
+
+Visual guides show indentation levels in your code:
+
+```json
+{
+  "indent_guides": {
+    "enabled": true,
+    "active_line_width": 2
+  }
+}
+```
+
+## Bracket Matching and Colorization
+
+### Bracket Matching
+
+Zed highlights matching brackets when your cursor is adjacent to one. Jump between matching brackets:
+
+- **Keybinding:** `Cmd+M` (macOS) or `Ctrl+M` (Linux/Windows)
+
+### Bracket Colorization
+
+Color-code nested brackets to make code structure clearer:
+
+```json
+{
+  "bracket_colorization": {
+    "enabled": true
+  }
+}
+```
+
+## Snippets
+
+Snippets are reusable code templates with tab stops for quick insertion.
+
+### Using Snippets
+
+1. Start typing a snippet prefix
+2. Select the snippet from the completions menu
+3. Press `Tab` to jump between placeholders
+4. Fill in the values
+
+### Custom Snippets
+
+Define your own snippets in your settings:
+
+```json
+{
+  "languages": {
+    "Rust": {
+      "snippets": {
+        "test": {
+          "prefix": "test",
+          "body": [
+            "#[test]",
+            "fn ${1:test_name}() {",
+            "    ${0}",
+            "}"
+          ],
+          "description": "Insert a test function"
+        }
+      }
+    }
+  }
+}
+```
+
+See [Snippets documentation](https://zed.dev/docs/snippets) for more details.
+
+## Folding
+
+Collapse and expand code blocks to focus on what matters:
+
+- **Fold:** Click the fold indicator in the gutter or use `Cmd+Alt+[` (macOS)
+- **Unfold:** Click again or use `Cmd+Alt+]` (macOS)
+- **Fold all:** Command Palette → "Fold All"
+- **Unfold all:** Command Palette → "Unfold All"
+- **Fold at level:** Command Palette → "Fold at Level" (specify indentation level)
+
+### Folding Ranges
+
+Language servers provide semantic folding ranges based on code structure (functions, classes, blocks). Zed also supports comment-based folding.
+
+## Text Objects and Motions
+
+Zed supports sophisticated text selection and navigation:
+
+### Word-Based Navigation
+
+- **Next word:** `Alt+Right` (macOS) or `Ctrl+Right` (Linux/Windows)
+- **Previous word:** `Alt+Left` (macOS) or `Ctrl+Left` (Linux/Windows)
+- **Next subword:** `Ctrl+Alt+Right` (macOS)
+- **Previous subword:** `Ctrl+Alt+Left` (macOS)
+
+Subword navigation treats `camelCase` and `snake_case` as separate words.
+
+### Deleting Text
+
+- **Delete to end of word:** `Alt+Delete` (macOS)
+- **Delete to beginning of word:** `Alt+Backspace` (macOS)
+- **Delete to end of line:** `Cmd+Delete` (macOS) or `Ctrl+K` (Linux/Windows)
+- **Delete line:** `Cmd+Shift+K` (macOS) or `Ctrl+Shift+K` (Linux/Windows)
+
+## Linked Editing
+
+For supported languages (HTML, JSX, TSX), editing an opening tag automatically updates the closing tag:
+
+```json
+{
+  "linked_edits": true
+}
+```
+
+This feature is powered by your language server.
+
+## Drag and Drop
+
+Drag selected text to move it to a new location:
+
+```json
+{
+  "drag_and_drop_selection": "enabled"
+}
+```
+
+Options:
+- `"enabled"` - Allow drag and drop
+- `"disabled"` - Disable drag and drop
+
+## Cursor Appearance
+
+### Cursor Shape
+
+```json
+{
+  "cursor_shape": "bar"
+}
+```
+
+Options: `"bar"`, `"block"`, `"underline"`, `"hollow"`
+
+### Cursor Blinking
+
+```json
+{
+  "cursor_blink": true
+}
+```
+
+## Selection Highlighting
+
+Highlight all occurrences of the selected text:
+
+```json
+{
+  "selection_highlight": true
+}
+```
+
+This helps you see where the current selection appears elsewhere in the file.
+
+## See Also
+
+- [Code Completions](https://zed.dev/docs/completions) - Autocomplete and AI suggestions
+- [Diagnostics](https://zed.dev/docs/diagnostics) - Error detection and quick fixes
+- [Multibuffers](https://zed.dev/docs/multibuffers) - Edit multiple files simultaneously
+- [Configuring Languages](https://zed.dev/docs/configuring-languages) - Language-specific settings
+- [Vim Mode](https://zed.dev/docs/vim) - Vim keybindings and workflows

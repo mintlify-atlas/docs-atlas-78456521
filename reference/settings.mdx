@@ -1,0 +1,259 @@
+---
+title: Settings Reference
+description: Complete reference for all Zed settings including editor, UI, language, and AI configuration options.
+---
+
+# Settings Reference
+
+This page provides a comprehensive reference for all Zed settings. For a guide on how to configure Zed, see [Configuring Zed](../customize/configuring-zed).
+
+## Settings Files
+
+### User Settings
+
+Your user settings apply globally across all projects:
+
+- **macOS:** `~/.config/zed/settings.json`
+- **Linux:** `~/.config/zed/settings.json` (or `$XDG_CONFIG_HOME/zed/settings.json`)
+- **Windows:** `%APPDATA%\Zed\settings.json`
+
+Open with `Cmd+,` (macOS) or `Ctrl+,` (Windows/Linux), or via the command palette: `zed: open settings`.
+
+### Project Settings
+
+Override user settings for a specific project by creating `.zed/settings.json` in your project root. Run `zed: open project settings` to create this file.
+
+```json
+// .zed/settings.json
+{
+  "tab_size": 2,
+  "formatter": "prettier",
+  "format_on_save": "on"
+}
+```
+
+### Default Settings
+
+View all available settings with their default values by running `zed: open default settings` from the command palette.
+
+## How Settings Merge
+
+Settings are applied in layers:
+
+1. **Default settings** — Zed's built-in defaults
+2. **User settings** — Your global preferences
+3. **Project settings** — Project-specific overrides
+
+Later layers override earlier ones. For object settings (like `terminal`), properties merge rather than replace entirely.
+
+## Settings Categories
+
+### Editor Settings
+
+<ParamField path="buffer_font_family" type="string" default="system default">
+  Font family for editor buffers.
+  
+  ```json
+  {
+    "buffer_font_family": "JetBrains Mono"
+  }
+  ```
+</ParamField>
+
+<ParamField path="buffer_font_size" type="number" default="14">
+  Font size for editor buffers (6-100 pixels).
+  
+  ```json
+  {
+    "buffer_font_size": 16
+  }
+  ```
+</ParamField>
+
+<ParamField path="tab_size" type="number" default="4">
+  Number of spaces per tab.
+  
+  ```json
+  {
+    "tab_size": 2
+  }
+  ```
+</ParamField>
+
+<ParamField path="soft_wrap" type="string" default="none">
+  How to wrap long lines. Options: `"none"`, `"editor_width"`, `"preferred_line_length"`.
+  
+  ```json
+  {
+    "soft_wrap": "preferred_line_length"
+  }
+  ```
+</ParamField>
+
+<ParamField path="show_whitespaces" type="string" default="selection">
+  When to show whitespace characters. Options: `"none"`, `"selection"`, `"all"`, `"boundary"`.
+  
+  ```json
+  {
+    "show_whitespaces": "all"
+  }
+  ```
+</ParamField>
+
+<ParamField path="vim_mode" type="boolean" default="false">
+  Enable Vim modal editing.
+  
+  ```json
+  {
+    "vim_mode": true
+  }
+  ```
+</ParamField>
+
+<ParamField path="format_on_save" type="string" default="off">
+  Format files when saving. Options: `"off"`, `"on"`, `"language_server"`, `"external"`.
+  
+  ```json
+  {
+    "format_on_save": "on"
+  }
+  ```
+</ParamField>
+
+<ParamField path="autosave" type="string" default="off">
+  When to autosave. Options: `"off"`, `"on_focus_change"`, `"on_window_change"`, `"after_delay"`.
+  
+  ```json
+  {
+    "autosave": "on_focus_change"
+  }
+  ```
+</ParamField>
+
+### UI Settings
+
+<ParamField path="theme" type="object">
+  Theme configuration. Can be a string for a single theme or an object for light/dark mode.
+  
+  ```json
+  {
+    "theme": {
+      "mode": "system",
+      "light": "One Light",
+      "dark": "One Dark"
+    }
+  }
+  ```
+</ParamField>
+
+<ParamField path="ui_font_size" type="number" default="16">
+  Font size for UI elements (6-100 pixels).
+  
+  ```json
+  {
+    "ui_font_size": 14
+  }
+  ```
+</ParamField>
+
+<ParamField path="base_keymap" type="string" default="VSCode">
+  Predefined keymap. Options: `"VSCode"`, `"Atom"`, `"JetBrains"`, `"SublimeText"`, `"Emacs"`, `"None"`.
+  
+  ```json
+  {
+    "base_keymap": "JetBrains"
+  }
+  ```
+</ParamField>
+
+### Terminal Settings
+
+<ParamField path="terminal" type="object">
+  Terminal configuration including font, shell, and environment variables.
+  
+  ```json
+  {
+    "terminal": {
+      "font_family": "JetBrains Mono",
+      "font_size": 14,
+      "shell": {
+        "program": "zsh"
+      }
+    }
+  }
+  ```
+</ParamField>
+
+### Language Settings
+
+<ParamField path="languages" type="object">
+  Per-language settings overrides.
+  
+  ```json
+  {
+    "languages": {
+      "Python": {
+        "tab_size": 4,
+        "format_on_save": "on"
+      },
+      "JavaScript": {
+        "tab_size": 2
+      }
+    }
+  }
+  ```
+</ParamField>
+
+### AI Settings
+
+<ParamField path="agent" type="object">
+  AI agent configuration including default models and providers.
+  
+  ```json
+  {
+    "agent": {
+      "default_model": {
+        "provider": "anthropic",
+        "model": "claude-sonnet-4"
+      }
+    }
+  }
+  ```
+</ParamField>
+
+## Complete Settings List
+
+For a complete, up-to-date list of all settings with descriptions and default values, open the default settings file in Zed:
+
+1. Open the command palette (`Cmd+Shift+P` or `Ctrl+Shift+P`)
+2. Run `zed: open default settings`
+
+This opens a read-only reference file showing all available settings.
+
+## Per-Release Channel Overrides
+
+Use different settings for Stable, Preview, or Nightly builds:
+
+```json
+{
+  "theme": "One Dark",
+  "vim_mode": false,
+  "nightly": {
+    "theme": "Rosé Pine",
+    "vim_mode": true
+  },
+  "preview": {
+    "theme": "Catppuccin Mocha"
+  }
+}
+```
+
+## Settings Deep Links
+
+Zed supports deep links that open specific settings:
+
+```
+zed://settings/theme
+zed://settings/vim_mode
+zed://settings/buffer_font_size
+```

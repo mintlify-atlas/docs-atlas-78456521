@@ -1,0 +1,453 @@
+---
+title: Edit Prediction
+description: AI-powered code completion and predictive editing in Zed
+---
+
+Edit Prediction provides intelligent, context-aware code completions as you type. Unlike traditional autocomplete, edit prediction understands your entire project context and can suggest multi-line completions, complex refactorings, and idiomatic patterns.
+
+## How It Works
+
+Edit Prediction analyzes:
+
+- **Your cursor position** and surrounding code
+- **Project structure** and related files
+- **Language patterns** and idioms
+- **Recent edits** and coding patterns
+- **LSP information** like types and symbols
+
+Based on this context, it predicts what you're about to write and shows suggestions as ghost text.
+
+## Enabling Edit Prediction
+
+Edit prediction can be enabled globally or per-context:
+
+### Global Settings
+
+```json
+{
+  "edit_predictions": {
+    "enabled": true,
+    "provider": {
+      "name": "anthropic",
+      "model": "claude-3-5-sonnet-20241022"
+    },
+    "debounce_ms": 500,
+    "enabled_in_text_threads": false
+  }
+}
+```
+
+### Configuration Options
+
+<ParamField path="enabled" type="boolean" default="false">
+  Enable or disable edit predictions globally
+</ParamField>
+
+<ParamField path="provider" type="object">
+  Which AI provider and model to use for predictions
+  
+  ```json
+  {
+    "name": "anthropic",
+    "model": "claude-3-5-sonnet-20241022"
+  }
+  ```
+</ParamField>
+
+<ParamField path="debounce_ms" type="number" default="500">
+  Milliseconds to wait after you stop typing before requesting a prediction
+</ParamField>
+
+<ParamField path="enabled_in_text_threads" type="boolean" default="false">
+  Whether to show predictions in AI text thread editors
+</ParamField>
+
+## Using Predictions
+
+### Accepting Predictions
+
+When a prediction appears as ghost text:
+
+- **Tab**: Accept the entire prediction
+- **Cmd/Ctrl + →**: Accept the next word
+- **Continue typing**: Dismiss and refine
+
+### Prediction Visibility
+
+Predictions appear as dimmed gray text:
+
+```rust
+fn calculate_total(items: Vec<Item>) -> f64 {▏
+    items.iter().map(|item| item.price).sum()
+}
+//  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+//  This is a prediction (shown in gray)
+```
+
+### Dismissing Predictions
+
+Predictions automatically dismiss when:
+
+- You press Escape
+- You move the cursor
+- You type something different
+- The prediction becomes invalid
+
+## Prediction Quality
+
+### What Makes Good Predictions
+
+Edit prediction works best when:
+
+- **Code is well-structured**: Clear naming and organization
+- **Context is available**: Related files are open
+- **Patterns are clear**: Consistent coding style
+- **Types are explicit**: Strong typing helps predictions
+
+### Model Selection
+
+Different models offer different tradeoffs:
+
+#### Fast Models (Lower Latency)
+
+```json
+{
+  "edit_predictions": {
+    "provider": {
+      "name": "anthropic",
+      "model": "claude-3-haiku-20240307"
+    }
+  }
+}
+```
+
+- Faster response times
+- Lower cost
+- Good for simple completions
+
+#### Powerful Models (Higher Quality)
+
+```json
+{
+  "edit_predictions": {
+    "provider": {
+      "name": "anthropic",
+      "model": "claude-3-5-sonnet-20241022"
+    }
+  }
+}
+```
+
+- Better understanding of context
+- More accurate complex completions
+- Higher latency and cost
+
+## Common Patterns
+
+### Function Implementation
+
+When you define a function signature:
+
+```rust
+fn validate_email(email: &str) -> bool {▏
+    // Prediction suggests full implementation
+}
+```
+
+### Error Handling
+
+When you start error handling:
+
+```rust
+let result = risky_operation();
+if let Err(e) = result {▏
+    // Prediction suggests appropriate error handling
+}
+```
+
+### Repetitive Patterns
+
+When you establish a pattern:
+
+```rust
+match status {
+    Status::Active => println!("active"),
+    Status::Inactive => ▏
+    // Prediction completes the pattern
+}
+```
+
+### Imports and Dependencies
+
+When you use a symbol:
+
+```rust
+use std::collections::▏
+// Prediction suggests commonly used imports
+```
+
+## Advanced Features
+
+### Multi-line Predictions
+
+Edit prediction can suggest entire blocks:
+
+```rust
+impl MyTrait for MyStruct {
+    fn method_one(&self) -> String {▏
+        // Entire implementation predicted
+        // Including multiple lines
+        // And proper formatting
+    }
+}
+```
+
+### Context-Aware Completions
+
+Predictions understand project context:
+
+```typescript
+// If you have a User type defined elsewhere
+function getUser(id: number): User {▏
+    // Prediction knows about User type
+    // Suggests appropriate API calls
+    // Returns properly typed result
+}
+```
+
+### Refactoring Suggestions
+
+Predictions can suggest refactorings:
+
+```rust
+// When you start extracting a function
+fn process() {
+    let data = vec![1, 2, 3];
+    let result = ▏
+    // Prediction suggests helper function call
+}
+```
+
+## Performance Optimization
+
+### Debounce Timing
+
+Adjust debounce for your preference:
+
+```json
+{
+  "edit_predictions": {
+    "debounce_ms": 300  // Faster predictions
+  }
+}
+```
+
+Or:
+
+```json
+{
+  "edit_predictions": {
+    "debounce_ms": 1000  // Less frequent, more considered
+  }
+}
+```
+
+### Selective Enabling
+
+Enable only for specific languages:
+
+```json
+{
+  "languages": {
+    "Rust": {
+      "edit_predictions": {
+        "enabled": true
+      }
+    },
+    "JavaScript": {
+      "edit_predictions": {
+        "enabled": false
+      }
+    }
+  }
+}
+```
+
+## Privacy Considerations
+
+Edit prediction sends code context to your AI provider:
+
+- **What's sent**: Surrounding code, file structure, open files
+- **When it's sent**: After debounce delay when typing
+- **Who sees it**: Your configured AI provider
+- **Caching**: May use prompt caching to reduce costs
+
+### Disabling for Sensitive Code
+
+Disable predictions in specific directories:
+
+```json
+{
+  "edit_predictions": {
+    "enabled": false
+  }
+}
+```
+
+Add this to `.zed/settings.json` in sensitive directories.
+
+## Integration with Other Features
+
+### LSP Integration
+
+Edit prediction works alongside language servers:
+
+- LSP provides type information
+- Edit prediction suggests implementations
+- Both can appear in the completion menu
+
+### Inline Assistant
+
+Edit prediction complements inline assist:
+
+- **Edit prediction**: Automatic as you type
+- **Inline assistant**: Explicit on-demand
+
+Use both together for maximum productivity.
+
+### Copilot Compatibility
+
+Zed's edit prediction is separate from GitHub Copilot:
+
+- You can use both
+- Or choose one
+- Configure separately
+
+## Best Practices
+
+### When to Accept
+
+✅ **Accept when:**
+- The prediction is exactly what you want
+- It follows project conventions
+- It's idiomatic for the language
+- It handles edge cases properly
+
+❌ **Don't accept when:**
+- You don't fully understand it
+- It uses deprecated APIs
+- It doesn't match your style
+- It has security implications
+
+### Provide Good Context
+
+Help predictions by:
+
+- Writing clear function signatures
+- Using descriptive variable names
+- Keeping related code visible
+- Maintaining consistent patterns
+
+### Review Suggestions
+
+Always review predicted code:
+
+- Check for correctness
+- Verify edge cases
+- Ensure security
+- Match project style
+
+## Keyboard Shortcuts
+
+| Action | Shortcut (macOS) | Shortcut (Linux/Windows) |
+|--------|------------------|-------------------------|
+| Accept prediction | `tab` | `tab` |
+| Accept next word | `cmd-→` | `ctrl-→` |
+| Dismiss prediction | `escape` | `escape` |
+| Cancel prediction | `escape` | `escape` |
+
+## Troubleshooting
+
+### Predictions Not Appearing
+
+1. Check that edit predictions are enabled:
+   ```json
+   { "edit_predictions": { "enabled": true } }
+   ```
+
+2. Verify AI provider is configured
+
+3. Check debounce timing (wait after typing)
+
+4. Ensure API key is valid
+
+### Predictions Are Slow
+
+- Increase debounce time to batch requests
+- Use a faster model
+- Check internet connection
+- Review API rate limits
+
+### Predictions Are Low Quality
+
+- Switch to a more capable model
+- Provide more context (open related files)
+- Write clearer code structure
+- Use explicit types
+
+### Predictions Are Intrusive
+
+- Increase debounce time
+- Disable in specific contexts
+- Use keyboard shortcuts to dismiss quickly
+
+<Warning>
+Edit prediction sends code to external AI providers. Review your organization's policies before enabling.
+</Warning>
+
+## Cost Management
+
+Edit prediction can generate many API calls:
+
+### Reducing Costs
+
+1. **Increase debounce**: Fewer requests
+   ```json
+   { "edit_predictions": { "debounce_ms": 1000 } }
+   ```
+
+2. **Use cheaper models**: Lower per-token cost
+   ```json
+   { "edit_predictions": { "provider": { "model": "claude-3-haiku-20240307" } } }
+   ```
+
+3. **Selective enabling**: Only in important files
+
+4. **Prompt caching**: If supported by provider
+
+## Implementation Details
+
+Edit prediction is implemented in:
+
+- **Core**: `crates/edit_prediction/`
+- **Integration**: `agent_ui/src/completion_provider.rs`
+- **Settings**: `language/src/language_settings.rs`
+
+Key concepts:
+
+- Predictions are requested after a debounce delay
+- Context includes surrounding code and project structure
+- Results are shown as ghost text in the editor
+- Accept/reject updates learning (if supported by model)
+
+## Related Features
+
+<CardGroup cols={2}>
+  <Card title="Inline Assistant" icon="wand-magic-sparkles" href="/ai/inline-assistant">
+    On-demand code generation and transformation
+  </Card>
+  
+  <Card title="Configuration" icon="gear" href="/ai/configuration">
+    Configure AI providers and models
+  </Card>
+</CardGroup>

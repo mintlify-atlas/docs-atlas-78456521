@@ -1,80 +1,321 @@
 ---
-title: "Quickstart"
-description: "Start building awesome documentation in minutes"
+title: Quick Start Guide
+description: Get productive with Zed fast. Learn essential commands, navigation, and configuration to start coding immediately.
 ---
 
-## Get started in three steps
+# Quick Start Guide
 
-Get your documentation site running locally and make your first customization.
-
-### Step 1: Set up your local environment
-
-<AccordionGroup>
-  <Accordion icon="copy" title="Clone your docs locally">
-    During the onboarding process, you created a GitHub repository with your docs content if you didn't already have one. You can find a link to this repository in your [dashboard](https://dashboard.mintlify.com).
-    
-    To clone the repository locally so that you can make and preview changes to your docs, follow the [Cloning a repository](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository) guide in the GitHub docs.
-  </Accordion>
-  <Accordion icon="rectangle-terminal" title="Start the preview server">
-    1. Install the Mintlify CLI: `npm i -g mint`
-    2. Navigate to your docs directory and run: `mint dev`
-    3. Open `http://localhost:3000` to see your docs live!
-    
-    <Tip>Your preview updates automatically as you edit files.</Tip>
-  </Accordion>
-</AccordionGroup>
-
-### Step 2: Deploy your changes
-
-<AccordionGroup>
-  <Accordion icon="github" title="Install our GitHub app">
-    Install the Mintlify GitHub app from your [dashboard](https://dashboard.mintlify.com/settings/organization/github-app).
-    
-    Our GitHub app automatically deploys your changes to your docs site, so you don't need to manage deployments yourself.
-</Accordion>
-<Accordion icon="palette" title="Update your site name and colors">
-    For a first change, let's update the name and colors of your docs site.
-
-    1. Open `docs.json` in your editor.
-    2. Change the `"name"` field to your project name.
-    3. Update the `"colors"` to match your brand.
-    4. Save and see your changes instantly at `http://localhost:3000`.
-
-    <Tip>Try changing the primary color to see an immediate difference!</Tip>
-  </Accordion>
-</AccordionGroup>
-
-### Step 3: Go live
-
-<Accordion icon="rocket" title="Publish your docs">
-  1. Commit and push your changes.
-  2. Your docs will update and be live in moments!
-</Accordion>
-
-## Next steps
-
-Now that you have your docs running, explore these key features:
-
-<CardGroup cols={2}>
-
-<Card title="Write Content" icon="pen-to-square" href="/essentials/markdown">
-  Learn MDX syntax and start writing your documentation.
-</Card>
-
-<Card title="Customize style" icon="palette" href="/essentials/settings">
-  Make your docs match your brand perfectly.
-</Card>
-
-<Card title="Add code examples" icon="square-code" href="/essentials/code">
-  Include syntax-highlighted code blocks.
-</Card>
-
-<Card title="API documentation" icon="code" href="/api-reference/introduction">
-  Auto-generate API docs from OpenAPI specs.
-</Card>
-
-</CardGroup>
+This guide will get you productive with Zed in minutes. We'll cover the essential commands, navigation, and basic configuration.
 
 <Note>
-  **Need help?** See our [full documentation](https://mintlify.com/docs) or join our [community](https://mintlify.com/community).
+  Already installed Zed? Great! If not, start with the [Installation guide](/installation).
 </Note>
+
+## Open Your First Project
+
+<Steps>
+  <Step title="Launch Zed">
+    Open Zed from your applications menu or run `zed` from the command line.
+  </Step>
+  <Step title="Open a folder">
+    Press `Cmd+O` (macOS) or `Ctrl+O` (Linux/Windows) and select a project folder.
+
+    Or from the command line:
+    ```sh
+    zed ~/projects/my-app
+    ```
+  </Step>
+  <Step title="Explore the interface">
+    - **Left sidebar**: Project panel showing your files and folders
+    - **Main editor**: Where you write code
+    - **Bottom panel**: Terminal and diagnostics
+  </Step>
+</Steps>
+
+## Essential Commands
+
+Master these keyboard shortcuts to navigate Zed efficiently:
+
+### Command Palette
+
+The command palette is your gateway to every action in Zed. If you forget a shortcut, search for it here.
+
+<Tabs>
+  <Tab title="macOS">
+    Press `Cmd+Shift+P` to open the command palette.
+  </Tab>
+  <Tab title="Linux/Windows">
+    Press `Ctrl+Shift+P` to open the command palette.
+  </Tab>
+</Tabs>
+
+Type any command name to find it, then press Enter to execute.
+
+### Navigation
+
+| Action | macOS | Linux/Windows | Description |
+|--------|-------|---------------|-------------|
+| **Go to file** | `Cmd+P` | `Ctrl+P` | Quick file search by name |
+| **Go to symbol** | `Cmd+Shift+O` | `Ctrl+Shift+O` | Jump to functions, classes, etc. |
+| **Find in project** | `Cmd+Shift+F` | `Ctrl+Shift+F` | Search across all files |
+| **Toggle terminal** | `` Ctrl+` `` | `` Ctrl+` `` | Show/hide integrated terminal |
+| **Open settings** | `Cmd+,` | `Ctrl+,` | Open Settings Editor |
+
+### Editing
+
+| Action | macOS | Linux/Windows | Description |
+|--------|-------|---------------|-------------|
+| **Multi-cursor** | `Cmd+D` | `Ctrl+D` | Add cursor at next match |
+| **Comment line** | `Cmd+/` | `Ctrl+/` | Toggle line comment |
+| **Format document** | `Cmd+Shift+I` | `Ctrl+Shift+I` | Format with configured formatter |
+| **Inline assistant** | `Cmd+Enter` | `Ctrl+Enter` | AI-powered code transformation |
+
+### AI Features
+
+| Action | macOS | Linux/Windows | Description |
+|--------|-------|---------------|-------------|
+| **Agent panel** | `Cmd+Shift+A` | `Ctrl+Shift+A` | Open AI agent for agentic editing |
+| **Inline assistant** | `Cmd+Enter` | `Ctrl+Enter` | Transform selection with AI |
+
+<Tip>
+  Press `Tab` to accept AI code completions as you type.
+</Tip>
+
+## Configure Your Editor
+
+<Steps>
+  <Step title="Open Settings">
+    Press `Cmd+,` (macOS) or `Ctrl+,` (Linux/Windows) to open the Settings Editor.
+  </Step>
+  <Step title="Search for settings">
+    Use the search box at the top to find any setting. Settings are organized by category.
+  </Step>
+  <Step title="Make changes">
+    Click controls to change values. All changes save automatically.
+  </Step>
+</Steps>
+
+### Common First Changes
+
+<Tabs>
+  <Tab title="Theme">
+    Change your theme:
+
+    1. Press `Cmd+K Cmd+T` (macOS) or `Ctrl+K Ctrl+T` (Linux/Windows)
+    2. Browse available themes
+    3. Click to apply
+
+    Or search for `theme` in Settings and choose from:
+    - One Dark / One Light (default)
+    - Rosé Pine
+    - Catppuccin
+    - Ayu
+    - And many more
+  </Tab>
+
+  <Tab title="Font">
+    Customize your editor font:
+
+    1. Open Settings (`Cmd+,` or `Ctrl+,`)
+    2. Search for `buffer_font_family`
+    3. Enter your preferred font (e.g., "JetBrains Mono", "Fira Code")
+    4. Adjust `buffer_font_size` to your preferred size
+
+    Or add to your settings JSON:
+
+    ```json
+    {
+      "buffer_font_family": "JetBrains Mono",
+      "buffer_font_size": 14
+    }
+    ```
+  </Tab>
+
+  <Tab title="Format on Save">
+    Enable automatic formatting when you save files:
+
+    1. Open Settings
+    2. Search for `format_on_save`
+    3. Set to `on`
+
+    Or in settings JSON:
+
+    ```json
+    {
+      "format_on_save": "on"
+    }
+    ```
+  </Tab>
+
+  <Tab title="Tab Size">
+    Change indentation size:
+
+    1. Search for `tab_size` in Settings
+    2. Set your preferred size (2, 4, etc.)
+
+    You can also set language-specific tab sizes:
+
+    ```json
+    {
+      "tab_size": 2,
+      "languages": {
+        "Python": {
+          "tab_size": 4
+        }
+      }
+    }
+    ```
+  </Tab>
+</Tabs>
+
+## Set Up Your Language
+
+Zed includes built-in support for many languages:
+
+**Built-in languages:**
+- Rust, JavaScript, TypeScript, Python, Go
+- C, C++, JSON, YAML, Markdown, HTML, CSS
+- And many more
+
+**For other languages:**
+
+<Steps>
+  <Step title="Open Extensions">
+    Press `Cmd+Shift+X` (macOS) or `Ctrl+Shift+X` (Linux/Windows).
+  </Step>
+  <Step title="Search for your language">
+    Type the language name in the search box.
+  </Step>
+  <Step title="Install">
+    Click Install next to the extension.
+  </Step>
+</Steps>
+
+<Tip>
+  Many languages require additional setup like installing a language server. Check the [Languages documentation](https://zed.dev/docs/languages) for language-specific instructions.
+</Tip>
+
+## Use the Integrated Terminal
+
+Zed includes a powerful integrated terminal:
+
+<Steps>
+  <Step title="Open the terminal">
+    Press `` Ctrl+` `` to toggle the terminal panel.
+  </Step>
+  <Step title="Create multiple terminals">
+    Press `Cmd+N` (macOS) or `Ctrl+N` (Linux/Windows) while in the terminal to open additional terminals.
+  </Step>
+  <Step title="Switch between terminals">
+    Use tabs at the top of the terminal panel or `Cmd+Shift+[` and `Cmd+Shift+]` (macOS) to switch.
+  </Step>
+</Steps>
+
+Terminals inherit your project's working directory automatically.
+
+## Try AI Features
+
+Zed includes built-in AI capabilities. To get started:
+
+<Steps>
+  <Step title="Open the Agent Panel">
+    Press `Cmd+Shift+A` (macOS) or `Ctrl+Shift+A` (Linux/Windows).
+  </Step>
+  <Step title="Start a conversation">
+    Ask the agent to help with your code. Try:
+    - "Explain this function"
+    - "Add error handling to this code"
+    - "Write unit tests for this class"
+  </Step>
+  <Step title="Use inline assistance">
+    Select code and press `Cmd+Enter` (macOS) or `Ctrl+Enter` (Linux/Windows) to transform it with AI.
+  </Step>
+</Steps>
+
+<Note>
+  AI features work with Zed's hosted models initially. You can configure your own API keys from providers like Anthropic, OpenAI, Google, or use local models with Ollama. See [AI Configuration](https://zed.dev/docs/ai/configuration).
+</Note>
+
+## Enable Vim Mode (Optional)
+
+If you prefer Vim keybindings:
+
+<Steps>
+  <Step title="Open Settings">
+    Press `Cmd+,` (macOS) or `Ctrl+,` (Linux/Windows).
+  </Step>
+  <Step title="Search for vim_mode">
+    Type "vim" in the search box.
+  </Step>
+  <Step title="Enable">
+    Toggle `vim_mode` to on.
+  </Step>
+</Steps>
+
+Zed includes comprehensive Vim support with modal editing, keybindings, and commands. See the [Vim Mode documentation](https://zed.dev/docs/vim) for details.
+
+## Collaboration (Optional)
+
+Zed supports real-time multiplayer editing:
+
+<Steps>
+  <Step title="Sign in">
+    Open the Collaboration Panel with `Cmd+Shift+C` (macOS) or `Ctrl+Shift+C` (Linux/Windows) and sign in with GitHub.
+  </Step>
+  <Step title="Share your project">
+    Click "Share" to create a collaboration session.
+  </Step>
+  <Step title="Invite others">
+    Share the session link with teammates. They'll see your cursors and edits in real-time.
+  </Step>
+</Steps>
+
+<Warning>
+  Sharing a project gives collaborators access to your local file system within that project. Only collaborate with people you trust.
+</Warning>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Configuration Guide" icon="sliders" href="/configuration">
+    Deep dive into settings, keybindings, and customization
+  </Card>
+  <Card title="Language Support" icon="code" href="https://zed.dev/docs/languages">
+    Configure language servers and formatters
+  </Card>
+  <Card title="AI Features" icon="sparkles" href="https://zed.dev/docs/ai/overview">
+    Unlock the full power of AI in Zed
+  </Card>
+  <Card title="Vim Mode" icon="keyboard" href="https://zed.dev/docs/vim">
+    Master Vim keybindings in Zed
+  </Card>
+  <Card title="Git Integration" icon="code-branch" href="https://zed.dev/docs/git">
+    Use Git directly in the editor
+  </Card>
+  <Card title="Remote Development" icon="server" href="https://zed.dev/docs/remote-development">
+    Connect to remote servers via SSH
+  </Card>
+</CardGroup>
+
+## Coming from Another Editor?
+
+Zed has migration guides for popular editors:
+
+- [VS Code](https://zed.dev/docs/migrate/vs-code) - Import settings and keybindings
+- [IntelliJ IDEA](https://zed.dev/docs/migrate/intellij) - Adapt to Zed's workflows
+- [PyCharm](https://zed.dev/docs/migrate/pycharm) - Python development in Zed
+- [WebStorm](https://zed.dev/docs/migrate/webstorm) - JavaScript/TypeScript setup
+
+## Get Help
+
+<CardGroup cols={3}>
+  <Card title="Discord" icon="discord" href="https://discord.com/invite/zedindustries">
+    Chat with the community
+  </Card>
+  <Card title="GitHub Discussions" icon="github" href="https://github.com/zed-industries/zed/discussions">
+    Ask questions and share tips
+  </Card>
+  <Card title="Troubleshooting" icon="wrench" href="https://zed.dev/docs/troubleshooting">
+    Common issues and solutions
+  </Card>
+</CardGroup>

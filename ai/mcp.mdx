@@ -1,0 +1,778 @@
+---
+title: Model Context Protocol (MCP)
+description: Connect AI agents to external data sources and tools via MCP
+---
+
+The Model Context Protocol (MCP) is an open protocol that allows AI agents to access external data sources and tools. Zed implements MCP client support, enabling agents to use MCP servers for enhanced capabilities.
+
+## What is MCP?
+
+MCP provides:
+
+- **Standardized access** to external data sources
+- **Tool integration** for specialized operations
+- **Resource management** for structured data
+- **Prompt templates** for common operations
+
+Developed by Anthropic, MCP is an open standard supported by multiple AI platforms.
+
+## MCP Architecture
+
+```
+Zed (MCP Client)
+  ↓
+  MCP Protocol
+  ↓  
+ MCP Server(s)
+  ↓
+  External Systems
+  (APIs, Databases, Files, etc.)
+```
+
+### Components
+
+**MCP Client** (Zed):
+- Connects to MCP servers
+- Exposes tools to AI agents
+- Manages server lifecycle
+
+**MCP Server**:
+- Implements specific capabilities
+- Provides tools, resources, and prompts
+- Communicates via stdio or HTTP
+
+**External Systems**:
+- APIs, databases, file systems
+- Business logic
+- Third-party services
+
+## Configuring MCP Servers
+
+### Basic Configuration
+
+Add MCP servers to your Zed settings:
+
+```json
+{
+  "context_servers": {
+    "filesystem": {
+      "command": {
+        "path": "npx",
+        "args": ["-y", "@modelcontextprotocol/server-filesystem", "/path/to/allowed/directory"],
+        "env": {}
+      },
+      "settings": {}
+    },
+    "github": {
+      "command": {
+        "path": "npx",
+        "args": ["-y", "@modelcontextprotocol/server-github"],
+        "env": {
+          "GITHUB_TOKEN": "ghp_..."
+        }
+      },
+      "settings": {}
+    }
+  }
+}
+```
+
+### Server Configuration
+
+<ParamField path="command" type="object" required>
+  Command to start the server
+  
+  ```json
+  {
+    "path": "node",
+    "args": ["server.js"],
+    "env": { "API_KEY": "..." }
+  }
+  ```
+</ParamField>
+
+<ParamField path="settings" type="object">
+  Server-specific configuration
+  
+  ```json
+  {
+    "api_key": "...",
+    "endpoint": "https://api.example.com"
+  }
+  ```
+</ParamField>
+
+<ParamField path="timeout" type="number">
+  Timeout in seconds for server operations
+</ParamField>
+
+### STDIO vs HTTP
+
+MCP servers can use different transports:
+
+#### STDIO (default)
+
+```json
+{
+  "context_servers": {
+    "my_server": {
+      "command": {
+        "path": "/path/to/server",
+        "args": []
+      }
+    }
+  }
+}
+```
+
+Communication via stdin/stdout.
+
+#### HTTP
+
+```json
+{
+  "context_servers": {
+    "my_server": {
+      "url": "http://localhost:3000",
+      "headers": {
+        "Authorization": "Bearer ..."
+      }
+    }
+  }
+}
+```
+
+Communication via HTTP requests.
+
+## Using MCP Servers
+
+### Available Servers
+
+Once configured, MCP servers automatically:
+
+1. Start when Zed launches (or on-demand)
+2. Register their tools with the agent
+3. Appear in the context server list
+
+View active servers:
+
+```
+Agent Panel → Settings → Context Servers
+```
+
+### MCP Tools
+
+Tools from MCP servers appear to agents like built-in tools:
+
+```
+Agent: I'll use the GitHub tool to search for issues...
+
+🔧 github_search_issues
+Input: {"query": "bug", "state": "open"}
+Output: [...results...]
+```
+
+### MCP Prompts
+
+MCP servers can provide prompts (templates):
+
+```
+/github search issues
+/database query users
+/weather forecast
+```
+
+Prompts appear as slash commands in the Agent Panel.
+
+### MCP Resources
+
+Servers expose resources (structured data):
+
+```
+@github:repo:user/repo
+@database:table:users
+@filesystem:file:/path/to/file
+```
+
+Reference in agent messages like other mentions.
+
+## Official MCP Servers
+
+### Filesystem
+
+Access local files:
+
+```json
+{
+  "context_servers": {
+    "filesystem": {
+      "command": {
+        "path": "npx",
+        "args": [
+          "-y",
+          "@modelcontextprotocol/server-filesystem",
+          "/Users/you/Documents"
+        ]
+      }
+    }
+  }
+}
+```
+
+**Tools**:
+- `read_file`: Read file contents
+- `write_file`: Write to files
+- `list_directory`: List directory contents
+- `search_files`: Search for files
+
+### GitHub
+
+Interact with GitHub:
+
+```json
+{
+  "context_servers": {
+    "github": {
+      "command": {
+        "path": "npx",
+        "args": ["-y", "@modelcontextprotocol/server-github"],
+        "env": {
+          "GITHUB_TOKEN": "ghp_..."
+        }
+      }
+    }
+  }
+}
+```
+
+**Tools**:
+- `search_issues`: Search GitHub issues
+- `create_issue`: Create new issues
+- `list_pull_requests`: List PRs
+- `get_file_contents`: Read files from repos
+
+### Google Drive
+
+Access Google Drive:
+
+```json
+{
+  "context_servers": {
+    "gdrive": {
+      "command": {
+        "path": "npx",
+        "args": ["-y", "@modelcontextprotocol/server-gdrive"],
+        "env": {
+          "GOOGLE_APPLICATION_CREDENTIALS": "/path/to/credentials.json"
+        }
+      }
+    }
+  }
+}
+```
+
+### PostgreSQL
+
+Query databases:
+
+```json
+{
+  "context_servers": {
+    "postgres": {
+      "command": {
+        "path": "npx",
+        "args": ["-y", "@modelcontextprotocol/server-postgres"],
+        "env": {
+          "DATABASE_URL": "postgresql://user:pass@localhost/db"
+        }
+      }
+    }
+  }
+}
+```
+
+**Tools**:
+- `query`: Execute SQL queries
+- `list_tables`: List database tables
+- `describe_table`: Get table schema
+
+### Puppeteer
+
+Browser automation:
+
+```json
+{
+  "context_servers": {
+    "puppeteer": {
+      "command": {
+        "path": "npx",
+        "args": ["-y", "@modelcontextprotocol/server-puppeteer"]
+      }
+    }
+  }
+}
+```
+
+**Tools**:
+- `navigate`: Navigate to URL
+- `screenshot`: Take screenshots
+- `click`: Click elements
+- `fill`: Fill form fields
+
+### Brave Search
+
+Web search:
+
+```json
+{
+  "context_servers": {
+    "brave_search": {
+      "command": {
+        "path": "npx",
+        "args": ["-y", "@modelcontextprotocol/server-brave-search"],
+        "env": {
+          "BRAVE_API_KEY": "..."
+        }
+      }
+    }
+  }
+}
+```
+
+## Building MCP Servers
+
+### Server Implementation
+
+Create an MCP server in TypeScript:
+
+```typescript
+import { Server } from '@modelcontextprotocol/sdk/server';
+import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio';
+
+const server = new Server({
+  name: 'my-server',
+  version: '1.0.0',
+});
+
+// Register a tool
+server.tool(
+  'search_documents',
+  'Search through documents',
+  {
+    query: { type: 'string', description: 'Search query' },
+    limit: { type: 'number', description: 'Max results' },
+  },
+  async ({ query, limit }) => {
+    const results = await searchDocuments(query, limit);
+    return {
+      content: [
+        {
+          type: 'text',
+          text: JSON.stringify(results, null, 2),
+        },
+      ],
+    };
+  }
+);
+
+// Start server
+const transport = new StdioServerTransport();
+await server.connect(transport);
+```
+
+### Registering Tools
+
+Define tools agents can use:
+
+```typescript
+server.tool(
+  'tool_name',
+  'Tool description',
+  {
+    // Input schema
+    param1: { type: 'string', description: 'Parameter 1' },
+    param2: { type: 'number', description: 'Parameter 2' },
+  },
+  async (input) => {
+    // Tool implementation
+    const result = await doSomething(input);
+    
+    return {
+      content: [
+        { type: 'text', text: JSON.stringify(result) },
+      ],
+    };
+  }
+);
+```
+
+### Providing Prompts
+
+Create prompt templates:
+
+```typescript
+server.prompt(
+  'search_code',
+  'Search for code in the repository',
+  {
+    query: { type: 'string', description: 'Search query' },
+  },
+  async ({ query }) => {
+    return {
+      messages: [
+        {
+          role: 'user',
+          content: {
+            type: 'text',
+            text: `Search the codebase for: ${query}`,
+          },
+        },
+      ],
+    };
+  }
+);
+```
+
+### Exposing Resources
+
+Provide structured data:
+
+```typescript
+server.resource(
+  'config://app',
+  'Application configuration',
+  async () => {
+    const config = await loadConfig();
+    return {
+      contents: [
+        {
+          uri: 'config://app',
+          mimeType: 'application/json',
+          text: JSON.stringify(config, null, 2),
+        },
+      ],
+    };
+  }
+);
+```
+
+## Tool Permissions
+
+MCP tools respect Zed's permission system:
+
+```json
+{
+  "agent": {
+    "tool_permissions": {
+      "tools": {
+        "github_search_issues": {
+          "default": "allow"
+        },
+        "database_query": {
+          "default": "confirm"
+        }
+      }
+    }
+  }
+}
+```
+
+[Learn more about tool permissions →](/ai/tools#permissions)
+
+## Managing Context Servers
+
+### Server Status
+
+View server status:
+
+```
+Agent Panel → Settings → Context Servers
+```
+
+Shows:
+- Server name and status
+- Available tools
+- Available prompts
+- Connection state
+
+### Starting/Stopping Servers
+
+Servers can be:
+
+- **Auto-started**: On Zed launch
+- **On-demand**: When first used
+- **Manual**: Start/stop via UI
+
+Configure in settings:
+
+```json
+{
+  "context_servers": {
+    "my_server": {
+      "start_mode": "auto" | "on_demand" | "manual"
+    }
+  }
+}
+```
+
+### Server Logs
+
+View server output:
+
+```
+Agent Panel → Settings → Context Servers → [Server] → Show Logs
+```
+
+Logs include:
+- Startup messages
+- Tool invocations
+- Errors and warnings
+- Debug information
+
+## Advanced Features
+
+### Sampling
+
+Servers can request AI completions:
+
+```typescript
+const completion = await server.sample({
+  messages: [
+    {
+      role: 'user',
+      content: { type: 'text', text: 'Generate a summary' },
+    },
+  ],
+  maxTokens: 1000,
+});
+```
+
+Useful for:
+- Data transformation
+- Content generation
+- Decision making
+
+### Progress Reporting
+
+Report progress for long operations:
+
+```typescript
+server.tool('long_operation', 'Long running task', {}, async (input, { progressToken }) => {
+  for (let i = 0; i < 100; i++) {
+    await doWork(i);
+    
+    if (progressToken) {
+      await server.notification({
+        method: 'progress',
+        params: {
+          progressToken,
+          progress: i + 1,
+          total: 100,
+        },
+      });
+    }
+  }
+  
+  return { content: [{ type: 'text', text: 'Done!' }] };
+});
+```
+
+### Notifications
+
+Send notifications to Zed:
+
+```typescript
+await server.notification({
+  method: 'log',
+  params: {
+    level: 'info',
+    data: 'Operation completed successfully',
+  },
+});
+```
+
+## Security
+
+### Sandboxing
+
+MCP servers run in separate processes:
+
+- Isolated from Zed's main process
+- Limited system access
+- Controlled via permissions
+
+### Authentication
+
+Secure server access:
+
+- API keys in environment variables
+- OAuth tokens
+- Certificate-based auth
+
+Never commit credentials to settings!
+
+### Network Access
+
+Control network permissions:
+
+```json
+{
+  "context_servers": {
+    "my_server": {
+      "network_access": {
+        "allowed_domains": ["api.example.com"],
+        "allow_localhost": false
+      }
+    }
+  }
+}
+```
+
+## Troubleshooting
+
+### Server Won't Start
+
+1. Check command path is correct
+2. Verify dependencies are installed (`npx` installs automatically)
+3. Review environment variables
+4. Check server logs for errors
+
+### Tools Not Appearing
+
+1. Ensure server is running
+2. Check server implements tools correctly
+3. Verify tool schemas are valid
+4. Restart Zed
+
+### Permission Errors
+
+1. Review tool permissions in settings
+2. Grant necessary permissions
+3. Check server has access to resources
+4. Verify API keys and credentials
+
+### Performance Issues
+
+1. Check server response times
+2. Optimize tool implementations
+3. Use caching where appropriate
+4. Limit concurrent requests
+
+<Warning>
+MCP servers have access to your file system and network. Only use trusted servers and review their code before use.
+</Warning>
+
+## Example: Custom MCP Server
+
+Complete example of a custom server:
+
+```typescript
+// my-server.ts
+import { Server } from '@modelcontextprotocol/sdk/server';
+import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio';
+import { z } from 'zod';
+
+const server = new Server({
+  name: 'my-custom-server',
+  version: '1.0.0',
+});
+
+// Tool: Search documents
+server.tool(
+  'search_docs',
+  'Search documentation',
+  {
+    query: z.string().describe('Search query'),
+  },
+  async ({ query }) => {
+    const results = await searchDocs(query);
+    return {
+      content: [
+        {
+          type: 'text',
+          text: `Found ${results.length} results:\n\n${results.map(r => `- ${r.title}: ${r.url}`).join('\n')}`,
+        },
+      ],
+    };
+  }
+);
+
+// Prompt: Ask about docs
+server.prompt(
+  'ask_docs',
+  'Ask a question about the documentation',
+  {
+    question: z.string(),
+  },
+  async ({ question }) => {
+    return {
+      messages: [
+        {
+          role: 'user',
+          content: {
+            type: 'text',
+            text: `Please answer this question based on our documentation: ${question}`,
+          },
+        },
+      ],
+    };
+  }
+);
+
+// Resource: All docs
+server.resource(
+  'docs://index',
+  'Documentation index',
+  async () => {
+    const index = await buildDocsIndex();
+    return {
+      contents: [
+        {
+          uri: 'docs://index',
+          mimeType: 'application/json',
+          text: JSON.stringify(index),
+        },
+      ],
+    };
+  }
+);
+
+// Start server
+const transport = new StdioServerTransport();
+await server.connect(transport);
+```
+
+Configuration:
+
+```json
+{
+  "context_servers": {
+    "docs": {
+      "command": {
+        "path": "node",
+        "args": ["my-server.js"]
+      }
+    }
+  }
+}
+```
+
+## Resources
+
+<CardGroup cols={2}>
+  <Card title="MCP Specification" icon="file-lines" href="https://modelcontextprotocol.io">
+    Official MCP documentation
+  </Card>
+  
+  <Card title="MCP SDK" icon="code" href="https://github.com/modelcontextprotocol/sdk">
+    TypeScript SDK for building servers
+  </Card>
+  
+  <Card title="Official Servers" icon="server" href="https://github.com/modelcontextprotocol/servers">
+    Collection of official MCP servers
+  </Card>
+  
+  <Card title="Agent Tools" icon="wrench" href="/ai/tools">
+    Zed's built-in agent tools
+  </Card>
+</CardGroup>

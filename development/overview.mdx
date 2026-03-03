@@ -1,0 +1,107 @@
+---
+title: Development Overview
+description: Overview of Zed's architecture and development workflow
+---
+
+## Bird's-eye view of Zed
+
+Zed is built as a modular system of Rust crates, each handling specific aspects of the editor's functionality. Understanding this architecture is essential for contributing effectively to the project.
+
+<Tip>
+Keep the [Zed glossary](/development/glossary) at your side when starting out. It lists and explains key structures and terms you'll encounter throughout the codebase.
+</Tip>
+
+## Core crates
+
+Zed is made up of several smaller crates. Here are the ones you're most likely to interact with:
+
+### gpui
+
+A GPU-accelerated UI framework providing all building blocks for Zed. GPUI handles state management, rendering, and event handling.
+
+<Warning>
+Familiarize yourself with the root level GPUI documentation before making UI changes. Understanding GPUI's patterns is crucial for effective development.
+</Warning>
+
+Key concepts:
+- `App` - Root context for global state and entity management
+- `Entity<T>` - Handles to managed state
+- `Window` - Window state and rendering
+- `Context<T>` - Entity-specific context for updates
+
+### editor
+
+Contains the core `Editor` type driving both the code editor and input fields throughout Zed. Also handles the display layer for LSP features like inlay hints and code completions.
+
+### project
+
+Manages files and navigation within the file tree. Handles Zed's communication with Language Server Protocol (LSP) servers.
+
+### workspace
+
+Handles local state serialization and groups projects together.
+
+### vim
+
+A thin implementation of Vim workflow layered over the `editor` crate.
+
+### lsp
+
+Handles communication with external LSP servers.
+
+### language
+
+Drives the editor's understanding of programming languages, from symbol lists to syntax maps.
+
+### collab
+
+The collaboration server driving features like project sharing.
+
+### rpc
+
+Defines messages exchanged with the collaboration server.
+
+### theme
+
+Defines the theme system and provides default themes.
+
+### ui
+
+A collection of UI components and common patterns used throughout Zed.
+
+### cli
+
+The CLI crate which invokes the Zed binary.
+
+### zed
+
+Where all components come together. Contains the `main` entry point for Zed.
+
+## Getting started
+
+Choose your platform to set up your development environment:
+
+<CardGroup cols={3}>
+  <Card title="macOS" icon="apple" href="/development/building-macos">
+    Build Zed on macOS with Xcode
+  </Card>
+  <Card title="Linux" icon="linux" href="/development/building-linux">
+    Build Zed on Linux distributions
+  </Card>
+  <Card title="Windows" icon="windows" href="/development/building-windows">
+    Build Zed on Windows with Visual Studio
+  </Card>
+</CardGroup>
+
+## Contributing guidelines
+
+Before submitting changes, review our [contributing guidelines](/development/contributing) to understand:
+
+- What types of contributions we're looking for
+- How to submit pull requests
+- Code quality standards and testing requirements
+- UI/UX checklist for interface changes
+
+## Packaging Zed
+
+If you're a distribution maintainer, see our [notes for packaging Zed](/development/building-linux#notes-for-packaging-zed).

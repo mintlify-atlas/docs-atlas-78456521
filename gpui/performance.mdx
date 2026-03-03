@@ -1,0 +1,598 @@
+---
+title: 'Performance'
+description: 'Performance optimization techniques and profiling in GPUI'
+icon: 'gauge-high'
+---
+
+GPUI is designed for high-performance UI rendering and efficient resource management. This guide covers performance optimization techniques, profiling tools, and best practices for building responsive applications.
+
+## Task Management
+
+Proper task management is critical for performance in GPUI applications.
+
+### Background vs Foreground Tasks
+
+```rust
+use gpui::{App, Context, BackgroundExecutor, Task};
+
+// CPU-intensive work on background thread
+fn expensive_computation(cx: &App) -> Task<Vec<u8>> {
+    cx.background_spawn(async move {
+        // Heavy computation that doesn't touch UI
+        let result = process_large_dataset();
+        result
+    })
+}
+
+// UI updates on foreground thread
+fn update_ui(cx: &mut Context<MyView>) -> Task<()> {
+    cx.spawn(async move |this, cx| {
+        let data = expensive_computation(&cx).await;
+        this.update(cx, |view, cx| {
+            view.data = data;
+            cx.notify();
+        }).ok();
+    })
+}
+```
+
+### Task Lifecycle
+
+```rust
+use gpui::{Task, Context};
+
+struct MyView {
+    // Store tasks to keep them alive
+    background_task: Option<Task<()>>,
+}
+
+impl MyView {
+    fn start_work(&mut self, cx: &mut Context<Self>) {
+        // Task is cancelled when dropped
+        self.background_task = Some(cx.background_spawn(async {
+            // Long-running work
+        }));
+    }
+    
+    fn cancel_work(&mut self) {
+        // Dropping the task cancels it
+        self.background_task = None;
+    }
+    
+    fn detach_work(&mut self, cx: &mut Context<Self>) {
+        // Work continues even after view is dropped
+        cx.background_spawn(async {
+            // Fire and forget
+        }).detach();
+    }
+}
+```
+
+### Task Priority
+
+```rust
+use gpui::{BackgroundExecutor, Priority};
+
+// High priority for user-facing operations
+let urgent = executor.spawn_with_priority(
+    Priority::High,
+    async { /* urgent work */ }
+);
+
+// Low priority for background processing
+let background = executor.spawn_with_priority(
+    Priority::Low,
+    async { /* background work */ }
+);
+
+// Realtime audio priority (dedicated thread)
+let realtime = executor.spawn_with_priority(
+    Priority::RealtimeAudio,
+    async { /* audio processing */ }
+);
+```
+
+## Rendering Optimization
+
+### Minimize Notifications
+
+Only call `cx.notify()` when state changes affect rendering.
+
+```rust
+use gpui::{Context, Entity};
+
+struct Counter {
+    count: i32,
+    cache: Vec<String>,
+}
+
+impl Counter {
+    fn increment(&mut self, cx: &mut Context<Self>) {
+        self.count += 1;
+        cx.notify(); // Triggers re-render
+    }
+    
+    fn update_cache(&mut self, cx: &mut Context<Self>) {
+        self.cache.push("item".to_string());
+        // No cx.notify() - cache doesn't affect rendering
+    }
+    
+    fn conditional_notify(&mut self, cx: &mut Context<Self>) {
+        let old_value = self.count;
+        self.count = compute_new_value();
+        
+        // Only notify if visible state changed
+        if self.count != old_value {
+            cx.notify();
+        }
+    }
+}
+```
+
+### Efficient Element Construction
+
+```rust
+use gpui::{div, Render, IntoElement, Context, Window};
+
+impl Render for MyView {
+    fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        // Good: reuse strings with SharedString
+        let label: SharedString = self.label.clone();
+        
+        div()
+            // Conditional rendering with when()
+            .when(self.show_header, |div| {
+                div.child("Header")
+            })
+            // Conditional with when_some()
+            .when_some(self.subtitle.as_ref(), |div, subtitle| {
+                div.child(subtitle.clone())
+            })
+            // Efficient list rendering
+            .children(
+                self.items.iter().map(|item| {
+                    div().child(item.name.clone())
+                })
+            )
+    }
+}
+```
+
+### Avoid Expensive Operations in Render
+
+```rust
+use gpui::{Render, Context};
+
+struct OptimizedView {
+    data: Vec<Item>,
+    // Cache computed values
+    cached_summary: Option<Summary>,
+}
+
+impl OptimizedView {
+    fn update_data(&mut self, data: Vec<Item>, cx: &mut Context<Self>) {
+        self.data = data;
+        // Compute expensive summary once
+        self.cached_summary = Some(compute_summary(&self.data));
+        cx.notify();
+    }
+}
+
+impl Render for OptimizedView {
+    fn render(&mut self, _: &mut Window, _: &mut Context<Self>) -> impl IntoElement {
+        // Use cached value instead of recomputing
+        let summary = self.cached_summary.as_ref().unwrap();
+        
+        div()
+            .child(format!("Total: {}", summary.total))
+            .child(format!("Average: {}", summary.average))
+    }
+}
+```
+
+## Memory Management
+
+### Weak References
+
+Use weak references to avoid reference cycles.
+
+```rust
+use gpui::{Entity, WeakEntity, Context};
+
+struct Parent {
+    children: Vec<Entity<Child>>,
+}
+
+struct Child {
+    // Use WeakEntity to avoid cycle
+    parent: WeakEntity<Parent>,
+}
+
+impl Child {
+    fn update_parent(&self, cx: &mut Context<Self>) {
+        // Safely access parent
+        if let Some(parent) = self.parent.upgrade() {
+            parent.update(cx, |p, cx| {
+                // Update parent
+            });
+        }
+    }
+}
+```
+
+### Subscription Management
+
+```rust
+use gpui::{Subscription, Context};
+
+struct Subscriber {
+    // Store subscriptions to keep them alive
+    _subscriptions: Vec<Subscription>,
+}
+
+impl Subscriber {
+    fn new(other: &Entity<OtherEntity>, cx: &mut Context<Self>) -> Self {
+        let subscription = cx.subscribe(other, |this, other, event, cx| {
+            // Handle event
+        });
+        
+        Self {
+            _subscriptions: vec![subscription],
+        }
+    }
+}
+// Subscriptions automatically cleaned up when Subscriber is dropped
+```
+
+## Thermal State Awareness
+
+Adapt application behavior based on system thermal state.
+
+```rust
+use gpui::{App, ThermalState, Context};
+
+struct AdaptiveRenderer {
+    frame_rate: f64,
+    quality: RenderQuality,
+    _subscription: Subscription,
+}
+
+impl AdaptiveRenderer {
+    fn new(cx: &mut Context<Self>) -> Self {
+        let subscription = cx.observe_thermal_state(|this, cx| {
+            this.adjust_for_thermal_state(cx);
+        });
+        
+        Self {
+            frame_rate: 60.0,
+            quality: RenderQuality::High,
+            _subscription: subscription,
+        }
+    }
+    
+    fn adjust_for_thermal_state(&mut self, cx: &App) {
+        match cx.thermal_state() {
+            ThermalState::Nominal => {
+                self.frame_rate = 60.0;
+                self.quality = RenderQuality::High;
+            }
+            ThermalState::Fair => {
+                self.frame_rate = 60.0;
+                self.quality = RenderQuality::Medium;
+            }
+            ThermalState::Serious => {
+                self.frame_rate = 30.0;
+                self.quality = RenderQuality::Low;
+            }
+            ThermalState::Critical => {
+                self.frame_rate = 30.0;
+                self.quality = RenderQuality::Minimal;
+            }
+        }
+    }
+}
+```
+
+## Profiling
+
+GPUI includes built-in profiling for task execution timing.
+
+### Task Timing Collection
+
+```rust
+use gpui::{App, ThreadTaskTimings};
+
+fn collect_profiling_data(cx: &App) {
+    // Get timing data for all threads
+    let timings = cx.dispatcher().get_all_timings();
+    
+    for thread_timing in timings {
+        println!("Thread: {:?}", thread_timing.thread_name);
+        println!("Total tasks: {}", thread_timing.total_pushed);
+        
+        for timing in &thread_timing.timings {
+            println!("  Task at {:?}", timing.location);
+            if let Some(end) = timing.end {
+                let duration = end.duration_since(timing.start);
+                println!("    Duration: {:?}", duration);
+            }
+        }
+    }
+}
+```
+
+### Profiling in Tests
+
+```rust
+use gpui::{TestAppContext, Task};
+
+#[gpui::test]
+async fn profile_performance(cx: &mut TestAppContext) {
+    let start = cx.foreground_executor().now();
+    
+    // Run operation
+    expensive_operation(cx).await;
+    
+    let end = cx.foreground_executor().now();
+    let duration = end.duration_since(start);
+    
+    assert!(duration.as_millis() < 100, "Operation too slow: {:?}", duration);
+}
+```
+
+## Batching Updates
+
+Batch multiple updates to minimize re-renders.
+
+```rust
+use gpui::{Entity, Context};
+
+struct BatchedUpdater {
+    items: Vec<Item>,
+    pending_updates: Vec<Update>,
+}
+
+impl BatchedUpdater {
+    fn queue_update(&mut self, update: Update) {
+        self.pending_updates.push(update);
+        // Don't notify yet
+    }
+    
+    fn flush_updates(&mut self, cx: &mut Context<Self>) {
+        // Apply all updates at once
+        for update in self.pending_updates.drain(..) {
+            self.apply_update(update);
+        }
+        
+        // Single notification for all updates
+        cx.notify();
+    }
+}
+```
+
+## Async Batching
+
+```rust
+use gpui::{Context, Task};
+use std::time::Duration;
+
+struct DebouncedUpdater {
+    pending_task: Option<Task<()>>,
+}
+
+impl DebouncedUpdater {
+    fn request_update(&mut self, cx: &mut Context<Self>) {
+        // Cancel previous debounce
+        self.pending_task = None;
+        
+        // Schedule new update
+        self.pending_task = Some(cx.spawn(async move |this, cx| {
+            // Wait for debounce period
+            cx.background_executor().timer(Duration::from_millis(300)).await;
+            
+            // Perform update
+            this.update(cx, |view, cx| {
+                view.perform_expensive_update(cx);
+            }).ok();
+        }));
+    }
+}
+```
+
+## Text Rendering
+
+### Font Caching
+
+GPUI caches font metrics and glyph rendering automatically, but you can help by reusing font IDs.
+
+```rust
+use gpui::{TextSystem, Font, FontId};
+
+struct TextRenderer {
+    text_system: Arc<TextSystem>,
+    // Cache font IDs
+    default_font: FontId,
+    monospace_font: FontId,
+}
+
+impl TextRenderer {
+    fn new(text_system: Arc<TextSystem>) -> anyhow::Result<Self> {
+        Ok(Self {
+            default_font: text_system.font_id(&Font::default())?,
+            monospace_font: text_system.font_id(&Font {
+                family: "JetBrains Mono".into(),
+                ..Default::default()
+            })?,
+            text_system,
+        })
+    }
+}
+```
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Offload work to background threads">
+    Move CPU-intensive operations to background threads:
+    
+    ```rust
+    // Heavy computation
+    let result = cx.background_spawn(async {
+        expensive_computation()
+    }).await;
+    
+    // Update UI on foreground
+    this.update(cx, |view, cx| {
+        view.result = result;
+        cx.notify();
+    });
+    ```
+  </Accordion>
+  
+  <Accordion title="Cache computed values">
+    Store expensive computations instead of recalculating:
+    
+    ```rust
+    struct View {
+        data: Vec<Item>,
+        cached_total: Option<f64>, // Cache expensive computation
+    }
+    
+    impl View {
+        fn update_data(&mut self, data: Vec<Item>, cx: &mut Context<Self>) {
+            self.data = data;
+            self.cached_total = Some(self.data.iter().sum());
+            cx.notify();
+        }
+    }
+    ```
+  </Accordion>
+  
+  <Accordion title="Use weak references for cycles">
+    Break reference cycles with `WeakEntity`:
+    
+    ```rust
+    struct Child {
+        parent: WeakEntity<Parent>, // Prevents memory leak
+    }
+    ```
+  </Accordion>
+  
+  <Accordion title="Batch notifications">
+    Combine multiple state changes into single update:
+    
+    ```rust
+    fn update_multiple(&mut self, cx: &mut Context<Self>) {
+        self.field1 = new_value1;
+        self.field2 = new_value2;
+        self.field3 = new_value3;
+        cx.notify(); // Single notification
+    }
+    ```
+  </Accordion>
+  
+  <Accordion title="Monitor thermal state">
+    Adjust quality/performance based on system load:
+    
+    ```rust
+    match cx.thermal_state() {
+        ThermalState::Serious | ThermalState::Critical => {
+            // Reduce frame rate, disable effects
+        }
+        _ => {
+            // Full quality
+        }
+    }
+    ```
+  </Accordion>
+  
+  <Accordion title="Profile in tests">
+    Use test timing to catch performance regressions:
+    
+    ```rust
+    #[gpui::test]
+    async fn perf_test(cx: &mut TestAppContext) {
+        let start = cx.executor().now();
+        operation(cx).await;
+        let duration = cx.executor().now().duration_since(start);
+        assert!(duration.as_millis() < 100);
+    }
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Common Performance Issues
+
+### Issue: Excessive Re-renders
+
+**Problem:** Calling `cx.notify()` too frequently.
+
+**Solution:** Only notify when visual state changes.
+
+```rust
+// Bad: notifies on every update
+fn update(&mut self, value: i32, cx: &mut Context<Self>) {
+    self.internal_state = value;
+    cx.notify(); // Triggers render even if not displayed
+}
+
+// Good: only notify if rendering depends on it
+fn update(&mut self, value: i32, cx: &mut Context<Self>) {
+    if self.displayed_value != value {
+        self.displayed_value = value;
+        cx.notify();
+    }
+}
+```
+
+### Issue: Blocking the Main Thread
+
+**Problem:** Heavy computation on foreground executor.
+
+**Solution:** Move to background thread.
+
+```rust
+// Bad: blocks UI
+fn process(&mut self, data: Vec<u8>, cx: &mut Context<Self>) {
+    self.result = expensive_process(&data);
+    cx.notify();
+}
+
+// Good: runs in background
+fn process(&mut self, data: Vec<u8>, cx: &mut Context<Self>) {
+    cx.spawn(async move |this, cx| {
+        let result = cx.background_spawn(async move {
+            expensive_process(&data)
+        }).await;
+        
+        this.update(cx, |view, cx| {
+            view.result = result;
+            cx.notify();
+        }).ok();
+    }).detach();
+}
+```
+
+### Issue: Memory Leaks
+
+**Problem:** Reference cycles preventing cleanup.
+
+**Solution:** Use weak references.
+
+```rust
+// Bad: creates cycle
+struct Child {
+    parent: Entity<Parent>, // Strong reference
+}
+
+// Good: allows cleanup
+struct Child {
+    parent: WeakEntity<Parent>, // Weak reference
+}
+```
+
+## See Also
+
+- [Concurrency Guide](src/_ownership_and_data_flow.rs:1) - Task and async patterns
+- [Executors](src/executor.rs:1) - BackgroundExecutor and ForegroundExecutor
+- [Profiler](src/profiler.rs:1) - Profiling utilities

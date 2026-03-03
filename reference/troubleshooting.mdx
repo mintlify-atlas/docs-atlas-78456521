@@ -1,0 +1,436 @@
+---
+title: Troubleshooting
+description: Common issues and solutions for Zed including startup, performance, language servers, and platform-specific problems.
+---
+
+# Troubleshooting
+
+This guide covers common troubleshooting techniques for Zed across all platforms.
+
+## Getting System Information
+
+### Quick System Info
+
+When reporting issues, gather your system information:
+
+<ParamField path="zed: about" type="action">
+  Shows Zed version number.
+  
+  Run from command palette (`Cmd+Shift+P` / `Ctrl+Shift+P`).
+</ParamField>
+
+<ParamField path="zed: copy system specs into clipboard" type="action">
+  Copies Zed version, OS version, and hardware specs to clipboard.
+  
+  Paste this info when reporting bugs.
+</ParamField>
+
+### Version from CLI
+
+```sh
+zed --version
+```
+
+## Zed Log
+
+The Zed log is the first place to look when troubleshooting.
+
+### View Recent Log
+
+Run `zed: open log` from the command palette to view the last 1000 lines.
+
+### View Full Log File
+
+Run `zed: reveal log in file manager` to open the log location:
+
+- **macOS:** `~/Library/Logs/Zed/Zed.log`
+- **Windows:** `C:\Users\YOU\AppData\Local\Zed\logs\Zed.log`
+- **Linux:** `~/.local/share/zed/logs/Zed.log` (or `$XDG_DATA_HOME`)
+
+### Monitor Log Live
+
+Useful when developing extensions or debugging specific issues:
+
+```sh
+# macOS/Linux
+tail -f ~/Library/Logs/Zed/Zed.log
+
+# Windows PowerShell
+Get-Content "$env:LOCALAPPDATA\Zed\logs\Zed.log" -Wait
+```
+
+## Startup Issues
+
+### Zed Won't Start
+
+<ParamField path="Verify system requirements" type="solution">
+  Check that your system meets [minimum requirements](./requirements):
+  - macOS 10.15.7+, Windows 10 1903+, or supported Linux
+  - GPU with Metal (macOS), DirectX 11 (Windows), or Vulkan 1.3 (Linux)
+</ParamField>
+
+<ParamField path="Update GPU drivers" type="solution">
+  Outdated drivers are a common cause of startup failures.
+  
+  - **macOS:** Update macOS via System Settings
+  - **Windows:** Update from GPU vendor (NVIDIA, AMD, Intel, Qualcomm)
+  - **Linux:** Install latest drivers for your distribution
+</ParamField>
+
+<ParamField path="Test with clean profile" type="solution">
+  Temporarily move your settings to test if corruption is the issue:
+  
+  ```sh
+  # macOS/Linux
+  mv ~/.config/zed ~/.config/zed.backup
+  
+  # Windows PowerShell
+  Rename-Item "$env:APPDATA\Zed" "$env:APPDATA\Zed.backup"
+  ```
+  
+  Start Zed. If it works, your settings or extensions may be corrupted.
+</ParamField>
+
+### Corrupted Workspace Database
+
+Zed stores workspace state in SQLite databases. Corruption is rare but can prevent startup.
+
+**Database locations:**
+
+- **macOS:** `~/Library/Application Support/Zed/db`
+- **Linux:** `~/.local/share/zed/db` (or `$XDG_DATA_HOME`)
+- **Windows:** `%LOCALAPPDATA%\Zed\db`
+
+**Database names:**
+- Stable: `0-stable`
+- Preview: `0-preview`
+- Nightly: `0-nightly`
+- Dev: `0-dev`
+
+**Fix:**
+
+Move the database to test:
+
+```sh
+# macOS
+mv "~/Library/Application Support/Zed/db/0-stable" "~/Library/Application Support/Zed/db/0-stable.backup"
+
+# Linux
+mv ~/.local/share/zed/db/0-stable ~/.local/share/zed/db/0-stable.backup
+
+# Windows PowerShell
+Rename-Item "$env:LOCALAPPDATA\Zed\db\0-stable" "$env:LOCALAPPDATA\Zed\db\0-stable.backup"
+```
+
+Zed will create a fresh database. Your recent projects and open tabs will reset.
+
+### Platform-Specific Startup Issues
+
+**macOS - "Damaged" Application:**
+
+See [macOS Troubleshooting](./macos#damaged-or-untrusted-application).
+
+**Linux - glibc Version Error:**
+
+See [Linux Troubleshooting](./linux#zed-fails-to-start).
+
+**Windows - Blank Window:**
+
+See [Windows Troubleshooting](./windows#zed-fails-to-start-or-shows-blank-window).
+
+## Performance Issues
+
+### High CPU or Memory Usage
+
+<ParamField path="Check language servers" type="solution">
+  Language servers can consume significant resources.
+  
+  1. Open the log: `zed: open log`
+  2. Look for language server errors or warnings
+  3. Restart language server: `editor: restart language server`
+  4. If a specific language server is problematic, disable it temporarily
+</ParamField>
+
+<ParamField path="Disable extensions" type="solution">
+  Extensions may cause performance issues.
+  
+  1. Open extensions: `zed: extensions`
+  2. Disable extensions one by one to identify the culprit
+  3. Report issues to the extension author
+</ParamField>
+
+<ParamField path="Exclude large directories" type="solution">
+  For large projects, exclude unnecessary directories from indexing:
+  
+  ```json
+  {
+    "file_scan_exclusions": [
+      "**/node_modules",
+      "**/.git",
+      "**/target",
+      "**/dist"
+    ]
+  }
+  ```
+</ParamField>
+
+<ParamField path="Reduce context size" type="solution">
+  Large AI context windows can use significant memory.
+  
+  1. Start new threads in the agent panel
+  2. Clear tool outputs using thread controls
+  3. Use a model with smaller context window
+</ParamField>
+
+### Profiling (macOS)
+
+For persistent performance issues, capture a performance profile:
+
+1. Install [Xcode](https://apps.apple.com/us/app/xcode/id497799835)
+2. Open Instruments (comes with Xcode)
+3. Select "Time Profiler" template
+4. Set target to running Zed process
+5. Record while reproducing the performance issue
+6. Save and compress the trace file
+7. Attach to a [GitHub issue](https://github.com/zed-industries/zed/issues/new/choose)
+
+### Slow Project Loading
+
+<ParamField path="Use SSD" type="solution">
+  Project indexing is significantly faster on SSDs.
+</ParamField>
+
+<ParamField path="Check disk usage" type="solution">
+  Nearly full disks slow down file operations. Ensure adequate free space.
+</ParamField>
+
+## Language Server Issues
+
+### Language Server Not Working
+
+<ParamField path="Restart language server" type="solution">
+  Run `editor: restart language server` from command palette.
+</ParamField>
+
+<ParamField path="Check installation" type="solution">
+  Zed auto-installs language servers, but manual installation may be needed for some languages.
+  
+  1. Check log for errors: `zed: open log`
+  2. Verify language server binary exists
+  3. See [Configuring Languages](../languages) for language-specific setup
+</ParamField>
+
+<ParamField path="Verify language detection" type="solution">
+  Ensure Zed detects the file type correctly.
+  
+  1. Check status bar for language name
+  2. Manually set language: Run `editor: change language` from command palette
+</ParamField>
+
+### Stale Diagnostics
+
+<ParamField path="Restart language server" type="solution">
+  Run `editor: restart language server` to refresh diagnostics.
+</ParamField>
+
+<ParamField path="Save file" type="solution">
+  Some language servers only update diagnostics on save.
+</ParamField>
+
+### Go to Definition Not Working
+
+<ParamField path="Ensure project is indexed" type="solution">
+  Wait for project indexing to complete (check status bar).
+</ParamField>
+
+<ParamField path="Check language server status" type="solution">
+  Open log to verify language server is running: `zed: open log`
+</ParamField>
+
+## AI Agent Issues
+
+### "Max Tokens Reached" Error
+
+This occurs when the agent's response exceeds the model's token limit.
+
+<ParamField path="Start new thread" type="solution">
+  Reduce context size by starting a fresh conversation.
+</ParamField>
+
+<ParamField path="Use larger model" type="solution">
+  Switch to a model with higher token limit in AI settings.
+  
+  ```json
+  {
+    "agent": {
+      "default_model": {
+        "provider": "anthropic",
+        "model": "claude-opus-4"  // Larger context window
+      }
+    }
+  }
+  ```
+</ParamField>
+
+<ParamField path="Clear tool outputs" type="solution">
+  Use thread controls to clear large tool outputs.
+</ParamField>
+
+<ParamField path="Break into smaller tasks" type="solution">
+  Split complex requests into multiple focused tasks.
+</ParamField>
+
+### Agent Not Responding
+
+<ParamField path="Check API key" type="solution">
+  Verify your API key is configured correctly in settings.
+</ParamField>
+
+<ParamField path="Check internet connection" type="solution">
+  AI features require an active internet connection.
+</ParamField>
+
+<ParamField path="Check provider status" type="solution">
+  Visit your AI provider's status page to check for outages.
+</ParamField>
+
+## Graphics Issues
+
+### macOS
+
+See [macOS Graphics Troubleshooting](./macos#gpu-or-rendering-issues).
+
+### Linux
+
+See [Linux Graphics Troubleshooting](./linux#graphics-issues).
+
+### Windows
+
+See [Windows Graphics Troubleshooting](./windows#graphics-issues).
+
+## Git Integration Issues
+
+### Git Not Detected
+
+<ParamField path="Install Git" type="solution">
+  Ensure Git is installed and on your PATH.
+  
+  ```sh
+  git --version
+  ```
+  
+  - **macOS:** Install Xcode Command Line Tools: `xcode-select --install`
+  - **Linux:** `sudo apt install git` (Debian/Ubuntu) or equivalent
+  - **Windows:** Install [Git for Windows](https://git-scm.com/download/win)
+</ParamField>
+
+<ParamField path="Restart Zed" type="solution">
+  After installing Git, restart Zed to detect it.
+</ParamField>
+
+### Git Credentials
+
+<ParamField path="SSH keys" type="solution">
+  For SSH remotes, ensure your SSH key is added to the agent:
+  
+  ```sh
+  ssh-add ~/.ssh/id_rsa
+  ```
+</ParamField>
+
+<ParamField path="Credential managers" type="solution">
+  Configure Git credential manager:
+  
+  ```sh
+  git config --global credential.helper manager
+  ```
+</ParamField>
+
+## Remote Development Issues
+
+See the [Remote Development documentation](../remote-development#troubleshooting) for SSH-specific troubleshooting.
+
+## Extension Issues
+
+### Extension Not Loading
+
+<ParamField path="Check compatibility" type="solution">
+  Verify the extension supports your Zed version.
+</ParamField>
+
+<ParamField path="Reinstall extension" type="solution">
+  1. Open extensions: `zed: extensions`
+  2. Uninstall the extension
+  3. Restart Zed
+  4. Reinstall the extension
+</ParamField>
+
+<ParamField path="Check extension log" type="solution">
+  Monitor the main Zed log while the extension loads:
+  
+  ```sh
+  tail -f ~/Library/Logs/Zed/Zed.log
+  ```
+</ParamField>
+
+### Developing Extensions
+
+See [Developing Extensions](../extensions/developing-extensions) for debugging tips.
+
+## Filing Bug Reports
+
+If you've tried troubleshooting and still have issues:
+
+### Before Filing
+
+1. Search [existing issues](https://github.com/zed-industries/zed/issues)
+2. Check release notes for known issues
+3. Test in latest version (stable or preview)
+4. Try with clean profile (no extensions/settings)
+
+### Include in Report
+
+1. **Zed version:** Run `zed: about`
+2. **System specs:** Run `zed: copy system specs into clipboard`
+3. **Steps to reproduce:** Clear, numbered steps
+4. **Expected behavior:** What should happen
+5. **Actual behavior:** What actually happens
+6. **Log excerpt:** Relevant lines from `zed: open log`
+7. **Screenshots/videos:** If applicable
+
+### Where to Report
+
+- **Bugs:** [github.com/zed-industries/zed/issues/new](https://github.com/zed-industries/zed/issues/new/choose)
+- **Feature requests:** Same as bugs, use "Feature Request" template
+- **Questions:** [Zed Discord](https://discord.gg/zed-community) or [GitHub Discussions](https://github.com/zed-industries/zed/discussions)
+
+## Getting Help
+
+### Community Support
+
+<ParamField path="Discord" type="support">
+  Join the [Zed Discord](https://discord.gg/zed-community) for real-time help.
+  
+  Channels:
+  - `#help` - General questions
+  - `#linux` - Linux-specific issues
+  - `#windows` - Windows-specific issues
+  - `#extensions` - Extension development
+</ParamField>
+
+<ParamField path="GitHub Discussions" type="support">
+  [GitHub Discussions](https://github.com/zed-industries/zed/discussions) for longer-form questions and answers.
+</ParamField>
+
+<ParamField path="Documentation" type="support">
+  Search this documentation site for guides and references.
+</ParamField>
+
+### Response Time
+
+Community support is best-effort. For faster responses:
+
+- Provide complete information upfront
+- Include logs and system specs
+- Describe what you've already tried
+- Be specific about the issue

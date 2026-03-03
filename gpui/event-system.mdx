@@ -1,0 +1,500 @@
+---
+title: Event and Notification System
+description: Learn how to emit and handle events between entities in GPUI
+---
+
+GPUI provides a powerful event system for communication between entities, enabling reactive UI updates and decoupled component interactions.
+
+## Entity Events
+
+Entities can emit events to notify other parts of your application about state changes.
+
+### Defining Events
+
+Events are typically simple structs or enums:
+
+```rust
+use gpui::*;
+
+#[derive(Clone, Debug)]
+struct DataLoaded {
+    data: String,
+}
+
+#[derive(Clone, Debug)]
+struct ErrorOccurred {
+    message: String,
+}
+
+#[derive(Clone, Debug)]
+enum CounterEvent {
+    Incremented,
+    Decremented,
+    Reset,
+}
+```
+
+### Declaring Event Emitters
+
+Implement `EventEmitter` for your entity type:
+
+```rust
+use gpui::*;
+
+struct Counter {
+    count: i32,
+}
+
+impl EventEmitter<CounterEvent> for Counter {}
+```
+
+### Emitting Events
+
+Emit events using `cx.emit()`:
+
+```rust
+impl Counter {
+    fn increment(&mut self, cx: &mut Context<Self>) {
+        self.count += 1;
+        cx.emit(CounterEvent::Incremented);
+        cx.notify();
+    }
+    
+    fn decrement(&mut self, cx: &mut Context<Self>) {
+        self.count -= 1;
+        cx.emit(CounterEvent::Decremented);
+        cx.notify();
+    }
+    
+    fn reset(&mut self, cx: &mut Context<Self>) {
+        self.count = 0;
+        cx.emit(CounterEvent::Reset);
+        cx.notify();
+    }
+}
+```
+
+### Subscribing to Events
+
+Subscribe to events from other entities:
+
+```rust
+use gpui::*;
+
+struct CounterObserver {
+    counter: Entity<Counter>,
+    last_event: Option<CounterEvent>,
+    _subscriptions: Vec<Subscription>,
+}
+
+impl CounterObserver {
+    fn new(counter: Entity<Counter>, cx: &mut Context<Self>) -> Self {
+        let subscription = cx.subscribe(
+            &counter,
+            |this, counter_entity, event: &CounterEvent, cx| {
+                this.last_event = Some(event.clone());
+                
+                match event {
+                    CounterEvent::Incremented => {
+                        println!("Counter was incremented");
+                    }
+                    CounterEvent::Decremented => {
+                        println!("Counter was decremented");
+                    }
+                    CounterEvent::Reset => {
+                        println!("Counter was reset");
+                    }
+                }
+                
+                cx.notify();
+            },
+        );
+        
+        Self {
+            counter,
+            last_event: None,
+            _subscriptions: vec![subscription],
+        }
+    }
+}
+```
+
+<Note>
+Store subscriptions in a `_subscriptions` field to keep them alive. When dropped, subscriptions are automatically cancelled.
+</Note>
+
+## Observation
+
+### Observing Entity Changes
+
+Observe any changes to an entity using `cx.observe()`:
+
+```rust
+use gpui::*;
+
+struct DataDisplay {
+    data_source: Entity<DataSource>,
+    _subscriptions: Vec<Subscription>,
+}
+
+impl DataDisplay {
+    fn new(data_source: Entity<DataSource>, cx: &mut Context<Self>) -> Self {
+        let subscription = cx.observe(&data_source, |this, source, cx| {
+            // Called whenever data_source.notify() is called
+            println!("Data source changed");
+            cx.notify();
+        });
+        
+        Self {
+            data_source,
+            _subscriptions: vec![subscription],
+        }
+    }
+}
+```
+
+### Difference: observe vs subscribe
+
+- `cx.observe()`: Triggers on `cx.notify()` calls, no event data
+- `cx.subscribe()`: Triggers on `cx.emit()`, provides event data
+
+## Notifications
+
+### Notifying Changes
+
+Call `cx.notify()` to trigger re-renders and observations:
+
+```rust
+impl Counter {
+    fn set_count(&mut self, count: i32, cx: &mut Context<Self>) {
+        self.count = count;
+        cx.notify();  // Triggers re-render and observers
+    }
+}
+```
+
+### When to Notify
+
+<CodeGroup>
+```rust Always Notify After State Changes
+impl MyComponent {
+    fn update_state(&mut self, cx: &mut Context<Self>) {
+        self.data = new_value;
+        cx.notify();  // ✓ Correct
+    }
+}
+```
+
+```rust Multiple Changes, Single Notify
+impl MyComponent {
+    fn batch_update(&mut self, cx: &mut Context<Self>) {
+        self.field1 = value1;
+        self.field2 = value2;
+        self.field3 = value3;
+        cx.notify();  // ✓ One notify at the end is sufficient
+    }
+}
+```
+</CodeGroup>
+
+## Complete Event Example
+
+```rust
+use gpui::*;
+use std::time::Duration;
+
+#[derive(Clone, Debug)]
+enum DataEvent {
+    LoadStarted,
+    LoadCompleted { data: String },
+    LoadFailed { error: String },
+}
+
+struct DataSource {
+    data: Option<String>,
+    loading: bool,
+}
+
+impl EventEmitter<DataEvent> for DataSource {}
+
+impl DataSource {
+    fn new() -> Self {
+        Self {
+            data: None,
+            loading: false,
+        }
+    }
+    
+    fn load_data(&mut self, cx: &mut Context<Self>) {
+        self.loading = true;
+        cx.emit(DataEvent::LoadStarted);
+        cx.notify();
+        
+        cx.spawn(|this, mut cx| async move {
+            // Simulate loading
+            cx.background_executor()
+                .timer(Duration::from_secs(1))
+                .await;
+            
+            // Simulate success or failure
+            let result = Ok("Loaded data".to_string());
+            
+            this.update(&mut cx, |this, cx| {
+                this.loading = false;
+                
+                match result {
+                    Ok(data) => {
+                        this.data = Some(data.clone());
+                        cx.emit(DataEvent::LoadCompleted { data });
+                    }
+                    Err(error) => {
+                        cx.emit(DataEvent::LoadFailed { 
+                            error: error.to_string() 
+                        });
+                    }
+                }
+                
+                cx.notify();
+            })
+        })
+        .detach();
+    }
+}
+
+struct DataView {
+    source: Entity<DataSource>,
+    status: String,
+    _subscriptions: Vec<Subscription>,
+}
+
+impl DataView {
+    fn new(source: Entity<DataSource>, cx: &mut Context<Self>) -> Self {
+        let subscription = cx.subscribe(
+            &source,
+            |this, _source, event: &DataEvent, cx| {
+                match event {
+                    DataEvent::LoadStarted => {
+                        this.status = "Loading...".to_string();
+                    }
+                    DataEvent::LoadCompleted { data } => {
+                        this.status = format!("Loaded: {}", data);
+                    }
+                    DataEvent::LoadFailed { error } => {
+                        this.status = format!("Error: {}", error);
+                    }
+                }
+                cx.notify();
+            },
+        );
+        
+        Self {
+            source,
+            status: "Ready".to_string(),
+            _subscriptions: vec![subscription],
+        }
+    }
+}
+
+impl Render for DataView {
+    fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        div()
+            .flex()
+            .flex_col()
+            .gap_4()
+            .p_6()
+            .child(
+                div()
+                    .p_4()
+                    .bg(rgb(0x3b82f6))
+                    .text_color(white())
+                    .rounded_md()
+                    .cursor_pointer()
+                    .on_click(cx.listener(|this, _event, _window, cx| {
+                        this.source.update(cx, |source, cx| {
+                            source.load_data(cx);
+                        });
+                    }))
+                    .child("Load Data")
+            )
+            .child(
+                div()
+                    .text_lg()
+                    .child(&self.status)
+            )
+    }
+}
+```
+
+## Parent-Child Communication
+
+### Child to Parent Events
+
+```rust
+use gpui::*;
+
+#[derive(Clone)]
+struct ChildClicked;
+
+struct ChildComponent;
+
+impl EventEmitter<ChildClicked> for ChildComponent {}
+
+impl Render for ChildComponent {
+    fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        div()
+            .on_click(cx.listener(|this, _event, _window, cx| {
+                cx.emit(ChildClicked);
+            }))
+            .child("Click me")
+    }
+}
+
+struct ParentComponent {
+    child: Entity<ChildComponent>,
+    click_count: usize,
+    _subscriptions: Vec<Subscription>,
+}
+
+impl ParentComponent {
+    fn new(cx: &mut Context<Self>) -> Self {
+        let child = cx.new(|_cx| ChildComponent);
+        
+        let subscription = cx.subscribe(&child, |this, _child, _event: &ChildClicked, cx| {
+            this.click_count += 1;
+            cx.notify();
+        });
+        
+        Self {
+            child,
+            click_count: 0,
+            _subscriptions: vec![subscription],
+        }
+    }
+}
+```
+
+### Parent to Child Updates
+
+Parents can directly update children:
+
+```rust
+impl ParentComponent {
+    fn reset_child(&mut self, cx: &mut Context<Self>) {
+        self.child.update(cx, |child, cx| {
+            // Update child state
+            cx.notify();
+        });
+    }
+}
+```
+
+## Global Events
+
+For application-wide events, use global state with observations:
+
+```rust
+use gpui::*;
+
+#[derive(Clone)]
+struct AppState {
+    theme: Theme,
+}
+
+impl Global for AppState {}
+
+#[derive(Clone)]
+enum Theme {
+    Light,
+    Dark,
+}
+
+struct ThemedComponent {
+    _subscriptions: Vec<Subscription>,
+}
+
+impl ThemedComponent {
+    fn new(cx: &mut Context<Self>) -> Self {
+        // Observe global state changes
+        let subscription = cx.observe_global::<AppState>(|this, cx| {
+            // React to theme changes
+            cx.notify();
+        });
+        
+        Self {
+            _subscriptions: vec![subscription],
+        }
+    }
+}
+
+impl Render for ThemedComponent {
+    fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        let theme = cx.global::<AppState>().theme.clone();
+        
+        let bg_color = match theme {
+            Theme::Light => rgb(0xffffff),
+            Theme::Dark => rgb(0x1f2937),
+        };
+        
+        div().bg(bg_color).child("Themed content")
+    }
+}
+```
+
+## Multiple Event Types
+
+An entity can emit multiple event types:
+
+```rust
+#[derive(Clone)]
+struct StateChanged;
+
+#[derive(Clone)]
+struct ErrorOccurred(String);
+
+struct MyComponent;
+
+impl EventEmitter<StateChanged> for MyComponent {}
+impl EventEmitter<ErrorOccurred> for MyComponent {}
+
+impl MyComponent {
+    fn do_something(&mut self, cx: &mut Context<Self>) {
+        cx.emit(StateChanged);
+    }
+    
+    fn handle_error(&mut self, error: String, cx: &mut Context<Self>) {
+        cx.emit(ErrorOccurred(error));
+    }
+}
+```
+
+## Best Practices
+
+<Tip>
+Store subscriptions in a `Vec<Subscription>` field to ensure they live as long as the subscriber.
+</Tip>
+
+<Note>
+Use events for loosely coupled communication between components. For tight coupling, direct method calls are simpler.
+</Note>
+
+<Warning>
+Always call `cx.notify()` after emitting events if the event should trigger a re-render.
+</Warning>
+
+### Event Naming Conventions
+
+- Use past tense for completed actions: `DataLoaded`, `ItemDeleted`
+- Use present tense for ongoing actions: `Loading`, `Updating`
+- Use descriptive names that clearly indicate what happened
+
+### Memory Management
+
+Subscriptions automatically clean up when dropped:
+
+```rust
+struct Component {
+    _subscriptions: Vec<Subscription>,
+}
+
+// When Component is dropped, all subscriptions are cancelled
+```

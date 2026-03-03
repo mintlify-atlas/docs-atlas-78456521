@@ -1,122 +1,212 @@
 {
   "$schema": "https://mintlify.com/docs.json",
-  "theme": "mint",
-  "name": "Mint Starter Kit",
+  "name": "Zed",
+  "theme": "aspen",
   "colors": {
-    "primary": "#16A34A",
-    "light": "#07C983",
-    "dark": "#15803D"
+    "primary": "#0091FF",
+    "light": "#60AFFF",
+    "dark": "#0077D4"
   },
   "favicon": "/favicon.svg",
+  "navbar": {
+    "primary": {
+      "type": "github",
+      "href": "https://github.com/zed-industries/zed"
+    }
+  },
+  "footer": {
+    "socials": {
+      "github": "https://github.com/zed-industries/zed"
+    }
+  },
   "navigation": {
     "tabs": [
       {
-        "tab": "Guides",
+        "tab": "Documentation",
         "groups": [
           {
-            "group": "Getting started",
+            "group": "Getting Started",
             "pages": [
               "index",
+              "installation",
               "quickstart",
-              "development"
+              "configuration"
+            ]
+          },
+          {
+            "group": "Core Features",
+            "pages": [
+              "features/editing",
+              "features/navigation",
+              "features/collaboration",
+              "features/remote-development",
+              "features/terminal"
+            ]
+          },
+          {
+            "group": "AI & Agents",
+            "pages": [
+              "ai/overview",
+              "ai/agent-panel",
+              "ai/inline-assistant",
+              "ai/edit-prediction",
+              "ai/text-threads",
+              "ai/configuration",
+              "ai/external-agents",
+              "ai/mcp",
+              "ai/tools",
+              "ai/rules"
+            ]
+          },
+          {
+            "group": "Language Support",
+            "pages": [
+              "languages/overview",
+              "languages/configuring",
+              "languages/toolchains",
+              "languages/rust",
+              "languages/typescript",
+              "languages/python",
+              "languages/go"
             ]
           },
           {
             "group": "Customization",
             "pages": [
-              "essentials/settings",
-              "essentials/navigation"
+              "customization/themes",
+              "customization/keybindings",
+              "customization/settings",
+              "customization/vim-mode",
+              "customization/fonts"
             ]
           },
           {
-            "group": "Writing content",
+            "group": "Extensions",
             "pages": [
-              "essentials/markdown",
-              "essentials/code",
-              "essentials/images",
-              "essentials/reusable-snippets"
-            ]
-          },
-          {
-            "group": "AI tools",
-            "pages": [
-              "ai-tools/cursor",
-              "ai-tools/claude-code",
-              "ai-tools/windsurf"
+              "extensions/overview",
+              "extensions/installing",
+              "extensions/developing",
+              "extensions/language-extensions",
+              "extensions/theme-extensions",
+              "extensions/capabilities"
             ]
           }
         ]
       },
       {
-        "tab": "API reference",
+        "tab": "GPUI Framework",
         "groups": [
           {
-            "group": "API documentation",
+            "group": "Introduction",
             "pages": [
-              "api-reference/introduction"
+              "gpui/overview",
+              "gpui/getting-started",
+              "gpui/architecture"
             ]
           },
           {
-            "group": "Endpoint examples",
+            "group": "Core Concepts",
             "pages": [
-              "api-reference/endpoint/get",
-              "api-reference/endpoint/create",
-              "api-reference/endpoint/delete",
-              "api-reference/endpoint/webhook"
+              "gpui/entities",
+              "gpui/views-rendering",
+              "gpui/elements",
+              "gpui/contexts",
+              "gpui/actions"
+            ]
+          },
+          {
+            "group": "UI Components",
+            "pages": [
+              "gpui/styling",
+              "gpui/layouts",
+              "gpui/interactive-elements",
+              "gpui/text-rendering"
+            ]
+          },
+          {
+            "group": "Concurrency",
+            "pages": [
+              "gpui/async-tasks",
+              "gpui/background-execution",
+              "gpui/event-system"
+            ]
+          },
+          {
+            "group": "Advanced",
+            "pages": [
+              "gpui/platform-services",
+              "gpui/testing",
+              "gpui/performance"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Developer Guides",
+        "groups": [
+          {
+            "group": "Contributing",
+            "pages": [
+              "development/overview",
+              "development/building-macos",
+              "development/building-linux",
+              "development/building-windows",
+              "development/contributing"
+            ]
+          },
+          {
+            "group": "Architecture",
+            "pages": [
+              "development/crate-structure",
+              "development/key-subsystems",
+              "development/gpui-integration",
+              "development/rpc-protocol",
+              "development/glossary"
+            ]
+          },
+          {
+            "group": "Testing & Debugging",
+            "pages": [
+              "development/testing",
+              "development/debugging",
+              "development/debugging-crashes",
+              "development/performance-profiling"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Reference",
+        "groups": [
+          {
+            "group": "API Reference",
+            "pages": [
+              "reference/cli",
+              "reference/settings",
+              "reference/actions",
+              "reference/keybindings"
+            ]
+          },
+          {
+            "group": "Platform Support",
+            "pages": [
+              "reference/macos",
+              "reference/linux",
+              "reference/windows",
+              "reference/requirements"
+            ]
+          },
+          {
+            "group": "Resources",
+            "pages": [
+              "reference/release-notes",
+              "reference/migration-guides",
+              "reference/troubleshooting",
+              "reference/faq"
             ]
           }
         ]
       }
-    ],
-    "global": {
-      "anchors": [
-        {
-          "anchor": "Documentation",
-          "href": "https://mintlify.com/docs",
-          "icon": "book-open-cover"
-        },
-        {
-          "anchor": "Blog",
-          "href": "https://mintlify.com/blog",
-          "icon": "newspaper"
-        }
-      ]
-    }
-  },
-  "logo": {
-    "light": "/logo/light.svg",
-    "dark": "/logo/dark.svg"
-  },
-  "navbar": {
-    "links": [
-      {
-        "label": "Support",
-        "href": "mailto:hi@mintlify.com"
-      }
-    ],
-    "primary": {
-      "type": "button",
-      "label": "Dashboard",
-      "href": "https://dashboard.mintlify.com"
-    }
-  },
-  "contextual": {
-    "options": [
-     "copy",
-     "view",
-     "chatgpt",
-     "claude",
-     "perplexity",
-     "mcp",
-     "cursor",
-     "vscode"
-   ]
-  },
-  "footer": {
-    "socials": {
-      "x": "https://x.com/mintlify",
-      "github": "https://github.com/mintlify",
-      "linkedin": "https://linkedin.com/company/mintlify"
-    }
+    ]
   }
 }

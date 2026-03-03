@@ -1,0 +1,651 @@
+---
+title: External Agents
+description: Connect to external AI agents via Agent Client Protocol (ACP)
+---
+
+Zed supports connecting to external AI agents through the Agent Client Protocol (ACP). This allows you to use specialized agents from providers like Anthropic's Claude Code or build your own custom agents.
+
+## Overview
+
+External agents extend Zed's AI capabilities by:
+
+- **Specialized expertise**: Agents trained for specific tasks
+- **Custom tools**: Provider-specific capabilities
+- **Enhanced features**: Advanced reasoning, planning, and execution
+- **Remote execution**: Offload complex tasks to powerful remote systems
+
+## Agent Client Protocol (ACP)
+
+ACP is Zed's protocol for communicating with external agents:
+
+```typescript
+interface AgentConnection {
+  // Session management
+  newSession(): Promise<Session>;
+  loadSession(id: SessionId): Promise<Session>;
+  closeSession(id: SessionId): Promise<void>;
+  
+  // Model selection
+  listModels(): Promise<ModelList>;
+  selectModel(modelId: ModelId): Promise<void>;
+  
+  // Message handling
+  prompt(request: PromptRequest): Promise<PromptResponse>;
+  retry(sessionId: SessionId): Promise<PromptResponse>;
+  cancel(sessionId: SessionId): void;
+}
+```
+
+## Supported External Agents
+
+### Claude Code (Anthropic)
+
+Anthropic's specialized coding agent:
+
+**Features**:
+- Advanced code understanding
+- Multi-file refactoring
+- Test generation
+- Bug detection and fixing
+
+**Setup**:
+
+1. Install Claude Code desktop app
+2. Enable ACP server in Claude Code settings
+3. Configure in Zed:
+
+```json
+{
+  "agent_servers": {
+    "claude_code": {
+      "enabled": true,
+      "url": "http://localhost:9090"
+    }
+  }
+}
+```
+
+### Gemini Agent (Google)
+
+Google's coding agent:
+
+```json
+{
+  "agent_servers": {
+    "gemini": {
+      "enabled": true,
+      "url": "http://localhost:9091"
+    }
+  }
+}
+```
+
+### Custom Agents
+
+Build your own ACP-compatible agent:
+
+```json
+{
+  "agent_servers": {
+    "my_agent": {
+      "enabled": true,
+      "url": "http://localhost:8080",
+      "name": "My Custom Agent",
+      "description": "Custom agent for specific tasks"
+    }
+  }
+}
+```
+
+## Using External Agents
+
+### Creating a Session
+
+Start a session with an external agent:
+
+1. Open Agent Panel (`cmd-shift-a`)
+2. Click "New Thread" → "External Agent"
+3. Select the agent from the list
+4. Start conversing
+
+Or via command:
+
+```
+Cmd/Ctrl + Shift + P
+Type: "New External Agent Thread"
+Select: Claude Code / Gemini / etc.
+```
+
+### Agent Selection
+
+When creating an external agent thread, Zed shows:
+
+- Available agents (enabled in settings)
+- Agent status (connected/disconnected)
+- Agent capabilities
+- Model options
+
+### Session Management
+
+External agent sessions:
+
+- **Persist**: Saved to Zed's database
+- **Resume**: Reload from history
+- **Share**: Export and import
+- **Sync**: Stay synchronized with agent server
+
+## ACP Features
+
+### Authentication
+
+Some agents require authentication:
+
+```typescript
+interface AuthMethod {
+  id: string;
+  type: "oauth" | "api_key" | "token";
+  name: string;
+  description: string;
+}
+```
+
+Zed handles the auth flow and stores credentials securely.
+
+### Model Selection
+
+External agents provide their own model lists:
+
+```typescript
+interface AgentModelInfo {
+  id: ModelId;
+  name: string;
+  description?: string;
+  icon?: AgentModelIcon;
+  is_latest: boolean;
+  cost?: string;
+}
+```
+
+Select models via the model selector in the Agent Panel.
+
+### Tool Calls
+
+External agents can use their own tools:
+
+- File operations on remote systems
+- API integrations
+- Database queries
+- Custom business logic
+
+Tool calls appear in the conversation with their results.
+
+### Token Usage
+
+Track usage across external agents:
+
+```typescript
+interface TokenUsage {
+  input_tokens: number;
+  output_tokens: number;
+  cache_read_tokens?: number;
+  cache_creation_tokens?: number;
+}
+```
+
+Displayed in the thread footer.
+
+## Building a Custom Agent
+
+### ACP Server Implementation
+
+Implement the ACP protocol:
+
+```typescript
+import { AcpServer } from '@zed/acp';
+
+const server = new AcpServer({
+  name: 'My Agent',
+  version: '1.0.0',
+  
+  async newSession() {
+    const session = await createSession();
+    return {
+      session_id: session.id,
+      title: 'New Session',
+    };
+  },
+  
+  async prompt(request) {
+    const { session_id, prompt } = request;
+    
+    // Process the prompt
+    const response = await processPrompt(session_id, prompt);
+    
+    // Stream events back
+    for await (const event of response) {
+      yield event;
+    }
+    
+    return { stop_reason: 'end_turn' };
+  },
+  
+  async listModels() {
+    return {
+      groups: {
+        'My Models': [
+          {
+            id: 'my-model-v1',
+            name: 'My Model v1',
+            description: 'Fast and efficient',
+          },
+        ],
+      },
+    };
+  },
+});
+
+server.listen(8080);
+```
+
+### Event Streaming
+
+Stream events to Zed:
+
+```typescript
+// Text response
+yield {
+  type: 'text',
+  text: 'Here is my response...',
+};
+
+// Tool call
+yield {
+  type: 'tool_use',
+  tool_use: {
+    id: 'tool_123',
+    name: 'read_file',
+    input: { path: 'src/main.rs' },
+  },
+};
+
+// Tool result
+yield {
+  type: 'tool_result',
+  tool_use_id: 'tool_123',
+  content: '... file content ...',
+};
+
+// Completion
+return {
+  stop_reason: 'end_turn',
+};
+```
+
+### Session Storage
+
+Persist session state:
+
+```typescript
+class SessionStore {
+  async save(sessionId: string, data: SessionData) {
+    await db.sessions.put(sessionId, {
+      id: sessionId,
+      messages: data.messages,
+      context: data.context,
+      updated_at: new Date(),
+    });
+  }
+  
+  async load(sessionId: string): Promise<SessionData> {
+    const session = await db.sessions.get(sessionId);
+    if (!session) throw new Error('Session not found');
+    return session;
+  }
+}
+```
+
+## Agent Server Configuration
+
+### Connection Settings
+
+```json
+{
+  "agent_servers": {
+    "my_agent": {
+      "enabled": true,
+      "url": "http://localhost:8080",
+      "name": "My Agent",
+      "description": "Custom agent",
+      "timeout_ms": 30000,
+      "retry_attempts": 3,
+      "auth": {
+        "type": "api_key",
+        "key": "..."
+      }
+    }
+  }
+}
+```
+
+### Health Checks
+
+Zed periodically checks agent health:
+
+```typescript
+interface HealthResponse {
+  status: 'healthy' | 'degraded' | 'unhealthy';
+  version: string;
+  capabilities: string[];
+}
+```
+
+### Auto-Reconnect
+
+When connection is lost:
+
+1. Zed shows a warning
+2. Attempts to reconnect
+3. Queues messages during downtime
+4. Resumes when reconnected
+
+## Advanced Features
+
+### Subagent Support
+
+External agents can spawn subagents:
+
+```typescript
+yield {
+  type: 'subagent_spawned',
+  session_id: 'sub_session_123',
+  purpose: 'Research API documentation',
+};
+```
+
+Zed displays subagents in a tree view.
+
+### Retry Mechanisms
+
+```typescript
+interface RetryOptions {
+  max_attempts: number;
+  backoff_ms: number;
+  exponential: boolean;
+}
+```
+
+Configure retry behavior per agent.
+
+### Custom UI Elements
+
+Agents can return custom UI:
+
+```typescript
+yield {
+  type: 'custom_ui',
+  component: 'progress_bar',
+  props: {
+    progress: 0.75,
+    label: 'Processing files...',
+  },
+};
+```
+
+## Protocol Specification
+
+### Message Format
+
+```typescript
+interface PromptRequest {
+  session_id: string;
+  prompt: ContentBlock[];
+  stream: boolean;
+}
+
+interface ContentBlock {
+  type: 'text' | 'image' | 'tool_result';
+  // ... type-specific fields
+}
+```
+
+### Response Format
+
+```typescript
+interface PromptResponse {
+  stop_reason: StopReason;
+  usage?: TokenUsage;
+}
+
+enum StopReason {
+  EndTurn = 'end_turn',
+  MaxTokens = 'max_tokens',
+  StopSequence = 'stop_sequence',
+  Error = 'error',
+}
+```
+
+### Error Handling
+
+```typescript
+interface ErrorResponse {
+  error: {
+    type: string;
+    message: string;
+    details?: any;
+  };
+}
+```
+
+## Security Considerations
+
+### Authentication
+
+Secure agent connections:
+
+- Use HTTPS in production
+- Validate API keys/tokens
+- Implement rate limiting
+- Log access attempts
+
+### Sandboxing
+
+Isolate agent operations:
+
+- Restrict file system access
+- Limit network requests
+- Control resource usage
+- Monitor for abuse
+
+### Data Privacy
+
+Protect user data:
+
+- Don't log sensitive information
+- Encrypt data in transit
+- Secure credential storage
+- Respect user privacy settings
+
+## Debugging
+
+### Agent Logs
+
+Enable detailed logging:
+
+```json
+{
+  "agent_servers": {
+    "my_agent": {
+      "log_level": "debug",
+      "log_requests": true,
+      "log_responses": true
+    }
+  }
+}
+```
+
+View logs in Zed's log panel:
+
+```
+View → Debug → Open Log
+```
+
+### Connection Issues
+
+Diagnose connection problems:
+
+```bash
+# Test agent endpoint
+curl http://localhost:8080/health
+
+# Check ACP protocol version
+curl http://localhost:8080/info
+```
+
+### Performance Monitoring
+
+Track agent performance:
+
+```typescript
+interface Metrics {
+  request_count: number;
+  average_latency_ms: number;
+  error_rate: number;
+  token_usage: TokenUsage;
+}
+```
+
+## Example Agents
+
+### Code Review Agent
+
+```typescript
+const reviewAgent = new AcpServer({
+  name: 'Code Review Agent',
+  
+  async prompt(request) {
+    const files = extractFiles(request.prompt);
+    
+    for (const file of files) {
+      yield { type: 'text', text: `Reviewing ${file.path}...\n` };
+      
+      const issues = await analyzeFile(file);
+      
+      for (const issue of issues) {
+        yield {
+          type: 'text',
+          text: `- ${issue.severity}: ${issue.message}\n`,
+        };
+      }
+    }
+    
+    return { stop_reason: 'end_turn' };
+  },
+});
+```
+
+### Testing Agent
+
+```typescript
+const testAgent = new AcpServer({
+  name: 'Test Generation Agent',
+  
+  async prompt(request) {
+    const code = extractCode(request.prompt);
+    
+    yield { type: 'text', text: 'Analyzing code...\n' };
+    const structure = await analyzeStructure(code);
+    
+    yield { type: 'text', text: 'Generating tests...\n' };
+    const tests = await generateTests(structure);
+    
+    yield { type: 'text', text: tests };
+    
+    return { stop_reason: 'end_turn' };
+  },
+});
+```
+
+## Best Practices
+
+### Agent Design
+
+- **Single purpose**: Focus on one task domain
+- **Clear naming**: Descriptive agent and tool names
+- **Good defaults**: Sensible default behavior
+- **Error messages**: Helpful error reporting
+
+### Performance
+
+- **Streaming**: Stream responses for better UX
+- **Caching**: Cache expensive computations
+- **Batching**: Batch related operations
+- **Timeouts**: Set reasonable timeouts
+
+### User Experience
+
+- **Progress**: Show progress for long operations
+- **Cancellation**: Support canceling requests
+- **Retry**: Handle transient failures gracefully
+- **Feedback**: Provide clear status updates
+
+## Troubleshooting
+
+### Agent Not Appearing
+
+- Check agent server is running
+- Verify URL in settings
+- Ensure `enabled: true` in config
+- Review health check status
+
+### Connection Timeouts
+
+- Increase timeout in settings
+- Check network connectivity
+- Verify firewall rules
+- Monitor server logs
+
+### Authentication Failures
+
+- Verify API key is correct
+- Check token hasn't expired
+- Ensure proper auth method
+- Review agent server logs
+
+<Note>
+External agents require the agent server to be running and accessible. Check the server's documentation for setup instructions.
+</Note>
+
+## Implementation Details
+
+External agent support is implemented in:
+
+- **Protocol**: `crates/agent_client_protocol/`
+- **Thread handling**: `crates/acp_thread/`
+- **Connection**: `crates/acp_thread/src/connection.rs`
+- **Agent registry**: `crates/agent_servers/`
+
+Key types:
+
+- `AgentConnection`: Connection interface
+- `AcpThread`: Thread implementation for external agents
+- `AgentServerStore`: Registry of available agents
+
+## Resources
+
+<CardGroup cols={2}>
+  <Card title="ACP Specification" icon="file-lines" href="https://github.com/zed-industries/acp">
+    Full protocol specification
+  </Card>
+  
+  <Card title="Example Agents" icon="code" href="https://github.com/zed-industries/acp-examples">
+    Sample agent implementations
+  </Card>
+  
+  <Card title="Agent Panel" icon="comments" href="/ai/agent-panel">
+    Using agents in Zed
+  </Card>
+  
+  <Card title="Configuration" icon="gear" href="/ai/configuration">
+    Agent configuration guide
+  </Card>
+</CardGroup>

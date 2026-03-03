@@ -1,0 +1,541 @@
+---
+title: GPUI Architecture
+description: Deep dive into GPUI's architecture, state management, and rendering model
+---
+
+# GPUI Architecture
+
+GPUI's architecture is built around several core concepts that work together to provide a high-performance, type-safe UI framework.
+
+## Core Concepts
+
+### The App Context
+
+The `App` is the root object that owns all application state. It provides:
+
+- Entity creation and management
+- Global state access
+- Window operations
+- Background execution
+
+```rust
+application().run(|cx: &mut App| {
+    // All application state is managed through cx
+});
+```
+
+### Context Types
+
+GPUI uses different context types for different scopes:
+
+<AccordionGroup>
+  <Accordion title="App - Root Context">
+    Provides access to global state, entity operations, and window management.
+    
+    ```rust
+    fn initialize(cx: &mut App) {
+        let entity = cx.new(|cx| MyState::new());
+    }
+    ```
+  </Accordion>
+  
+  <Accordion title="Context<T> - Entity Context">
+    Provided when updating an entity. Dereferences into `App`, so functions taking `&App` also accept `&Context<T>`.
+    
+    ```rust
+    entity.update(cx, |state, cx: &mut Context<MyState>| {
+        cx.notify(); // Entity-specific operations
+    });
+    ```
+  </Accordion>
+  
+  <Accordion title="Window - Window Context">
+    Provides access to window state, focus management, and action dispatch. Passed as `window` parameter before `cx`.
+    
+    ```rust
+    fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        // Access window services
+    }
+    ```
+  </Accordion>
+  
+  <Accordion title="AsyncApp - Async Context">
+    Used in async closures spawned with `cx.spawn()`. Can be held across await points.
+    
+    ```rust
+    cx.spawn(|mut cx| async move {
+        // cx is AsyncApp here
+    }).detach();
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Entity System
+
+### Ownership and Data Flow
+
+Entities are GPUI's fundamental state management primitive. Unlike traditional ownership models, GPUI owns all entity state:
+
+```rust
+// Create an entity - GPUI owns the state
+let counter: Entity<Counter> = cx.new(|_cx| Counter { count: 0 });
+
+// Access state through the entity handle
+let value = counter.read(cx).count;
+
+// Mutate state through update
+counter.update(cx, |counter, cx| {
+    counter.count += 1;
+    cx.notify();
+});
+```
+
+<Info>
+`Entity<T>` is like an `Rc`, but only provides access to state when a context reference is available. This ensures thread safety and proper invalidation.
+</Info>
+
+### Entity Operations
+
+<CodeGroup>
+```rust Reading State
+// Read immutably
+let value = entity.read(cx).field;
+
+// Read with closure
+entity.read_with(cx, |state, cx| {
+    // Access state and context
+});
+```
+
+```rust Updating State
+// Update with closure
+entity.update(cx, |state, cx: &mut Context<T>| {
+    state.field = new_value;
+    cx.notify(); // Trigger re-render
+});
+
+// Update with window access
+entity.update_in(cx, |state, window, cx| {
+    // Access window services
+});
+```
+
+```rust Weak References
+// Create weak reference
+let weak = entity.downgrade();
+
+// Weak references return Result
+weak.update(cx, |state, cx| {
+    // Returns Err if entity was dropped
+});
+```
+</CodeGroup>
+
+### Entity Communication
+
+#### Observation
+
+Observe changes to an entity:
+
+```rust
+cx.observe(&other_entity, |this, observed_entity, cx| {
+    // Called when observed_entity.notify() is called
+    let value = observed_entity.read(cx).some_field;
+    this.update_from(value);
+}).detach();
+```
+
+#### Event Emission
+
+Emit typed events from entities:
+
+```rust
+// Define event
+struct CountChanged { new_count: usize }
+
+// Declare entity can emit event
+impl EventEmitter<CountChanged> for Counter {}
+
+// Emit event
+counter.update(cx, |counter, cx| {
+    counter.count += 1;
+    cx.emit(CountChanged { new_count: counter.count });
+});
+
+// Subscribe to events
+cx.subscribe(&counter, |this, counter, event: &CountChanged, cx| {
+    println!("Count changed to: {}", event.new_count);
+}).detach();
+```
+
+## Rendering Pipeline
+
+### The Render Trait
+
+Views implement `Render` to define their visual representation:
+
+```rust
+impl Render for MyView {
+    fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        div()
+            .flex()
+            .child("Content")
+    }
+}
+```
+
+### Element Lifecycle
+
+Elements go through three phases each frame:
+
+<Steps>
+  <Step title="Request Layout">
+    Element requests layout from Taffy (flexbox engine) and initializes state:
+    
+    ```rust
+    fn request_layout(
+        &mut self,
+        id: Option<&GlobalElementId>,
+        inspector_id: Option<&InspectorElementId>,
+        window: &mut Window,
+        cx: &mut App,
+    ) -> (LayoutId, Self::RequestLayoutState);
+    ```
+  </Step>
+  
+  <Step title="Prepaint">
+    After layout, bounds are committed for hitbox testing:
+    
+    ```rust
+    fn prepaint(
+        &mut self,
+        id: Option<&GlobalElementId>,
+        inspector_id: Option<&InspectorElementId>,
+        bounds: Bounds<Pixels>,
+        request_layout: &mut Self::RequestLayoutState,
+        window: &mut Window,
+        cx: &mut App,
+    ) -> Self::PrepaintState;
+    ```
+  </Step>
+  
+  <Step title="Paint">
+    Element paints to screen using its state:
+    
+    ```rust
+    fn paint(
+        &mut self,
+        id: Option<&GlobalElementId>,
+        inspector_id: Option<&InspectorElementId>,
+        bounds: Bounds<Pixels>,
+        request_layout: &mut Self::RequestLayoutState,
+        prepaint: &mut Self::PrepaintState,
+        window: &mut Window,
+        cx: &mut App,
+    );
+    ```
+  </Step>
+</Steps>
+
+### Element Types
+
+GPUI provides elements at different abstraction levels:
+
+<Tabs>
+  <Tab title="High-Level">
+    Pre-built elements for common use cases:
+    
+    - `div()` - Container element with flexbox layout
+    - `img()` - Image rendering
+    - `svg()` - SVG rendering
+    - `canvas()` - Custom drawing
+    - Text primitives
+  </Tab>
+  
+  <Tab title="Custom">
+    Implement `Element` trait for full control:
+    
+    ```rust
+    impl Element for MyCustomElement {
+        type RequestLayoutState = ();
+        type PrepaintState = ();
+        
+        fn request_layout(&mut self, ...) -> (LayoutId, ()) {
+            // Custom layout logic
+        }
+        
+        fn prepaint(&mut self, ...) -> () {
+            // Prepare for painting
+        }
+        
+        fn paint(&mut self, ...) {
+            // Custom rendering
+        }
+    }
+    ```
+  </Tab>
+  
+  <Tab title="Components">
+    Use `RenderOnce` for reusable components:
+    
+    ```rust
+    #[derive(IntoElement)]
+    struct Button {
+        label: SharedString,
+    }
+    
+    impl RenderOnce for Button {
+        fn render(self, _window: &mut Window, _cx: &mut App) -> impl IntoElement {
+            div()
+                .px_4()
+                .py_2()
+                .bg(rgb(0x0000ff))
+                .child(self.label)
+        }
+    }
+    ```
+  </Tab>
+</Tabs>
+
+## Actions
+
+Actions provide type-safe keyboard shortcuts and commands:
+
+### Defining Actions
+
+<CodeGroup>
+```rust Simple Actions
+actions!(editor, [MoveUp, MoveDown, MoveLeft, MoveRight]);
+```
+
+```rust Actions with Data
+#[derive(Clone, PartialEq, Action)]
+#[action(namespace = editor)]
+pub struct SelectNext {
+    pub replace_newest: bool,
+}
+```
+</CodeGroup>
+
+### Handling Actions
+
+```rust
+impl Render for Editor {
+    fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        div()
+            .on_action(cx.listener(|this, action: &MoveUp, window, cx| {
+                this.move_cursor_up();
+                cx.notify();
+            }))
+            .child("Editor content")
+    }
+}
+```
+
+### Dispatching Actions
+
+```rust
+// Dispatch globally
+window.dispatch_action(MoveUp.boxed_clone(), cx);
+
+// Dispatch to focused element
+focus_handle.dispatch_action(&MoveUp, window, cx);
+```
+
+## Async Execution
+
+GPUI provides an integrated async runtime:
+
+### Foreground Tasks
+
+Run on the main thread:
+
+```rust
+cx.spawn(|mut cx| async move {
+    // Access entities
+    entity.update(&mut cx, |state, cx| {
+        // Update state
+    })?;
+    Ok(())
+}).detach();
+```
+
+### Background Tasks
+
+Run on background threads:
+
+```rust
+let task = cx.background_spawn(async move {
+    // Heavy computation
+    expensive_operation().await
+});
+
+// Use results on foreground
+cx.spawn(|mut cx| async move {
+    let result = task.await;
+    entity.update(&mut cx, |state, cx| {
+        state.apply_result(result);
+    })?;
+    Ok(())
+}).detach();
+```
+
+### Task Management
+
+<Warning>
+Tasks are cancelled when dropped. Either await them, detach them, or store them in a field.
+</Warning>
+
+```rust
+struct MyView {
+    _background_task: Task<()>,  // Cancelled when view is dropped
+}
+
+impl MyView {
+    fn start_work(&mut self, cx: &mut Context<Self>) {
+        self._background_task = cx.spawn(|this, mut cx| async move {
+            // Work continues until view is dropped
+        });
+    }
+}
+```
+
+## Global State
+
+GPUI supports global state with the `Global` trait:
+
+```rust
+struct AppSettings {
+    theme: String,
+}
+
+impl Global for AppSettings {}
+
+// Set global
+cx.set_global(AppSettings { theme: "dark".into() });
+
+// Read global
+let theme = cx.read_global::<AppSettings>(|settings, cx| {
+    settings.theme.clone()
+});
+
+// Update global
+cx.update_global::<AppSettings>(|settings, cx| {
+    settings.theme = "light".into();
+});
+```
+
+## Focus Management
+
+GPUI provides a focus system for keyboard navigation:
+
+```rust
+struct TextField {
+    focus_handle: FocusHandle,
+}
+
+impl TextField {
+    fn new(cx: &mut Context<Self>) -> Self {
+        Self {
+            focus_handle: cx.focus_handle(),
+        }
+    }
+}
+
+impl Render for TextField {
+    fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        div()
+            .track_focus(&self.focus_handle)
+            .on_action(cx.listener(|this, action: &Submit, window, cx| {
+                // Handle submit when focused
+            }))
+    }
+}
+
+// Focus the element
+cx.focus(&text_field);
+```
+
+## Testing
+
+GPUI provides comprehensive testing support:
+
+```rust
+#[gpui::test]
+fn test_counter(cx: &mut TestAppContext) {
+    let counter = cx.new(|_| Counter { count: 0 });
+    
+    counter.update(cx, |counter, cx| {
+        counter.count += 1;
+        cx.notify();
+    });
+    
+    assert_eq!(counter.read(cx).count, 1);
+}
+```
+
+<Tip>
+Use `TestAppContext` for unit tests and `VisualTestContext` (macOS only) for integration tests with rendering.
+</Tip>
+
+## Performance Considerations
+
+### View Caching
+
+Cache views when their rendering is expensive:
+
+```rust
+let cached_view = view.into_any_view().cached(StyleRefinement::default());
+```
+
+### Efficient Updates
+
+Only call `cx.notify()` when state actually changes:
+
+```rust
+entity.update(cx, |state, cx| {
+    if state.value != new_value {
+        state.value = new_value;
+        cx.notify();
+    }
+});
+```
+
+### Subscription Management
+
+Store subscriptions to control their lifetime:
+
+```rust
+struct MyView {
+    _subscriptions: Vec<Subscription>,
+}
+
+impl MyView {
+    fn new(cx: &mut Context<Self>) -> Self {
+        let sub = cx.observe(&other_entity, |this, entity, cx| {
+            // Handle changes
+        });
+        
+        Self {
+            _subscriptions: vec![sub],
+        }
+    }
+}
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Examples" icon="code" href="https://github.com/zed-industries/zed/tree/main/crates/gpui/examples">
+    Explore GPUI examples
+  </Card>
+  <Card title="API Reference" icon="book" href="https://docs.rs/gpui">
+    Browse the API documentation
+  </Card>
+  <Card title="Zed Source" icon="folder-open" href="https://github.com/zed-industries/zed">
+    Study production GPUI code
+  </Card>
+  <Card title="Community" icon="discord" href="https://zed.dev/community-links">
+    Get help on Discord
+  </Card>
+</CardGroup>

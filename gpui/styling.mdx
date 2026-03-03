@@ -1,0 +1,393 @@
+---
+title: Styling and Tailwind-like API
+description: Learn how to style GPUI elements using a Tailwind-inspired API
+---
+
+GPUI provides a powerful styling API inspired by Tailwind CSS, allowing you to style elements using a fluent, method-chaining interface.
+
+## The Styled Trait
+
+The `Styled` trait provides CSS-like styling methods for elements. Any element that implements `Styled` can use these methods to configure its appearance.
+
+```rust
+use gpui::*;
+
+struct StyledExample;
+
+impl Render for StyledExample {
+    fn render(&mut self, _window: &mut Window, _cx: &mut Context<Self>) -> impl IntoElement {
+        div()
+            .flex()
+            .flex_col()
+            .gap_3()
+            .bg(rgb(0x505050))
+            .size(px(500.0))
+            .justify_center()
+            .items_center()
+            .shadow_lg()
+            .border_1()
+            .border_color(rgb(0x0000ff))
+            .text_xl()
+            .text_color(rgb(0xffffff))
+            .child("Styled Content")
+    }
+}
+```
+
+## Display Types
+
+Control how elements are laid out:
+
+<CodeGroup>
+```rust Flex Layout
+div()
+    .flex()  // Display as flexbox
+    .flex_col()  // Column direction
+    .items_center()  // Center items on cross axis
+    .justify_between()  // Space items evenly
+```
+
+```rust Block Layout
+div()
+    .block()  // Display as block
+    .w_full()  // Full width
+```
+
+```rust Grid Layout
+div()
+    .grid()  // Display as grid
+    .grid_cols(3)  // 3 columns
+    .gap_4()  // Gap between cells
+```
+
+```rust Hidden
+div()
+    .hidden()  // Display: none
+```
+</CodeGroup>
+
+## Colors and Backgrounds
+
+### Background Colors
+
+```rust
+use gpui::*;
+
+div()
+    .bg(rgb(0xff0000))  // Red background
+    .bg(hsla(0.5, 0.8, 0.5, 1.0))  // Using HSLA
+```
+
+Built-in color helpers:
+
+```rust
+div().bg(gpui::red())
+div().bg(gpui::green())
+div().bg(gpui::blue())
+div().bg(gpui::yellow())
+div().bg(gpui::black())
+div().bg(gpui::white())
+```
+
+### Text Colors
+
+```rust
+div()
+    .text_color(rgb(0xffffff))
+    .child("White text")
+```
+
+## Sizing
+
+<CodeGroup>
+```rust Fixed Sizes
+div()
+    .w(px(200.))  // Width: 200px
+    .h(px(100.))  // Height: 100px
+    .size(px(150.))  // Both width and height
+```
+
+```rust Relative Sizes
+div()
+    .w_full()  // Width: 100%
+    .h_full()  // Height: 100%
+    .size_full()  // Both
+```
+
+```rust Min/Max Sizes
+div()
+    .min_w(px(100.))
+    .max_w(px(500.))
+    .min_h(px(50.))
+    .max_h(px(300.))
+```
+</CodeGroup>
+
+## Spacing
+
+### Padding
+
+```rust
+div()
+    .p(px(16.))  // All sides
+    .px(px(16.))  // Horizontal (left + right)
+    .py(px(8.))  // Vertical (top + bottom)
+    .pt(px(4.))  // Top only
+    .pr(px(4.))  // Right only
+    .pb(px(4.))  // Bottom only
+    .pl(px(4.))  // Left only
+```
+
+Shorthand padding methods:
+
+```rust
+div().p_1()  // 0.25rem
+div().p_2()  // 0.5rem
+div().p_3()  // 0.75rem
+div().p_4()  // 1rem
+div().p_8()  // 2rem
+```
+
+### Margin
+
+```rust
+div()
+    .m(px(16.))  // All sides
+    .mx(px(16.))  // Horizontal
+    .my(px(8.))  // Vertical
+    .mt(px(4.))  // Top only
+```
+
+### Gap (for flex and grid)
+
+```rust
+div()
+    .flex()
+    .gap(px(16.))  // Gap between all children
+    .gap_x(px(8.))  // Horizontal gap only
+    .gap_y(px(4.))  // Vertical gap only
+```
+
+Shorthand gap methods:
+
+```rust
+div().flex().gap_2()  // 0.5rem gap
+div().flex().gap_4()  // 1rem gap
+```
+
+## Borders
+
+```rust
+div()
+    .border_1()  // 1px border on all sides
+    .border_color(rgb(0x0000ff))
+    .border_dashed()  // Dashed border style
+    .rounded_md()  // Medium border radius
+```
+
+Border shortcuts:
+
+```rust
+div().border_t(px(2.))  // Top border only
+div().border_r(px(2.))  // Right border only
+div().border_b(px(2.))  // Bottom border only
+div().border_l(px(2.))  // Left border only
+```
+
+Border radius:
+
+```rust
+div().rounded_sm()  // Small radius
+div().rounded_md()  // Medium radius
+div().rounded_lg()  // Large radius
+div().rounded_full()  // Fully rounded (circle/pill)
+```
+
+## Shadows
+
+```rust
+div()
+    .shadow_sm()  // Small shadow
+    .shadow_md()  // Medium shadow
+    .shadow_lg()  // Large shadow
+    .shadow_xl()  // Extra large shadow
+```
+
+## Typography
+
+### Font Sizes
+
+```rust
+div()
+    .text_xs()    // 0.75rem
+    .text_sm()    // 0.875rem
+    .text_base()  // 1rem
+    .text_lg()    // 1.125rem
+    .text_xl()    // 1.25rem
+    .text_2xl()   // 1.5rem
+    .text_3xl()   // 1.875rem
+```
+
+Custom font size:
+
+```rust
+div().text_size(px(24.0))
+```
+
+### Font Weight and Style
+
+```rust
+div()
+    .font_weight(FontWeight::BOLD)
+    .italic()
+```
+
+### Text Decoration
+
+```rust
+div()
+    .underline()
+    .text_decoration_color(rgb(0xff0000))
+    .text_decoration_wavy()  // Wavy underline
+    .line_through()  // Strikethrough
+```
+
+### Text Alignment
+
+```rust
+div().text_left()
+div().text_center()
+div().text_right()
+```
+
+### Text Overflow
+
+```rust
+div()
+    .truncate()  // Truncate with ellipsis
+    .text_ellipsis()  // Ellipsis at end
+    .text_ellipsis_start()  // Ellipsis at start
+    .whitespace_nowrap()  // Prevent wrapping
+    .line_clamp(3)  // Clamp to 3 lines
+```
+
+## Opacity
+
+```rust
+div().opacity(0.5)  // 50% opacity
+```
+
+## Visibility
+
+```rust
+div().visible()  // Visible (default)
+div().invisible()  // Hidden but takes up space
+div().hidden()  // Display: none
+```
+
+## Overflow
+
+```rust
+div()
+    .overflow_hidden()  // Hide overflow
+    .overflow_scroll()  // Scrollbars
+    .overflow_x_scroll()  // Horizontal scroll only
+    .overflow_y_scroll()  // Vertical scroll only
+```
+
+## Position
+
+```rust
+div()
+    .absolute()  // Absolute positioning
+    .relative()  // Relative positioning
+    .inset(px(0.))  // Position at all edges
+    .top(px(10.))
+    .right(px(10.))
+    .bottom(px(10.))
+    .left(px(10.))
+```
+
+## Cursor Styles
+
+```rust
+div().cursor_pointer()  // Pointer cursor on hover
+div().cursor_default()  // Default cursor
+```
+
+## Conditional Styling
+
+Apply styles conditionally:
+
+```rust
+let is_active = true;
+
+div()
+    .when(is_active, |this| {
+        this.bg(rgb(0x00ff00))
+    })
+    .when_some(optional_value, |this, value| {
+        this.child(value)
+    })
+```
+
+## StyleRefinement
+
+The `StyleRefinement` struct stores style properties that can be combined and refined:
+
+```rust
+let mut style = StyleRefinement::default();
+style.display = Some(Display::Flex);
+style.background = Some(Fill::Color(rgb(0xff0000).into()));
+```
+
+## Best Practices
+
+<Note>
+GPUI's styling API is designed to be similar to Tailwind CSS, making it familiar for web developers while providing type safety and compile-time checking.
+</Note>
+
+<Warning>
+Method chaining order doesn't matter for most properties, but later calls will override earlier ones for the same property.
+</Warning>
+
+## Complete Example
+
+```rust
+use gpui::*;
+
+struct StyledCard {
+    title: SharedString,
+    content: SharedString,
+}
+
+impl Render for StyledCard {
+    fn render(&mut self, _window: &mut Window, _cx: &mut Context<Self>) -> impl IntoElement {
+        div()
+            .flex()
+            .flex_col()
+            .gap_4()
+            .p_6()
+            .bg(white())
+            .border_1()
+            .border_color(rgb(0xe5e7eb))
+            .rounded_lg()
+            .shadow_md()
+            .max_w(px(400.))
+            .child(
+                div()
+                    .text_xl()
+                    .font_weight(FontWeight::BOLD)
+                    .text_color(rgb(0x111827))
+                    .child(self.title.clone())
+            )
+            .child(
+                div()
+                    .text_base()
+                    .text_color(rgb(0x6b7280))
+                    .line_height(relative(1.5))
+                    .child(self.content.clone())
+            )
+    }
+}
+```

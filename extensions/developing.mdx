@@ -1,0 +1,294 @@
+---
+title: Developing Extensions
+description: Create extensions for languages, themes, debuggers, and more
+---
+
+## Prerequisites
+
+Before developing extensions, install Rust via rustup:
+
+```bash
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+```
+
+<Warning>
+Rust must be installed via [rustup](https://www.rust-lang.org/tools/install). Homebrew or system package manager installations are not supported for extension development.
+</Warning>
+
+## Creating an Extension
+
+### Extension Manifest
+
+Create an `extension.toml` file at your repository root:
+
+```toml
+id = "my-extension"
+name = "My Extension"
+version = "0.0.1"
+schema_version = 1
+authors = ["Your Name <you@example.com>"]
+description = "Example extension"
+repository = "https://github.com/your-name/my-zed-extension"
+```
+
+Required fields:
+- `id` - Unique identifier (lowercase, hyphens allowed)
+- `name` - Human-readable name
+- `version` - Semantic version
+- `schema_version` - Extension manifest version (currently `1`)
+- `authors` - List of authors with email addresses
+- `description` - Brief description
+- `repository` - GitHub repository URL
+
+### Directory Structure
+
+A complete extension with all capabilities:
+
+```
+my-extension/
+  extension.toml       # Required manifest
+  LICENSE              # Required (see License Requirements)
+  Cargo.toml           # For WebAssembly code
+  src/
+    lib.rs             # Rust implementation
+  languages/           # Language definitions
+    my-language/
+      config.toml
+      highlights.scm
+      brackets.scm
+      outline.scm
+  themes/              # Theme JSON files
+    my-theme.json
+  icon_themes/         # Icon theme definitions
+```
+
+## WebAssembly Implementation
+
+For extensions with custom behavior (language servers, slash commands, etc.), create a Rust crate:
+
+### Cargo.toml
+
+```toml
+[package]
+name = "my-extension"
+version = "0.0.1"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+zed_extension_api = "0.8.0"
+```
+
+<Note>
+Use the latest `zed_extension_api` version from [crates.io](https://crates.io/crates/zed_extension_api). Check [compatibility](https://github.com/zed-industries/zed/blob/main/crates/extension_api#compatible-zed-versions) with Zed versions you want to support.
+</Note>
+
+### Implementation (src/lib.rs)
+
+```rust
+use zed_extension_api as zed;
+use zed::{Command, LanguageServerId, Result, Worktree};
+
+struct MyExtension {
+    // Extension state
+}
+
+impl zed::Extension for MyExtension {
+    fn new() -> Self {
+        Self {}
+    }
+
+    fn language_server_command(
+        &mut self,
+        language_server_id: &LanguageServerId,
+        worktree: &Worktree,
+    ) -> Result<Command> {
+        Ok(Command {
+            command: get_language_server_path()?,
+            args: vec!["--stdio".to_string()],
+            env: Default::default(),
+        })
+    }
+}
+
+zed::register_extension!(MyExtension);
+```
+
+### Debugging Output
+
+Extension `stdout`/`stderr` forwards to the Zed process. To see `println!` or `dbg!` output:
+
+```bash
+zed --foreground
+```
+
+This displays INFO-level logs in the terminal.
+
+## Local Development
+
+### Installing a Dev Extension
+
+<Steps>
+  <Step title="Open Extension Gallery">
+    Use the keybinding for `zed::Extensions` or the action `zed::InstallDevExtension`
+  </Step>
+  
+  <Step title="Install Dev Extension">
+    Click **Install Dev Extension** and select your extension directory
+  </Step>
+  
+  <Step title="Verify Installation">
+    The Extension Gallery shows "Overridden by dev extension" for published versions
+  </Step>
+</Steps>
+
+### Troubleshooting
+
+Check logs for errors:
+
+- **Zed Log**:
+- **Verbose Logs**: Launch with `zed --foreground`
+
+Common issues:
+
+- **Rust not installed via rustup** - Extensions won't compile
+- **Missing `extension.toml`** - Extension won't be recognized
+- **Invalid manifest** - Check TOML syntax and required fields
+
+## Extension License Requirements
+
+<Warning>
+As of October 1st, 2025, all extensions must include a license file at the repository root.
+</Warning>
+
+Accepted licenses:
+
+- [Apache 2.0](https://www.apache.org/licenses/LICENSE-2.0)
+- [BSD 2-Clause](https://opensource.org/license/bsd-2-clause)
+- [BSD 3-Clause](https://opensource.org/license/bsd-3-clause)
+- [GNU GPLv3](https://www.gnu.org/licenses/gpl-3.0.en.html)
+- [GNU LGPLv3](https://www.gnu.org/licenses/lgpl-3.0.en.html)
+- [MIT](https://opensource.org/license/mit)
+- [zlib](https://opensource.org/license/zlib)
+
+The license file must have `LICENSE` or `LICENCE` as a prefix (case insensitive). See [license validation source](https://github.com/zed-industries/extensions/blob/main/src/lib/license.js).
+
+<Note>
+The license applies only to extension code compiled into the binary. External tools (language servers, binaries) downloaded by the extension are not covered.
+</Note>
+
+## Publishing Extensions
+
+### Forking the Extensions Repository
+
+<Steps>
+  <Step title="Fork the Repository">
+    Fork [zed-industries/extensions](https://github.com/zed-industries/extensions) to your personal GitHub account (not an organization - this allows Zed staff to push changes to your PR).
+  </Step>
+  
+  <Step title="Clone and Initialize">
+    ```bash
+    git clone https://github.com/your-username/extensions
+    cd extensions
+    git submodule init
+    git submodule update
+    ```
+  </Step>
+</Steps>
+
+### Adding Your Extension
+
+<Steps>
+  <Step title="Add Submodule">
+    ```bash
+    git submodule add https://github.com/your-username/my-extension.git extensions/my-extension
+    git add extensions/my-extension
+    ```
+
+    <Note>
+    Use HTTPS URLs, not SSH URLs (`git@github.com`).
+    </Note>
+  </Step>
+  
+  <Step title="Update extensions.toml">
+    Add an entry to `extensions.toml`:
+
+    ```toml
+    [my-extension]
+    submodule = "extensions/my-extension"
+    version = "0.0.1"
+    ```
+
+    If your extension is in a subdirectory, use the `path` field:
+
+    ```toml
+    [my-extension]
+    submodule = "extensions/my-extension"
+    path = "extension"
+    version = "0.0.1"
+    ```
+  </Step>
+  
+  <Step title="Sort Configuration">
+    ```bash
+    pnpm sort-extensions
+    ```
+
+    This ensures `extensions.toml` and `.gitmodules` are properly sorted.
+  </Step>
+  
+  <Step title="Open Pull Request">
+    Create a PR to [zed-industries/extensions](https://github.com/zed-industries/extensions) with your changes.
+  </Step>
+</Steps>
+
+Once merged, the extension is automatically packaged and published to the Zed extension registry.
+
+<Warning>
+Extension IDs and names should not contain "zed" or "Zed" since all extensions are for Zed.
+</Warning>
+
+## Updating Extensions
+
+To publish an update:
+
+<Steps>
+  <Step title="Update Submodule">
+    ```bash
+    git submodule update --remote extensions/my-extension
+    ```
+  </Step>
+  
+  <Step title="Update Version">
+    Edit `extensions.toml` to match the version in your `extension.toml`:
+
+    ```toml
+    [my-extension]
+    submodule = "extensions/my-extension"
+    version = "0.0.2"
+    ```
+  </Step>
+  
+  <Step title="Create Pull Request">
+    Open a PR to [zed-industries/extensions](https://github.com/zed-industries/extensions).
+  </Step>
+</Steps>
+
+<Note>
+A [community GitHub Action](https://github.com/huacnlee/zed-extension-action) is available to automate this process.
+</Note>
+
+## Extension Capabilities
+
+Extensions can provide:
+
+- [Languages](/extensions/language-extensions) - Syntax highlighting, LSP servers, grammars
+- [Themes](/extensions/theme-extensions) - Color schemes for editor and UI
+- [Icon Themes](https://zed.dev/docs/extensions/icon-themes) - File and folder icons
+- [Debuggers](https://zed.dev/docs/extensions/debugger-extensions) - DAP server integration
+- [Slash Commands](https://zed.dev/docs/extensions/slash-commands) - Custom Assistant commands
+- [MCP Servers](https://zed.dev/docs/extensions/mcp-extensions) - Model Context Protocol servers
+
+See the [Extension API documentation](https://docs.rs/zed_extension_api) for complete implementation details.

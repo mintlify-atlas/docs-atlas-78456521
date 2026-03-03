@@ -1,0 +1,439 @@
+---
+title: TypeScript Development
+description: Configure TypeScript and JavaScript language support in Zed with vtsls or typescript-language-server, including formatting, linting, and debugging
+---
+
+# TypeScript Development
+
+TypeScript, TSX, and JavaScript support are available natively in Zed with powerful language server integration and debugging capabilities.
+
+<Info>
+**Key Technologies:**
+- **Tree-sitter**: [tree-sitter/tree-sitter-typescript](https://github.com/tree-sitter/tree-sitter-typescript)
+- **Language Server**: [vtsls](https://github.com/yioneko/vtsls) (default)
+- **Alternate Language Server**: [typescript-language-server](https://github.com/typescript-language-server/typescript-language-server)
+- **Debug Adapter**: [vscode-js-debug](https://github.com/microsoft/vscode-js-debug)
+</Info>
+
+## Getting Started
+
+Zed automatically detects and configures TypeScript support when you open `.ts`, `.tsx`, `.js`, or `.jsx` files. No manual setup is required.
+
+<Steps>
+  <Step title="Open a TypeScript Project">
+    Open any folder containing TypeScript/JavaScript files.
+  </Step>
+  
+  <Step title="Automatic Configuration">
+    Zed automatically:
+    - Downloads vtsls language server
+    - Configures Prettier for formatting
+    - Enables code completion and diagnostics
+  </Step>
+  
+  <Step title="Verify Functionality">
+    Test features like:
+    - Code completion (start typing)
+    - Go to definition (`F12`)
+    - Type checking (see red squigglies)
+  </Step>
+</Steps>
+
+## Language Server Configuration
+
+By default, Zed uses [vtsls](https://github.com/yioneko/vtsls) for TypeScript, TSX, and JavaScript files.
+
+### Switching Language Servers
+
+You can switch to `typescript-language-server` if you prefer:
+
+<CodeGroup>
+```json settings.json
+{
+  "languages": {
+    "TypeScript": {
+      "language_servers": ["typescript-language-server", "!vtsls", "..."]
+    },
+    "TSX": {
+      "language_servers": ["typescript-language-server", "!vtsls", "..."]
+    },
+    "JavaScript": {
+      "language_servers": ["typescript-language-server", "!vtsls", "..."]
+    }
+  }
+}
+```
+</CodeGroup>
+
+<Note>
+The `!` prefix disables a language server, and `...` expands to other registered language servers for the language.
+</Note>
+
+### Memory Limits for Large Projects
+
+vtsls may run out of memory on very large projects. Zed defaults to 8192 MB (8 GiB), but you can increase this:
+
+<CodeGroup>
+```json settings.json
+{
+  "lsp": {
+    "vtsls": {
+      "settings": {
+        "typescript": { "tsserver": { "maxTsServerMemory": 16184 } },
+        "javascript": { "tsserver": { "maxTsServerMemory": 16184 } }
+      }
+    }
+  }
+}
+```
+</CodeGroup>
+
+## Formatting and Linting
+
+### Prettier Integration
+
+Prettier is enabled by default for TypeScript files. To disable it:
+
+<CodeGroup>
+```json settings.json
+{
+  "languages": {
+    "TypeScript": {
+      "prettier": { "allowed": false }
+    },
+    "JavaScript": {
+      "prettier": { "allowed": false }
+    }
+  }
+}
+```
+</CodeGroup>
+
+### ESLint Integration
+
+Configure ESLint to fix issues on save:
+
+<CodeGroup>
+```json settings.json
+{
+  "languages": {
+    "TypeScript": {
+      "code_actions_on_format": {
+        "source.fixAll.eslint": true
+      }
+    },
+    "JavaScript": {
+      "code_actions_on_format": {
+        "source.fixAll.eslint": true
+      }
+    }
+  }
+}
+```
+</CodeGroup>
+
+<Note>
+Other formatters (like Prettier) will still run after ESLint. Ensure your formatter configuration aligns with ESLint rules to avoid conflicts.
+</Note>
+
+To run **only** ESLint on save without other formatters:
+
+<CodeGroup>
+```json settings.json
+{
+  "languages": {
+    "TypeScript": {
+      "formatter": [],
+      "code_actions_on_format": {
+        "source.fixAll.eslint": true
+      }
+    }
+  }
+}
+```
+</CodeGroup>
+
+### Custom External Formatter
+
+Use an external formatter like Prettier:
+
+<CodeGroup>
+```json settings.json
+{
+  "languages": {
+    "TypeScript": {
+      "formatter": {
+        "external": {
+          "command": "prettier",
+          "arguments": ["--stdin-filepath", "{buffer_path}"]
+        }
+      }
+    }
+  }
+}
+```
+</CodeGroup>
+
+## Inlay Hints
+
+Inlay hints display type information and parameter names inline with your code.
+
+### vtsls Inlay Hints
+
+<CodeGroup>
+```json settings.json
+{
+  "lsp": {
+    "vtsls": {
+      "settings": {
+        "typescript": {
+          "inlayHints": {
+            "parameterNames": {
+              "enabled": "all",
+              "suppressWhenArgumentMatchesName": false
+            },
+            "parameterTypes": { "enabled": true },
+            "variableTypes": {
+              "enabled": true,
+              "suppressWhenTypeMatchesName": true
+            },
+            "propertyDeclarationTypes": { "enabled": true },
+            "functionLikeReturnTypes": { "enabled": true },
+            "enumMemberValues": { "enabled": true }
+          }
+        },
+        "javascript": {
+          "inlayHints": {
+            "parameterNames": { "enabled": "all" },
+            "parameterTypes": { "enabled": true },
+            "variableTypes": { "enabled": true },
+            "propertyDeclarationTypes": { "enabled": true },
+            "functionLikeReturnTypes": { "enabled": true },
+            "enumMemberValues": { "enabled": true }
+          }
+        }
+      }
+    }
+  }
+}
+```
+</CodeGroup>
+
+### typescript-language-server Inlay Hints
+
+<CodeGroup>
+```json settings.json
+{
+  "lsp": {
+    "typescript-language-server": {
+      "initialization_options": {
+        "preferences": {
+          "includeInlayParameterNameHints": "all",
+          "includeInlayParameterNameHintsWhenArgumentMatchesName": true,
+          "includeInlayFunctionParameterTypeHints": true,
+          "includeInlayVariableTypeHints": true,
+          "includeInlayVariableTypeHintsWhenTypeMatchesName": true,
+          "includeInlayPropertyDeclarationTypeHints": true,
+          "includeInlayFunctionLikeReturnTypeHints": true,
+          "includeInlayEnumMemberValueHints": true
+        }
+      }
+    }
+  }
+}
+```
+</CodeGroup>
+
+See [typescript-language-server inlay hints documentation](https://github.com/typescript-language-server/typescript-language-server?tab=readme-ov-file#inlay-hints-textdocumentinlayhint) for more details.
+
+## Tailwind CSS Integration
+
+To enable Tailwind CSS autocomplete in TypeScript/JavaScript files, configure the `classRegex` pattern:
+
+<CodeGroup>
+```json settings.json
+{
+  "lsp": {
+    "tailwindcss-language-server": {
+      "settings": {
+        "experimental": {
+          "classRegex": [
+            "\\.className\\s*[+]?=\\s*['\"]([^'\"]*)['\"]" ,
+            "\\.setAttributeNS\\(.*,\\s*['\"]class['\"],\\s*['\"]([^'\"]*)['\"]" ,
+            "\\.setAttribute\\(['\"]class['\"],\\s*['\"]([^'\"]*)['\"]" ,
+            "\\.classList\\.add\\(['\"]([^'\"]*)['\"]" ,
+            "\\.classList\\.remove\\(['\"]([^'\"]*)['\"]" ,
+            "\\.classList\\.toggle\\(['\"]([^'\"]*)['\"]" ,
+            "\\.classList\\.contains\\(['\"]([^'\"]*)['\"]" ,
+            "\\.classList\\.replace\\(\\s*['\"]([^'\"]*)['\"]" ,
+            "\\.classList\\.replace\\([^,)]+,\\s*['\"]([^'\"]*)['\"]"
+          ]
+        }
+      }
+    }
+  }
+}
+```
+</CodeGroup>
+
+This enables Tailwind autocomplete for DOM manipulation methods.
+
+## Debugging TypeScript & JavaScript
+
+Zed supports debugging TypeScript and JavaScript code with `vscode-js-debug`.
+
+### Zero-Configuration Debugging
+
+Run `debugger: start` (default: `F4`) to see automatically detected debug targets:
+
+- Tasks from `package.json` scripts
+- Jest, Mocha, Vitest, Jasmine tests
+- Bun tests (when `@types/bun` is in `package.json`)
+- Node.js tests (when `@types/node` is in `package.json`, requires Node 20+)
+
+<Info>
+Configurations from `.vscode/launch.json` are also supported in Zed.
+</Info>
+
+### Custom Debug Configurations
+
+Create `.zed/debug.json` for advanced debugging setups:
+
+<Tabs>
+  <Tab title="Debug Node.js File">
+    ```json .zed/debug.json
+    [
+      {
+        "adapter": "JavaScript",
+        "label": "Debug current file",
+        "type": "node",
+        "request": "launch",
+        "program": "$ZED_FILE",
+        "skipFiles": ["<node_internals>/**"]
+      }
+    ]
+    ```
+  </Tab>
+  
+  <Tab title="Debug Chrome Web App">
+    ```json .zed/debug.json
+    [
+      {
+        "adapter": "JavaScript",
+        "label": "Launch Chrome",
+        "type": "chrome",
+        "request": "launch",
+        "url": "http://localhost:3000",
+        "webRoot": "$ZED_WORKTREE_ROOT",
+        "skipFiles": ["<node_internals>/**"]
+      }
+    ]
+    ```
+  </Tab>
+  
+  <Tab title="Debug TypeScript with Build">
+    ```json .zed/debug.json
+    [
+      {
+        "label": "Build & Debug TypeScript",
+        "adapter": "JavaScript",
+        "type": "node",
+        "request": "launch",
+        "program": "$ZED_FILE",
+        "build": {
+          "command": "npx",
+          "args": ["tsc"]
+        },
+        "skipFiles": ["<node_internals>/**"]
+      }
+    ]
+    ```
+  </Tab>
+  
+  <Tab title="Attach to Server">
+    ```json .zed/debug.json
+    [
+      {
+        "label": "Launch Chrome (with server)",
+        "adapter": "JavaScript",
+        "type": "chrome",
+        "request": "launch",
+        "url": "http://localhost:5500",
+        "program": "$ZED_FILE",
+        "webRoot": "$ZED_WORKTREE_ROOT",
+        "build": {
+          "command": "npx",
+          "args": ["tsc"]
+        },
+        "skipFiles": ["<node_internals>/**"]
+      }
+    ]
+    ```
+  </Tab>
+</Tabs>
+
+<Note>
+JavaScript debugging uses `type: "node"` for Node.js or `type: "chrome"` for browser debugging.
+</Note>
+
+See [vscode-js-debug configuration documentation](https://github.com/microsoft/vscode-js-debug/blob/main/OPTIONS.md) for all available options.
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="TypeScript language server won't start">
+    **Solution**:
+    1. Check Zed logs: Command Palette → `zed: open log`
+    2. Verify Node.js installation: `node --version`
+    3. Try restarting the language server: Command Palette → `editor: restart language server`
+    4. Switch language servers (vtsls ↔ typescript-language-server)
+  </Accordion>
+  
+  <Accordion title="Import errors or module not found">
+    **Solution**:
+    1. Run `npm install` or `yarn install` to ensure dependencies are installed
+    2. Check `tsconfig.json` for correct `paths` and `baseUrl` configuration
+    3. Verify `node_modules` directory exists
+    4. Restart the language server
+  </Accordion>
+  
+  <Accordion title="High memory usage">
+    **Solution**:
+    1. Increase `maxTsServerMemory` limit
+    2. Exclude large directories in `tsconfig.json` (e.g., `node_modules`, `dist`)
+    3. Use project references for large monorepos
+    4. Consider using `typescript-language-server` instead of vtsls
+  </Accordion>
+  
+  <Accordion title="Prettier conflicts with ESLint">
+    **Solution**:
+    1. Install `eslint-config-prettier` to disable conflicting ESLint rules
+    2. Ensure Prettier runs after ESLint in the formatter pipeline
+    3. Verify `.prettierrc` and `.eslintrc` configurations align
+  </Accordion>
+  
+  <Accordion title="Debugger not stopping at breakpoints">
+    **Solution**:
+    1. Ensure source maps are enabled in `tsconfig.json`: `"sourceMap": true`
+    2. Verify the `program` or `url` path is correct in debug configuration
+    3. Check that TypeScript is compiled before debugging
+    4. Try using `"smartStep": false` in debug configuration
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Yarn Configuration" icon="yarn" href="/languages/yarn">
+    Configure your project to use Yarn with Zed
+  </Card>
+  <Card title="Deno Configuration" icon="deno" href="/languages/deno">
+    Use Deno instead of Node.js
+  </Card>
+  <Card title="JavaScript Guide" icon="js" href="/languages/javascript">
+    JavaScript-specific configuration and features
+  </Card>
+  <Card title="Language Configuration" icon="gear" href="/languages/configuring">
+    General language configuration options
+  </Card>
+</CardGroup>
