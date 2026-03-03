@@ -1,0 +1,224 @@
+{
+  "projectType": "saas",
+  "projectName": "Zed",
+  "projectDescription": "High-performance, multiplayer code editor with built-in AI, collaboration, and remote development capabilities.",
+  "theme": "aspen",
+  "primaryColor": "#0091FF",
+  "lightColor": "#60AFFF",
+  "darkColor": "#0077D4",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Getting Started",
+            "pages": [
+              "introduction",
+              "installation",
+              "quickstart",
+              "configuration"
+            ]
+          },
+          {
+            "group": "Core Features",
+            "pages": [
+              "features/editing",
+              "features/navigation",
+              "features/collaboration",
+              "features/remote-development",
+              "features/terminal"
+            ]
+          },
+          {
+            "group": "AI & Agents",
+            "pages": [
+              "ai/overview",
+              "ai/agent-panel",
+              "ai/inline-assistant",
+              "ai/edit-prediction",
+              "ai/text-threads",
+              "ai/configuration",
+              "ai/external-agents",
+              "ai/mcp",
+              "ai/tools",
+              "ai/rules"
+            ]
+          },
+          {
+            "group": "Language Support",
+            "pages": [
+              "languages/overview",
+              "languages/configuring",
+              "languages/toolchains",
+              "languages/rust",
+              "languages/typescript",
+              "languages/python",
+              "languages/go"
+            ]
+          },
+          {
+            "group": "Customization",
+            "pages": [
+              "customization/themes",
+              "customization/keybindings",
+              "customization/settings",
+              "customization/vim-mode",
+              "customization/fonts"
+            ]
+          },
+          {
+            "group": "Extensions",
+            "pages": [
+              "extensions/overview",
+              "extensions/installing",
+              "extensions/developing",
+              "extensions/language-extensions",
+              "extensions/theme-extensions",
+              "extensions/capabilities"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "GPUI Framework",
+        "groups": [
+          {
+            "group": "Introduction",
+            "pages": [
+              "gpui/overview",
+              "gpui/getting-started",
+              "gpui/architecture"
+            ]
+          },
+          {
+            "group": "Core Concepts",
+            "pages": [
+              "gpui/entities",
+              "gpui/views-rendering",
+              "gpui/elements",
+              "gpui/contexts",
+              "gpui/actions"
+            ]
+          },
+          {
+            "group": "UI Components",
+            "pages": [
+              "gpui/styling",
+              "gpui/layouts",
+              "gpui/interactive-elements",
+              "gpui/text-rendering"
+            ]
+          },
+          {
+            "group": "Concurrency",
+            "pages": [
+              "gpui/async-tasks",
+              "gpui/background-execution",
+              "gpui/event-system"
+            ]
+          },
+          {
+            "group": "Advanced",
+            "pages": [
+              "gpui/platform-services",
+              "gpui/testing",
+              "gpui/performance"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Developer Guides",
+        "groups": [
+          {
+            "group": "Contributing",
+            "pages": [
+              "development/overview",
+              "development/building-macos",
+              "development/building-linux",
+              "development/building-windows",
+              "development/contributing"
+            ]
+          },
+          {
+            "group": "Architecture",
+            "pages": [
+              "development/crate-structure",
+              "development/key-subsystems",
+              "development/gpui-integration",
+              "development/rpc-protocol",
+              "development/glossary"
+            ]
+          },
+          {
+            "group": "Testing & Debugging",
+            "pages": [
+              "development/testing",
+              "development/debugging",
+              "development/debugging-crashes",
+              "development/performance-profiling"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Reference",
+        "groups": [
+          {
+            "group": "API Reference",
+            "pages": [
+              "reference/cli",
+              "reference/settings",
+              "reference/actions",
+              "reference/keybindings"
+            ]
+          },
+          {
+            "group": "Platform Support",
+            "pages": [
+              "reference/macos",
+              "reference/linux",
+              "reference/windows",
+              "reference/requirements"
+            ]
+          },
+          {
+            "group": "Resources",
+            "pages": [
+              "reference/release-notes",
+              "reference/migration-guides",
+              "reference/troubleshooting",
+              "reference/faq"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "High-performance GPU-accelerated UI with GPUI framework",
+    "Built-in AI agents with multi-model support (Anthropic, OpenAI, Google, Ollama)",
+    "Real-time multiplayer collaboration with channels and voice",
+    "Remote development with SSH and dev containers",
+    "Extensive language support with LSP integration (50+ languages)",
+    "Extension system for languages, themes, debuggers, and AI tools",
+    "Cross-platform support (macOS, Linux, Windows)",
+    "Integrated terminal, debugger, and REPL",
+    "Vim and Helix keybinding modes",
+    "Model Context Protocol (MCP) for AI tool extensions"
+  ],
+  "publicApiSurface": [
+    "GPUI Framework (gpui crate) - UI framework API",
+    "Extension API (extension_api crate) - Plugin development",
+    "Language Server Protocol integration",
+    "Model Context Protocol (MCP) server interface",
+    "Agent Client Protocol (ACP) for external agents",
+    "CLI commands (zed command-line interface)",
+    "Settings configuration schema",
+    "Theme and icon theme schemas",
+    "Keybinding configuration",
+    "RPC protocol for collaboration",
+    "Debug Adapter Protocol (DAP) integration"
+  ]
+}
